@@ -16,8 +16,8 @@
 | M06 | Repository Scaffold | PASS | git init (main), layout per ARCHITECTURE §11, .gitignore/.editorconfig/.gitattributes/README; bootstrap commit e5e0446 |
 | M07 | Secret Hygiene | PASS | .env.example placeholders only; ignores verified via check-ignore; secret scan clean |
 | M08 | Root Development Commands | PASS | Makefile targets validated with make -n / make help; reset-local destructive-guarded |
-| M09 | Local PostgreSQL | NOT_STARTED | — |
-| M10 | Local Redis | NOT_STARTED | — |
+| M09 | Local PostgreSQL | PASS | postgres:18.6-alpine healthy; volume persists across restart; 127.0.0.1:15432 only |
+| M10 | Local Redis | PASS | redis:8.8.2-alpine healthy; SET/GET verified; 127.0.0.1:16379 only; coordination-only config |
 | M11 | FastAPI Scaffold | NOT_STARTED | — |
 | M12 | Python Engineering Baseline | NOT_STARTED | — |
 | M13 | Next.js Scaffold | NOT_STARTED | — |

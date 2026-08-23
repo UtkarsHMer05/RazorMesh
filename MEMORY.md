@@ -30,8 +30,8 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M09 — Local PostgreSQL  
-**Milestones passed:** M01–M08  
+**Current milestone:** M11 — FastAPI Scaffold  
+**Milestones passed:** M01–M10  
 **Last updated:** 2026-08-23
 
 ---
@@ -43,7 +43,8 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 - uv 0.12.5 installed (~/.local/bin/uv). Python 3.13 line will be uv-managed (3.13.15 current).
 - Docker 29.7.2 + Compose v5.4.0; daemon launched on demand at M09 (approved).
 - User's own non-Docker PostgreSQL occupies 127.0.0.1:5432 — DO NOT TOUCH. Our Docker PG binds 127.0.0.1:15432.
-- Ports 3000/8000/6379 free. All host bindings loopback-only.
+- Infra live: razormesh-postgres (18.6-alpine @127.0.0.1:15432, vol pgdata, PG18 mounts /var/lib/postgresql) + razormesh-redis (8.8.2-alpine @127.0.0.1:16379, no persistence by design — coordination only).
+- Ports 3000/8000 free. All host bindings loopback-only.
 - Repo: governance pack only; git init happens at M06 with .gitignore in place.
 
 # Version decisions (M02, full detail in VERSION_MANIFEST.md)
