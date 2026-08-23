@@ -66,6 +66,7 @@ class Identifier:
         cls, source_type: type, handler: GetCoreSchemaHandler
     ) -> CoreSchema:
         _ = source_type
+
         def _serialize(inst: "Identifier") -> str:
             return inst.value
 
