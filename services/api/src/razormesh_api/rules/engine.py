@@ -27,11 +27,24 @@ class RuleOutcome(StrEnum):
 
 
 @dataclass(frozen=True)
+class ProductFacts:
+    """Structured facts resolved by the TRUSTED system (never merchant text).
+
+    A ``None`` field means 'fact unavailable' — rules that need it must return
+    UNKNOWN rather than guess.
+    """
+
+    brand: str | None = None
+    category: str | None = None
+
+
+@dataclass(frozen=True)
 class EvaluationContext:
     intent: IntentContract
     checkout: CheckoutEnvelope
     committed_minor: int = 0  # durable spend already committed against authority
     reserved_minor: int = 0  # open reservations held against authority
+    product_facts: dict[str, ProductFacts] | None = None  # trusted catalog facts
 
 
 @dataclass(frozen=True)

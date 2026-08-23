@@ -36,7 +36,7 @@
 | M26 | Canonical Authorization Hashing | PASS | JCS(RFC 8785) canonicalization with RFC known-answer vectors; documented checkout/intent projections; untrusted text + presentation drift provably excluded; relevant drift (price/qty/revision/recurring/generation) changes hash; 7 tests PASS |
 | M27 | RazorGuard Rule Engine Foundation | PASS | StrEnum PASS/FAIL/UNKNOWN outcomes, FunctionRule + AllOf combinators, stable reason codes + explanations, crashing rules degrade to UNKNOWN (fail-closed), duplicate rule ids rejected, determinism test; 7 tests PASS |
 | M28 | Money Rules | PASS | 6 deterministic rules: currency match, positive amount, max_total (inclusive boundary), aggregate budget incl. open reservations (exact-fit PASS / -1 minor FAIL), fee sanity (<= subtotal), shipping sanity (<=10x subtotal); 7 boundary tests PASS |
-| M29 | Merchant/Product/Quantity Rules | NOT_STARTED | — |
+| M29 | Merchant/Product/Quantity Rules | PASS | Allowlists honor None=any/empty=nothing (SEC-018); category+brand rules use TRUSTED product facts; missing fact -> UNKNOWN (CATEGORY_UNKNOWN/BRAND_UNKNOWN), never silent PASS; brand allow_only/forbid modes case-insensitive; quantity per-line + aggregate; 7 tests PASS |
 | M30 | Subscription/Expiry/Approval Rules | NOT_STARTED | — |
 | M31 | Stateful Spend Reservation and Aggregate Budget | NOT_STARTED | — |
 | M32 | Decision Engine | NOT_STARTED | — |
@@ -219,6 +219,11 @@ M03 — Project Charter.
 - Boundary semantics inclusive-on-allowed: total == max_total PASS / +1 FAIL; budget exact-fit PASS / -1 minor FAIL; fees == subtotal PASS / +1 FAIL; shipping == 10x subtotal PASS / +1 FAIL.
 - Rules read only trusted context (intent + server-recomputed totals); untrusted text cannot influence outcomes.
 - Validation: ruff clean; mypy strict 30 files clean; pytest 98/98.
+
+## M29 — Merchant/Product/Quantity Rules — PASS
+- `rules/catalog_rules.py`: `CATALOG_RULES` registry — merchant/product allowlists (None=any, empty=nothing, membership decides), category rule and brand restriction rule driven by TRUSTED `ProductFacts` resolved by the trusted system (new `EvaluationContext.product_facts`, default None), quantity rule enforcing per-line `max_quantity` plus aggregate unit cap.
+- Unknown-data behavior: brand/category unavailable → UNKNOWN with BRAND_UNKNOWN / CATEGORY_UNKNOWN reason codes; never a silent PASS. Brand matching is case-insensitive; modes allow_only + forbid.
+- Validation: ruff clean; mypy strict 31 files clean; pytest 105/105.
 
 ---
 
