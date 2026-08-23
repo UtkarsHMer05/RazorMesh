@@ -22,11 +22,11 @@
 | M12 | Python Engineering Baseline | PASS | uv+lock py3.13; ruff strict-ish clean; mypy --strict clean; pytest 5/5; coverage configured |
 | M13 | Next.js Scaffold | PASS | Next 16.3.2/React 19.2.8/TS 5.9.3; 5 routes; prod build OK; tsc clean |
 | M14 | Frontend Test Baseline | PASS | Vitest+RTL smoke 3/3; Playwright chromium E2E 2/2; eslint 9.39.5 clean (v10 fallback documented) |
-| M15 | Shared Identifier Types | NOT_STARTED | — |
-| M16 | Money Value Object | NOT_STARTED | — |
-| M17 | Intent Contract Model | NOT_STARTED | — |
-| M18 | Canonical Checkout Envelope | NOT_STARTED | — |
-| M19 | Provenance Model | NOT_STARTED | — |
+| M15 | Shared Identifier Types | PASS | 12 ID types ULID-validated, 8 tests PASS, cross-type equality impossible |
+| M16 | Money Value Object | PASS | integer minor units, 14 Money tests + Hypothesis properties PASS, mypy strict clean |
+| M17 | Intent Contract Model | PASS | IntentContract 7 tests PASS, frozen + generation/currency/expiry invariants, fixtures |
+| M18 | Canonical Checkout Envelope | PASS | CheckoutEnvelope recomputation 7 tests PASS, client total manipulation rejected |
+| M19 | Provenance Model | PASS | Provenanced trust classes 6 tests PASS, UNTRUSTED cannot occupy authority slots |
 | M20 | Database Schema | NOT_STARTED | — |
 | M21 | Repository/Data Access Layer | NOT_STARTED | — |
 | M22 | Merchant Catalog | NOT_STARTED | — |

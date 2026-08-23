@@ -33,7 +33,7 @@ lint: ## Lint backend (ruff) and frontend (eslint)
 	@if [ -d "$(WEB_DIR)" ]; then cd $(WEB_DIR) && pnpm lint; else echo "skip eslint: not scaffolded yet"; fi
 
 typecheck: ## Static type checks (mypy backend, tsc frontend)
-	$(UV) run --project $(API_DIR) mypy
+	$(UV) run --project $(API_DIR) mypy -p razormesh_api
 	@if [ -d "$(WEB_DIR)" ]; then cd $(WEB_DIR) && pnpm typecheck; else echo "skip tsc: not scaffolded yet"; fi
 
 test: test-backend test-frontend ## Run full local test suite

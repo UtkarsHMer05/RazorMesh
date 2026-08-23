@@ -7,7 +7,10 @@ Invariants (SEC-013, RULES Financial correctness):
 """
 
 from decimal import Decimal
-from typing import Final
+from typing import Any, Final
+
+from pydantic import GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
 
 MoneyLike = int | Decimal
 
@@ -160,3 +163,47 @@ class Money:
 
     def __str__(self) -> str:
         return f"{self.amount_minor} {self.currency}"
+
+    # -- pydantic integration ----------------------------------------------
+
+    @classmethod
+    def _pydantic_validate(cls, value: object) -> "Money":
+        if isinstance(value, Money):
+            return value
+        if isinstance(value, dict):
+            amt = value.get("amount_minor")
+            if amt is None:
+                raise MoneyError("Money dict missing amount_minor")
+            cur = value.get("currency", DEFAULT_CURRENCY)
+            if not isinstance(cur, str):
+                raise MoneyError(f"invalid currency {cur!r}")
+            return cls(amt, cur)
+        raise MoneyError(f"cannot parse Money from {value!r}")
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, source_type: type, handler: GetCoreSchemaHandler
+    ) -> CoreSchema:
+        _ = source_type, handler
+        inner = core_schema.union_schema(
+            [
+                core_schema.is_instance_schema(Money),
+                core_schema.typed_dict_schema(
+                    {
+                        "amount_minor": core_schema.typed_dict_field(core_schema.int_schema()),
+                        "currency": core_schema.typed_dict_field(
+                            core_schema.str_schema(), required=False
+                        ),
+                    }
+                ),
+            ]
+        )
+
+        def _serialize(inst: Money) -> dict[str, Any]:
+            return {"amount_minor": inst.amount_minor, "currency": inst.currency}
+
+        return core_schema.no_info_after_validator_function(
+            cls._pydantic_validate,
+            inner,
+            serialization=core_schema.plain_serializer_function_ser_schema(_serialize),
+        )
