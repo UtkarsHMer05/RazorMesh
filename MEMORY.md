@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M36 — Trusted Payment Executor + Durable ExecutionAttempt (next)  
-**Milestones passed:** M01–M35  
+**Current milestone:** M37 — Mock Payment Provider (next)  
+**Milestones passed:** M01–M36  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 37 files clean, pytest 146/146
+**Gate:** ruff clean, mypy 38 files clean, pytest 152/152
 
 ---
 
@@ -104,6 +104,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Dev keys: Ed25519 at infra/keys/ (gitignored), ensure/load/sign/verify (M33)
 - Tickets: signed JCS claims; verify sig->expiry->11 bindings fail-closed (M34)
 - Nonce: Redis SET NX EX claim, 20-worker race proven 1 winner (M35)
+- Executor: sole provider caller; durable attempts; unknown keeps reservation (M36)
 
 ---
 
@@ -134,7 +135,7 @@ None yet; do not invent.
 
 # Next action
 
-M36 — Trusted Executor: only component calling PaymentProvider; durable ExecutionAttempt states.
+M37 — Mock Provider modes: success/fail/timeout-before/timeout-after/duplicate/delayed/out-of-order.
 
 ---
 

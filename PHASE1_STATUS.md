@@ -43,7 +43,7 @@
 | M33 | Dev Signing Key Management | PASS | Ed25519 pair via cryptography lib at settings-driven paths (infra/keys/, gitignored); 0o600 private perms; missing key -> actionable DevKeyError; sign/verify + cross-key rejection + idempotent ensure tested (6 tests); live keygen verified untracked |
 | M34 | Context-Bound Single-Use Execution Ticket | PASS | Signed JCS-canonical claims bind principal/agent/gen/intent+checkout hashes/merchant/amount/currency/decision/policy/nonce/window; ordered fail-closed verify: SIGNATURE_INVALID -> TICKET_EXPIRED -> 11 binding codes; 8 tests PASS |
 | M35 | Redis Nonce Claim and Concurrency | PASS | SET NX EX atomic claim; replay rejected; TTL bounded; holder-only Lua release; 20-worker same-nonce race -> exactly 1 winner; Redis down -> CoordinationUnavailable fail-closed; 5 tests PASS |
-| M36 | Trusted Payment Executor + Durable ExecutionAttempt | NOT_STARTED | — |
+| M36 | Trusted Payment Executor + Durable ExecutionAttempt | PASS | Only executor calls PaymentProvider; durable attempts CREATED->EXECUTING->SUCCEEDED/FAILED/PROVIDER_UNKNOWN (transition-guarded); idempotency-key re-entry returns same attempt (never fresh op); unknown keeps reservation, failure releases, success commits; ticket persisted for FK/audit; 6 tests PASS |
 | M37 | Mock Payment Provider | NOT_STARTED | — |
 | M38 | Checkout Service | NOT_STARTED | — |
 | M39 | Live Checkout Revalidation | NOT_STARTED | — |
@@ -260,6 +260,13 @@ M03 — Project Charter.
 - Fail-closed: Redis unreachable → `CoordinationUnavailable` on every operation, so no side effect proceeds without dedup capability. PostgreSQL remains durable authority; Redis holds only ephemeral claims.
 - Race proof: 20 real threads claim the SAME nonce → exactly 1 winner, 19 rejected. Replay after first use always rejected; distinct nonces independent.
 - Validation: ruff clean; mypy strict 37 files clean; pytest 146/146.
+
+## M36 — Trusted Payment Executor + Durable ExecutionAttempt — PASS
+- `executor.py`: `PaymentProvider` protocol + `ChargeCommand`/`ChargeResult`; `AttemptState` machine (CREATED→EXECUTING→{SUCCEEDED,FAILED,PROVIDER_UNKNOWN}, terminal states locked, `require_transition` guard); `TrustedPaymentExecutor.execute`: idempotency-key re-entry FIRST (returns same durable attempt → provider-unknown can never spawn a fresh financial op), ticket verification (M34), Redis nonce claim (M35), durable ticket row + CREATED attempt BEFORE provider call, single `charge()` per attempt.
+- Spend integration: SUCCEEDED → `spend.commit`; FAILED → `spend.release`; PROVIDER_UNKNOWN → reservation intentionally KEPT (tested). `resolve_unknown()` provides explicit ops resolution of unknown attempts.
+- Tests cover: success+commit, definitive failure+release (+error_code persisted), provider exception→UNKNOWN+reservation kept, retry-same-idempotency never recharges (provider.calls==1), tampered ticket blocks before any side effect (zero attempts), nonce replay rejected.
+- Note: test chain helper uses incremental flushes between parent/child merges — SQLAlchemy UOW did not derive FK order without relationship(); flagged for later normalization.
+- Validation: ruff clean; mypy strict 38 files clean; pytest 152/152.
 
 ---
 
