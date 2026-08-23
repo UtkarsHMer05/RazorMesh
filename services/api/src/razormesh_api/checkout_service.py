@@ -238,9 +238,13 @@ class CheckoutService:
                     merchant_id=str(env.merchant_id),
                     line_items=[
                         {
+                            # Full authorization-relevant projection persisted
+                            # so live revalidation can rebuild the exact hash.
                             "product_id": str(i.product_id),
                             "quantity": i.quantity,
-                            "unit_price": i.unit_price.amount_minor,
+                            "unit_price_minor": i.unit_price.amount_minor,
+                            "currency": i.unit_price.currency,
+                            "condition": i.condition,
                         }
                         for i in env.line_items
                     ],

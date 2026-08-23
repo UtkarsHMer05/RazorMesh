@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M39 — Live Checkout Revalidation (next)  
-**Milestones passed:** M01–M38  
+**Current milestone:** M40 — Untrusted Content Boundary (next)  
+**Milestones passed:** M01–M39  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 40 files clean, pytest 166/166
+**Gate:** ruff clean, mypy 41 files clean, pytest 171/171
 
 ---
 
@@ -107,6 +107,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Executor: sole provider caller; durable attempts; unknown keeps reservation (M36)
 - Mock provider: 7 scripted modes incl. timeout-after-success + event replay (M37)
 - Checkout service: server-authoritative totals; propose+authorize+ticket flow (M38)
+- Revalidation: rebuild hash from DB pre-execution; drift blocks, cosmetics don't (M39)
 
 ---
 
@@ -137,7 +138,7 @@ None yet; do not invent.
 
 # Next action
 
-M39 — Live Revalidation: re-read authoritative checkout pre-execution; drift invalidates stale tickets.
+M40 — Untrusted Content Boundary: malicious merchant text cannot mutate authority/execution.
 
 ---
 

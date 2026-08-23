@@ -46,7 +46,7 @@
 | M36 | Trusted Payment Executor + Durable ExecutionAttempt | PASS | Only executor calls PaymentProvider; durable attempts CREATED->EXECUTING->SUCCEEDED/FAILED/PROVIDER_UNKNOWN (transition-guarded); idempotency-key re-entry returns same attempt (never fresh op); unknown keeps reservation, failure releases, success commits; ticket persisted for FK/audit; 6 tests PASS |
 | M37 | Mock Payment Provider | PASS | 7 modes (success/failure/timeout-before/timeout-after-success/duplicate/delayed/out-of-order) driving REAL executor: provider-side effects ledger proves money-moved-vs-not; unknown+reconciliation resolves to SUCCEEDED; duplicate delivery keeps 1 effect; 7 tests PASS |
 | M38 | Checkout Service | PASS | Server recomputes ALL amounts from trusted catalog (client total mismatch rejected loudly); blocked intents refused pre-rules; propose persists checkout + ledger event; authorize runs full rule set -> durable decision + hashes; ALLOW-only ticket issuance; 7 tests PASS |
-| M39 | Live Checkout Revalidation | NOT_STARTED | — |
+| M39 | Live Checkout Revalidation | PASS | Revalidator re-reads durable checkout, rebuilds exact authz projection (condition/currency persisted), recomputes hash: relevant drift -> STALE_CHECKOUT; generation/status drift -> AUTHORIZATION_SUPERSEDED/STALE; untrusted title changes proven NOT to invalidate; 5 tests PASS |
 | M40 | Untrusted Content Boundary | NOT_STARTED | — |
 | M41 | Future SemanticVerifier Interface | NOT_STARTED | — |
 | M42 | Attack Scenario Specification | NOT_STARTED | — |
@@ -278,6 +278,12 @@ M03 — Project Charter.
 - `checkout_service.py`: `CheckoutService.propose` (clients name product_id+quantity ONLY; prices/shipping from trusted catalog rows; single-merchant enforcement; quantity caps; client_total disagreement → ClientTotalMismatch; durable Checkout projection + CHECKOUT_PROPOSED ledger event) and `authorize` (full rule set via DecisionEngine over trusted facts; durable Decision row with intent/checkout hashes + reason codes + per-rule outcomes; DECISION_RECORDED + TICKET_ISSUED ledger events; ALLOW-only ticket issuance with 120s validity).
 - Security: BLOCKED/CHALLENGED intents refused before rule evaluation; untrusted merchant text never enters rule inputs; amount manipulation cannot pass because totals are server-recomputed.
 - Validation: ruff clean; mypy strict 40 files clean; pytest 166/166.
+
+## M39 — Live Checkout Revalidation — PASS
+- `revalidation.py`: `Revalidator.revalidate` re-reads the durable checkout row, rebuilds the envelope EXACTLY from stored authorization-relevant fields (proposal now persists product_id/quantity/unit_price_minor/currency/condition per line), recomputes the JCS hash and compares to the ticket binding; independently re-checks intent status/generation/terms hash.
+- Verdicts: STALE_CHECKOUT (hash or revision drift), AUTHORIZATION_SUPERSEDED (generation), AUTHORIZATION_STALE (status/terms), CHECKOUT_MISSING, AUTHORIZATION_MISSING.
+- Proven both ways: server-side quantity drift invalidates; untrusted catalog title/image changes do NOT invalidate.
+- Validation: ruff clean; mypy strict 41 files clean; pytest 171/171.
 
 ---
 
