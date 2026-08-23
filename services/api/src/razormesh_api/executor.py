@@ -82,8 +82,9 @@ _TRANSITIONS: dict[str, set[str]] = {
         AttemptState.FAILED,
         AttemptState.PROVIDER_UNKNOWN,
     },
-    # Terminal or awaiting-provider-resolution: no direct exits from here.
-    AttemptState.PROVIDER_UNKNOWN: set(),
+    # Awaiting provider truth: only explicit reconciliation (resolve_unknown)
+    # may exit, applying the authoritative outcome.
+    AttemptState.PROVIDER_UNKNOWN: {AttemptState.SUCCEEDED, AttemptState.FAILED},
     AttemptState.SUCCEEDED: set(),
     AttemptState.FAILED: set(),
 }

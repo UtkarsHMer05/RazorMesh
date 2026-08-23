@@ -5,9 +5,28 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import text
+from sqlalchemy.engine import Engine
 
 from razormesh_api.api.main import app
 from razormesh_api.settings import Settings
+
+
+def wipe_business_tables(engine: Engine) -> None:
+    """FK-safe full wipe of all business tables (shared by integration fixtures)."""
+    statements = (
+        "DELETE FROM execution_attempts",
+        "DELETE FROM execution_tickets",
+        "DELETE FROM decisions",
+        "DELETE FROM authorization_spend",
+        "DELETE FROM checkouts",
+        "DELETE FROM intent_contracts",
+        "DELETE FROM products",
+        "DELETE FROM merchants",
+    )
+    with engine.begin() as conn:
+        for stmt in statements:
+            conn.execute(text(stmt))
 
 
 @pytest.fixture(scope="session")

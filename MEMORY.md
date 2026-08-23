@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M37 — Mock Payment Provider (next)  
-**Milestones passed:** M01–M36  
+**Current milestone:** M38 — Checkout Service (next)  
+**Milestones passed:** M01–M37  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 38 files clean, pytest 152/152
+**Gate:** ruff clean, mypy 39 files clean, pytest 159/159
 
 ---
 
@@ -105,6 +105,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Tickets: signed JCS claims; verify sig->expiry->11 bindings fail-closed (M34)
 - Nonce: Redis SET NX EX claim, 20-worker race proven 1 winner (M35)
 - Executor: sole provider caller; durable attempts; unknown keeps reservation (M36)
+- Mock provider: 7 scripted modes incl. timeout-after-success + event replay (M37)
 
 ---
 
@@ -135,7 +136,7 @@ None yet; do not invent.
 
 # Next action
 
-M37 — Mock Provider modes: success/fail/timeout-before/timeout-after/duplicate/delayed/out-of-order.
+M38 — Checkout Service: proposal flow, server-recomputed totals, reject client amount manipulation.
 
 ---
 

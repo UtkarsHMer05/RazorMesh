@@ -30,16 +30,14 @@ def _make_engine():
 
 @pytest.fixture()
 def repos():
+    from conftest import wipe_business_tables
+
     engine = _make_engine()
     factory = create_session_factory(engine)
     r = Repositories(factory)
+    wipe_business_tables(engine)
     yield r
-    # cleanup between tests
-    with r.transaction() as s:
-        s.query(AuthorizationSpend).delete()
-        s.query(IntentContract).delete()
-        s.query(Product).delete()
-        s.query(Merchant).delete()
+    wipe_business_tables(engine)
 
 
 def _merchant(mid: MerchantId) -> Merchant:

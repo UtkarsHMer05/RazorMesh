@@ -6,7 +6,6 @@ from sqlalchemy import create_engine
 from razormesh_api.catalog import _MERCHANT_DEFS, seed_catalog
 from razormesh_api.persistence import models  # noqa: F401
 from razormesh_api.persistence.db import create_session_factory
-from razormesh_api.persistence.models import Merchant, Product
 from razormesh_api.persistence.repositories import Repositories
 
 
@@ -18,16 +17,13 @@ def _make_engine():
 
 @pytest.fixture()
 def repos():
+    from conftest import wipe_business_tables
+
     engine = _make_engine()
     r = Repositories(create_session_factory(engine))
-    with r.transaction() as s:
-        s.query(Product).delete()
-        s.query(Merchant).delete()
+    wipe_business_tables(engine)
     yield r
-    # cleanup between tests
-    with r.transaction() as s:
-        s.query(Product).delete()
-        s.query(Merchant).delete()
+    wipe_business_tables(engine)
 
 
 def test_seed_creates_merchants_and_products(repos: Repositories) -> None:

@@ -9,7 +9,6 @@ from sqlalchemy import create_engine
 from razormesh_api.catalog import seed_catalog
 from razormesh_api.persistence import models  # noqa: F401
 from razormesh_api.persistence.db import create_session_factory
-from razormesh_api.persistence.models import Merchant, Product
 from razormesh_api.persistence.repositories import Repositories
 from razormesh_api.settings import Settings
 
@@ -17,6 +16,7 @@ from razormesh_api.settings import Settings
 @pytest.fixture()
 def seeded_client(settings: Settings) -> Iterator[TestClient]:
     """Client with a freshly seeded catalog, wiped afterwards."""
+    from conftest import wipe_business_tables
     from razormesh_api import api
 
     api.main.get_settings.cache_clear()
@@ -24,16 +24,12 @@ def seeded_client(settings: Settings) -> Iterator[TestClient]:
     app.dependency_overrides[api.main.get_settings] = lambda: settings
     engine = create_engine(settings.database_url, future=True)
     repos = Repositories(create_session_factory(engine))
-    with repos.transaction() as s:
-        s.query(Product).delete()
-        s.query(Merchant).delete()
+    wipe_business_tables(engine)
     seed_catalog(repos)
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
-    with repos.transaction() as s:
-        s.query(Product).delete()
-        s.query(Merchant).delete()
+    wipe_business_tables(engine)
 
 
 def test_merchants_endpoint_paginates(seeded_client: TestClient) -> None:

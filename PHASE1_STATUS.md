@@ -44,7 +44,7 @@
 | M34 | Context-Bound Single-Use Execution Ticket | PASS | Signed JCS-canonical claims bind principal/agent/gen/intent+checkout hashes/merchant/amount/currency/decision/policy/nonce/window; ordered fail-closed verify: SIGNATURE_INVALID -> TICKET_EXPIRED -> 11 binding codes; 8 tests PASS |
 | M35 | Redis Nonce Claim and Concurrency | PASS | SET NX EX atomic claim; replay rejected; TTL bounded; holder-only Lua release; 20-worker same-nonce race -> exactly 1 winner; Redis down -> CoordinationUnavailable fail-closed; 5 tests PASS |
 | M36 | Trusted Payment Executor + Durable ExecutionAttempt | PASS | Only executor calls PaymentProvider; durable attempts CREATED->EXECUTING->SUCCEEDED/FAILED/PROVIDER_UNKNOWN (transition-guarded); idempotency-key re-entry returns same attempt (never fresh op); unknown keeps reservation, failure releases, success commits; ticket persisted for FK/audit; 6 tests PASS |
-| M37 | Mock Payment Provider | NOT_STARTED | — |
+| M37 | Mock Payment Provider | PASS | 7 modes (success/failure/timeout-before/timeout-after-success/duplicate/delayed/out-of-order) driving REAL executor: provider-side effects ledger proves money-moved-vs-not; unknown+reconciliation resolves to SUCCEEDED; duplicate delivery keeps 1 effect; 7 tests PASS |
 | M38 | Checkout Service | NOT_STARTED | — |
 | M39 | Live Checkout Revalidation | NOT_STARTED | — |
 | M40 | Untrusted Content Boundary | NOT_STARTED | — |
@@ -267,6 +267,12 @@ M03 — Project Charter.
 - Tests cover: success+commit, definitive failure+release (+error_code persisted), provider exception→UNKNOWN+reservation kept, retry-same-idempotency never recharges (provider.calls==1), tampered ticket blocks before any side effect (zero attempts), nonce replay rejected.
 - Note: test chain helper uses incremental flushes between parent/child merges — SQLAlchemy UOW did not derive FK order without relationship(); flagged for later normalization.
 - Validation: ruff clean; mypy strict 38 files clean; pytest 152/152.
+
+## M37 — Mock Payment Provider — PASS
+- `providers/mock.py`: `MockPaymentProvider` with thread-safe effects ledger + event queue; modes SUCCESS, DEFINITIVE_FAILURE, TIMEOUT_BEFORE_EFFECT (no provider-side effect), TIMEOUT_AFTER_SUCCESS (effect recorded THEN raise — proves "unknown" can mean paid), DUPLICATE_EVENT (replay returns same reference, single effect), DELAYED_EVENT (UNKNOWN now, SUCCEEDED delivered later), OUT_OF_ORDER_EVENT (terminal before creation with sequence proof).
+- Tests drive the REAL TrustedPaymentExecutor: success→SUCCEEDED+commit; failure→FAILED+release+zero effects; timeout-before→UNKNOWN+held reservation+NO money moved; timeout-after→UNKNOWN but reconciliation via pending_events resolves to SUCCEEDED.
+- Test infra: shared FK-safe `wipe_business_tables` in conftest used by all integration fixtures (fixes cross-fixture pollution).
+- Validation: ruff clean; mypy strict 39 files clean; pytest 159/159.
 
 ---
 
