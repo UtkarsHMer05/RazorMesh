@@ -42,7 +42,7 @@
 | M32 | Decision Engine | PASS | Deterministic matrix: state gate (non-AUTHORIZED -> BLOCK incl. BLOCKED/CHALLENGED), FAIL->BLOCK, UNKNOWN->CHALLENGE, else ALLOW; policy_version pinned; 7 tests PASS incl. 6-status gate parametrization + determinism |
 | M33 | Dev Signing Key Management | PASS | Ed25519 pair via cryptography lib at settings-driven paths (infra/keys/, gitignored); 0o600 private perms; missing key -> actionable DevKeyError; sign/verify + cross-key rejection + idempotent ensure tested (6 tests); live keygen verified untracked |
 | M34 | Context-Bound Single-Use Execution Ticket | PASS | Signed JCS-canonical claims bind principal/agent/gen/intent+checkout hashes/merchant/amount/currency/decision/policy/nonce/window; ordered fail-closed verify: SIGNATURE_INVALID -> TICKET_EXPIRED -> 11 binding codes; 8 tests PASS |
-| M35 | Redis Nonce Claim and Concurrency | NOT_STARTED | — |
+| M35 | Redis Nonce Claim and Concurrency | PASS | SET NX EX atomic claim; replay rejected; TTL bounded; holder-only Lua release; 20-worker same-nonce race -> exactly 1 winner; Redis down -> CoordinationUnavailable fail-closed; 5 tests PASS |
 | M36 | Trusted Payment Executor + Durable ExecutionAttempt | NOT_STARTED | — |
 | M37 | Mock Payment Provider | NOT_STARTED | — |
 | M38 | Checkout Service | NOT_STARTED | — |
@@ -254,6 +254,12 @@ M03 — Project Charter.
 - Distinct machine-readable codes: SIGNATURE_INVALID, MALFORMED_TICKET, TICKET_EXPIRED, PRINCIPAL_MISMATCH, AGENT_MISMATCH, INTENT_MISMATCH, AUTHORIZATION_SUPERSEDED (hash or generation), CHECKOUT_MISMATCH, CHECKOUT_CHANGED (hash or revision), MERCHANT_MISMATCH, AMOUNT_MISMATCH, CURRENCY_MISMATCH.
 - Tests prove: happy path; amount tampering → signature failure; expired-but-valid-binding rejected; wrong principal/agent/merchant rejected; superseded authorization (generation bump + new intent hash) rejected; changed checkout (hash or revision) rejected; nonce mandatory.
 - Validation: ruff clean; mypy strict 36 files clean; pytest 141/141.
+
+## M35 — Redis Nonce Claim and Concurrency — PASS
+- `nonce.py`: `NonceRegistry` over Redis `SET key value NX EX ttl` (single atomic compare-and-set); holder-only compensating release via Lua compare-and-delete; TTL bounded (default 300s); `holder_of`/`ttl_of` inspection.
+- Fail-closed: Redis unreachable → `CoordinationUnavailable` on every operation, so no side effect proceeds without dedup capability. PostgreSQL remains durable authority; Redis holds only ephemeral claims.
+- Race proof: 20 real threads claim the SAME nonce → exactly 1 winner, 19 rejected. Replay after first use always rejected; distinct nonces independent.
+- Validation: ruff clean; mypy strict 37 files clean; pytest 146/146.
 
 ---
 
