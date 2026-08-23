@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M20 — Database Schema (next)  
-**Milestones passed:** M01–M19  
+**Current milestone:** M21 — Repository/DAL (next)  
+**Milestones passed:** M01–M20  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy strict clean (17 files), pytest 48/48, tsc clean
+**Gate:** ruff clean, mypy 19/19, pytest 52/52 (M20 schema trigger verified)
 
 ---
 
@@ -88,6 +88,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Intent: frozen contract with generation/expiry/currency invariants (M17)
 - Checkout: server recomputed totals, mixed-currency and tampering rejected (M18)
 - Provenance: UNTRUSTED_CONTENT cannot satisfy authority gates (M19)
+- DB: 9 tables, alembic upgrade/downgrade, audit trigger blocks mutation (M20)
 
 ---
 
@@ -118,7 +119,7 @@ None yet; do not invent.
 
 # Next action
 
-M20 — Database Schema: migrations for merchants/products/intents/checkouts/decisions/spend tickets/attempts/audit with indexes/uniques, then M21 DAL.
+M21 — Repository/Data Access Layer: transactional repos, row locks/versioning, rollback tests.
 
 ---
 

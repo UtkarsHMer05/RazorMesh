@@ -27,7 +27,7 @@
 | M17 | Intent Contract Model | PASS | IntentContract 7 tests PASS, frozen + generation/currency/expiry invariants, fixtures |
 | M18 | Canonical Checkout Envelope | PASS | CheckoutEnvelope recomputation 7 tests PASS, client total manipulation rejected |
 | M19 | Provenance Model | PASS | Provenanced trust classes 6 tests PASS, UNTRUSTED cannot occupy authority slots |
-| M20 | Database Schema | NOT_STARTED | — |
+| M20 | Database Schema | PASS | 9 tables + alembic 1 revision, upgrade/downgrade verified, audit trigger blocks UPDATE/DELETE, 4 schema tests PASS |
 | M21 | Repository/Data Access Layer | NOT_STARTED | — |
 | M22 | Merchant Catalog | NOT_STARTED | — |
 | M23 | Catalog API | NOT_STARTED | — |
