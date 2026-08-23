@@ -39,7 +39,7 @@
 | M29 | Merchant/Product/Quantity Rules | PASS | Allowlists honor None=any/empty=nothing (SEC-018); category+brand rules use TRUSTED product facts; missing fact -> UNKNOWN (CATEGORY_UNKNOWN/BRAND_UNKNOWN), never silent PASS; brand allow_only/forbid modes case-insensitive; quantity per-line + aggregate; 7 tests PASS |
 | M30 | Subscription/Expiry/Approval Rules | PASS | Recurring checkout requires explicit permission; expiry inclusive-dead (now==expires_at FAIL); approval threshold boundary: total==threshold PASS, +1 -> UNKNOWN APPROVAL_REQUIRED (deterministic challenge signal); 5 tests PASS |
 | M31 | Stateful Spend Reservation and Aggregate Budget | PASS | SpendManager: reserve/commit/release under FOR UPDATE row lock; 10 threads x 150k vs 1M -> exactly 6 reserved, invariants hold; provider-unknown keeps reservation; Hypothesis random sequences (15 examples) preserve authorized>=reserved+committed |
-| M32 | Decision Engine | NOT_STARTED | — |
+| M32 | Decision Engine | PASS | Deterministic matrix: state gate (non-AUTHORIZED -> BLOCK incl. BLOCKED/CHALLENGED), FAIL->BLOCK, UNKNOWN->CHALLENGE, else ALLOW; policy_version pinned; 7 tests PASS incl. 6-status gate parametrization + determinism |
 | M33 | Dev Signing Key Management | NOT_STARTED | — |
 | M34 | Context-Bound Single-Use Execution Ticket | NOT_STARTED | — |
 | M35 | Redis Nonce Claim and Concurrency | NOT_STARTED | — |
@@ -236,6 +236,12 @@ M03 — Project Charter.
 - Concurrency proof: 10 threads × 150k vs 1M authority → exactly 6 reserved / 4 rejected, invariants intact afterwards.
 - Hypothesis property test (15 examples): random reserve(/release) sequences keep reserved ≥ 0, committed = 0, reserved+committed ≤ authorized at every step.
 - Validation: ruff clean; mypy strict 33 files clean; pytest 115/115.
+
+## M32 — Decision Engine — PASS
+- `decider.py`: `Decision` StrEnum (ALLOW/CHALLENGE/BLOCK), frozen `DecisionOutcome` (decision, reason_codes, rule_results, policy_version=`razormesh-phase1-policy-v1`), `DecisionEngine.decide`.
+- Matrix order: state gate first (`assert_executable`; non-AUTHORIZED → BLOCK STATUS_NOT_EXECUTABLE — BLOCKED never executes, CHALLENGED cannot until reauthorization); any FAIL → BLOCK; any UNKNOWN → CHALLENGE (fail-closed step-up, e.g. APPROVAL_REQUIRED); else ALLOW. No ML scores anywhere.
+- `_safe` made public as `safe_evaluate` for cross-module reuse.
+- Validation: ruff clean; mypy strict 34 files clean; pytest 127/127.
 
 ---
 

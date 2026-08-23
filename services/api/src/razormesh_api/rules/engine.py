@@ -91,7 +91,7 @@ class FunctionRule:
         return self._fn(ctx)
 
 
-def _safe(rule: Rule, ctx: EvaluationContext) -> RuleResult:
+def safe_evaluate(rule: Rule, ctx: EvaluationContext) -> RuleResult:
     """A crashing rule degrades to UNKNOWN (fail-closed), never to PASS."""
     try:
         return rule.evaluate(ctx)
@@ -121,7 +121,7 @@ class AllOf:
         failures: list[RuleResult] = []
         unknowns: list[RuleResult] = []
         for rule in self._rules:
-            result = _safe(rule, ctx)
+            result = safe_evaluate(rule, ctx)
             if result.outcome == RuleOutcome.FAIL:
                 failures.append(result)
             elif result.outcome == RuleOutcome.UNKNOWN:
@@ -186,4 +186,4 @@ class RazorGuardEngine:
         self._rules = tuple(rules)
 
     def evaluate(self, ctx: EvaluationContext) -> EvaluationReport:
-        return EvaluationReport(results=tuple(_safe(r, ctx) for r in self._rules))
+        return EvaluationReport(results=tuple(safe_evaluate(r, ctx) for r in self._rules))

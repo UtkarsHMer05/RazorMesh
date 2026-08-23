@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M32 — Decision Engine (next)  
-**Milestones passed:** M01–M31  
+**Current milestone:** M33 — Dev Signing Key Management (next)  
+**Milestones passed:** M01–M32  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 33 files clean, pytest 115/115
+**Gate:** ruff clean, mypy 34 files clean, pytest 127/127
 
 ---
 
@@ -100,6 +100,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Catalog rules: allowlists + trusted ProductFacts; unknown fact -> UNKNOWN (M29)
 - Policy rules: recurring/expiry hard fails; approval threshold -> APPROVAL_REQUIRED UNKNOWN (M30)
 - SpendManager: atomic reserve/commit/release, row-locked, concurrency-proven (M31)
+- Decision engine: state gate + FAIL->BLOCK + UNKNOWN->CHALLENGE else ALLOW (M32)
 
 ---
 
@@ -130,7 +131,7 @@ None yet; do not invent.
 
 # Next action
 
-M32 — Decision Engine: combine rule outputs into deterministic ALLOW/CHALLENGE/BLOCK matrix.
+M33 — Dev Signing Keys: local Ed25519 keygen, gitignored private keys.
 
 ---
 
