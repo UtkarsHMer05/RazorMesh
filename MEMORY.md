@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M34 — Context-Bound Single-Use Execution Ticket (next)  
-**Milestones passed:** M01–M33  
+**Current milestone:** M35 — Redis Nonce Claim and Concurrency (next)  
+**Milestones passed:** M01–M34  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 35 files clean, pytest 133/133
+**Gate:** ruff clean, mypy 36 files clean, pytest 141/141
 
 ---
 
@@ -102,6 +102,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - SpendManager: atomic reserve/commit/release, row-locked, concurrency-proven (M31)
 - Decision engine: state gate + FAIL->BLOCK + UNKNOWN->CHALLENGE else ALLOW (M32)
 - Dev keys: Ed25519 at infra/keys/ (gitignored), ensure/load/sign/verify (M33)
+- Tickets: signed JCS claims; verify sig->expiry->11 bindings fail-closed (M34)
 
 ---
 
@@ -132,7 +133,7 @@ None yet; do not invent.
 
 # Next action
 
-M34 — Execution Ticket: bind principal/agent/gen/hashes/merchant/amount/nonce; tamper+expiry tests.
+M35 — Redis Nonce Claim: atomic first-use claim; 20-worker same-ticket race.
 
 ---
 

@@ -41,7 +41,7 @@
 | M31 | Stateful Spend Reservation and Aggregate Budget | PASS | SpendManager: reserve/commit/release under FOR UPDATE row lock; 10 threads x 150k vs 1M -> exactly 6 reserved, invariants hold; provider-unknown keeps reservation; Hypothesis random sequences (15 examples) preserve authorized>=reserved+committed |
 | M32 | Decision Engine | PASS | Deterministic matrix: state gate (non-AUTHORIZED -> BLOCK incl. BLOCKED/CHALLENGED), FAIL->BLOCK, UNKNOWN->CHALLENGE, else ALLOW; policy_version pinned; 7 tests PASS incl. 6-status gate parametrization + determinism |
 | M33 | Dev Signing Key Management | PASS | Ed25519 pair via cryptography lib at settings-driven paths (infra/keys/, gitignored); 0o600 private perms; missing key -> actionable DevKeyError; sign/verify + cross-key rejection + idempotent ensure tested (6 tests); live keygen verified untracked |
-| M34 | Context-Bound Single-Use Execution Ticket | NOT_STARTED | — |
+| M34 | Context-Bound Single-Use Execution Ticket | PASS | Signed JCS-canonical claims bind principal/agent/gen/intent+checkout hashes/merchant/amount/currency/decision/policy/nonce/window; ordered fail-closed verify: SIGNATURE_INVALID -> TICKET_EXPIRED -> 11 binding codes; 8 tests PASS |
 | M35 | Redis Nonce Claim and Concurrency | NOT_STARTED | — |
 | M36 | Trusted Payment Executor + Durable ExecutionAttempt | NOT_STARTED | — |
 | M37 | Mock Payment Provider | NOT_STARTED | — |
@@ -248,6 +248,12 @@ M03 — Project Charter.
 - Missing/unreadable/wrong-type keys raise `DevKeyError` with actionable regeneration instructions — no silent key substitution.
 - Security: `infra/keys/` + `*.pem` gitignored (verified via check-ignore); live generation run, files untracked; sign/verify roundtrip, tamper rejection, cross-pair rejection tested.
 - Validation: ruff clean; mypy strict 35 files clean; pytest 133/133.
+
+## M34 — Context-Bound Single-Use Execution Ticket — PASS
+- `tickets.py`: `ExecutionTicketClaims` (frozen pydantic: ticket/decision/checkout/intent ids, principal, agent, generation, intent_hash, checkout_hash+revision, merchant, amount, currency, policy_version, nonce, issued/expires), `TicketIssuer` (Ed25519 over RFC 8785 canonical claim bytes with schema domain-separation), `TicketVerifier` with ordered fail-closed checks: signature → expiry → 11 binding comparisons against `CurrentBinding` (the CURRENT authoritative values).
+- Distinct machine-readable codes: SIGNATURE_INVALID, MALFORMED_TICKET, TICKET_EXPIRED, PRINCIPAL_MISMATCH, AGENT_MISMATCH, INTENT_MISMATCH, AUTHORIZATION_SUPERSEDED (hash or generation), CHECKOUT_MISMATCH, CHECKOUT_CHANGED (hash or revision), MERCHANT_MISMATCH, AMOUNT_MISMATCH, CURRENCY_MISMATCH.
+- Tests prove: happy path; amount tampering → signature failure; expired-but-valid-binding rejected; wrong principal/agent/merchant rejected; superseded authorization (generation bump + new intent hash) rejected; changed checkout (hash or revision) rejected; nonce mandatory.
+- Validation: ruff clean; mypy strict 36 files clean; pytest 141/141.
 
 ---
 
