@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M28 — Money Rules (next)  
-**Milestones passed:** M01–M27  
+**Current milestone:** M29 — Merchant/Product/Quantity Rules (next)  
+**Milestones passed:** M01–M28  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 29 files clean, pytest 91/91
+**Gate:** ruff clean, mypy 30 files clean, pytest 98/98
 
 ---
 
@@ -96,6 +96,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Evidence ledger: JCS+SHA256 hash chain, advisory-lock appends, tamper detection (M25)
 - Authz hashing: JCS canonical projections; untrusted text provably excluded (M26)
 - Rule engine: PASS/FAIL/UNKNOWN rules + combinators; crash -> UNKNOWN fail-closed (M27)
+- Money rules: 6 rules, inclusive boundaries, budget counts reserved+committed (M28)
 
 ---
 
@@ -126,7 +127,7 @@ None yet; do not invent.
 
 # Next action
 
-M28 — Money Rules: amount/currency/final-fee/shipping/budget rules with boundary tests.
+M29 — Merchant/Product/Quantity Rules: allowlists, unknown-data fail-closed behavior.
 
 ---
 

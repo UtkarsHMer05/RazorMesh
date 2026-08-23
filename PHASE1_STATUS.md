@@ -35,7 +35,7 @@
 | M25 | Evidence Ledger | PASS | JCS(RFC 8785)-canonicalized SHA-256 hash chain, genesis + link checks, advisory-lock serialized appends (5x10 concurrent = single linear chain), tampered payload/link detected; seq anchor migration round-trips |
 | M26 | Canonical Authorization Hashing | PASS | JCS(RFC 8785) canonicalization with RFC known-answer vectors; documented checkout/intent projections; untrusted text + presentation drift provably excluded; relevant drift (price/qty/revision/recurring/generation) changes hash; 7 tests PASS |
 | M27 | RazorGuard Rule Engine Foundation | PASS | StrEnum PASS/FAIL/UNKNOWN outcomes, FunctionRule + AllOf combinators, stable reason codes + explanations, crashing rules degrade to UNKNOWN (fail-closed), duplicate rule ids rejected, determinism test; 7 tests PASS |
-| M28 | Money Rules | NOT_STARTED | — |
+| M28 | Money Rules | PASS | 6 deterministic rules: currency match, positive amount, max_total (inclusive boundary), aggregate budget incl. open reservations (exact-fit PASS / -1 minor FAIL), fee sanity (<= subtotal), shipping sanity (<=10x subtotal); 7 boundary tests PASS |
 | M29 | Merchant/Product/Quantity Rules | NOT_STARTED | — |
 | M30 | Subscription/Expiry/Approval Rules | NOT_STARTED | — |
 | M31 | Stateful Spend Reservation and Aggregate Budget | NOT_STARTED | — |
@@ -213,6 +213,12 @@ M03 — Project Charter.
 - Fail-closed guarantees: crashing rules → UNKNOWN with RULE_ERROR (never PASS); UNKNOWN blocks overall pass; duplicate rule ids rejected at construction; invalid outcomes rejected in RuleResult.
 - Determinism: same context → identical report (tested).
 - Validation: ruff clean; mypy strict 29 files clean; pytest 91/91.
+
+## M28 — Money Rules — PASS
+- `rules/money_rules.py`: `MONEY_RULES` registry of 6 deterministic rules with stable reason codes: CURRENCY_MISMATCH, ZERO_AMOUNT, TOTAL_EXCEEDS_MAX, BUDGET_EXCEEDED (counts committed+reserved+proposed), FEES_EXCEED_SUBTOTAL, SHIPPING_EXCESSIVE (10x-subtotal ceiling; zero subtotal forbids shipping).
+- Boundary semantics inclusive-on-allowed: total == max_total PASS / +1 FAIL; budget exact-fit PASS / -1 minor FAIL; fees == subtotal PASS / +1 FAIL; shipping == 10x subtotal PASS / +1 FAIL.
+- Rules read only trusted context (intent + server-recomputed totals); untrusted text cannot influence outcomes.
+- Validation: ruff clean; mypy strict 30 files clean; pytest 98/98.
 
 ---
 
