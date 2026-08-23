@@ -13,6 +13,7 @@ report, byte for byte.
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Protocol
 
@@ -45,6 +46,10 @@ class EvaluationContext:
     committed_minor: int = 0  # durable spend already committed against authority
     reserved_minor: int = 0  # open reservations held against authority
     product_facts: dict[str, ProductFacts] | None = None  # trusted catalog facts
+    now_utc: datetime | None = None  # evaluation instant; None -> wall clock
+
+    def effective_now(self) -> datetime:
+        return self.now_utc or datetime.now(UTC)
 
 
 @dataclass(frozen=True)

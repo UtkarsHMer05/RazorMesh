@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M30 — Subscription/Expiry/Approval Rules (next)  
-**Milestones passed:** M01–M29  
+**Current milestone:** M31 — Stateful Spend Reservation (next)  
+**Milestones passed:** M01–M30  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 31 files clean, pytest 105/105
+**Gate:** ruff clean, mypy 32 files clean, pytest 110/110
 
 ---
 
@@ -98,6 +98,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Rule engine: PASS/FAIL/UNKNOWN rules + combinators; crash -> UNKNOWN fail-closed (M27)
 - Money rules: 6 rules, inclusive boundaries, budget counts reserved+committed (M28)
 - Catalog rules: allowlists + trusted ProductFacts; unknown fact -> UNKNOWN (M29)
+- Policy rules: recurring/expiry hard fails; approval threshold -> APPROVAL_REQUIRED UNKNOWN (M30)
 
 ---
 
@@ -128,7 +129,7 @@ None yet; do not invent.
 
 # Next action
 
-M30 — Subscription/Expiry/Approval Rules: recurring permission, expiry, challenge thresholds.
+M31 — Stateful Spend Reservation: durable authorized/reserved/committed with concurrency proof.
 
 ---
 
