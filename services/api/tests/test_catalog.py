@@ -20,7 +20,11 @@ def _make_engine():
 def repos():
     engine = _make_engine()
     r = Repositories(create_session_factory(engine))
+    with r.transaction() as s:
+        s.query(Product).delete()
+        s.query(Merchant).delete()
     yield r
+    # cleanup between tests
     with r.transaction() as s:
         s.query(Product).delete()
         s.query(Merchant).delete()

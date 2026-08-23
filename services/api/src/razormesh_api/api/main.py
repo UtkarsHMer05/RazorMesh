@@ -10,6 +10,7 @@ from redis import Redis
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
+from razormesh_api.api.routes.catalog import router as catalog_router
 from razormesh_api.settings import Settings, get_settings
 
 app = FastAPI(
@@ -17,6 +18,8 @@ app = FastAPI(
     version="0.1.0",
     description="Phase-1 local trust core. All payments are simulated via MockPaymentProvider.",
 )
+
+app.include_router(catalog_router)
 
 settings_dep = Annotated[Settings, Depends(get_settings)]
 

@@ -30,7 +30,7 @@
 | M20 | Database Schema | PASS | 9 tables + alembic 1 revision, upgrade/downgrade verified, audit trigger blocks UPDATE/DELETE, 4 schema tests PASS |
 | M21 | Repository/Data Access Layer | PASS | Repositories for all entities; transactional scope + FOR UPDATE row lock; rollback + 5-thread concurrency overspend test PASS |
 | M22 | Merchant Catalog | PASS | 5 merchants / 50 synthetic products, price+seller+condition+recurring+shipping variations, idempotent atomic seed, live DB verified, 3 tests PASS |
-| M23 | Catalog API | NOT_STARTED | — |
+| M23 | Catalog API | PASS | GET /catalog/merchants + /catalog/products (+/{id}) read-only; pagination bounds (1..100), filter validation, typed ProductId path param (422 malformed / 404 missing); 6 API tests PASS |
 | M24 | Authorization State Machine | NOT_STARTED | — |
 | M25 | Evidence Ledger | NOT_STARTED | — |
 | M26 | Canonical Authorization Hashing | NOT_STARTED | — |
@@ -178,6 +178,16 @@ M03 — Project Charter.
 - Seed is idempotent (presence check) and atomic (single `session_scope` transaction via `repos.transaction()`).
 - Validation: ruff clean; mypy strict 21 files clean; pytest 60/60 (3 new catalog tests: seed+idempotency, variations, category/brand filtering); live DB seed run twice → 50 products/5 merchants, second call seeded 0.
 - Note: merchant/product IDs must be valid Crockford-base32 ULIDs (M15 validation); slugs are descriptive only.
+
+## M23 — Catalog API — PASS
+- `api/routes/catalog.py`: read-only router `/catalog` wired into `main.py`.
+  - `GET /catalog/merchants`, `GET /catalog/products` (filters: category, brand), `GET /catalog/products/{product_id}`.
+  - Pagination bounded: `limit` 1..100 (default 20), `offset` >= 0; violations → 422. Page bodies include `total/limit/offset/items`.
+  - Path param uses typed `ProductId` (pydantic core schema) → malformed IDs rejected 422 before touching DB; unknown valid ID → 404.
+  - Repositories gained `count()` for merchants/products (pagination totals).
+- Security regression: OpenAPI paths under `/catalog` expose GET only (test asserts no write methods).
+- Validation: ruff clean; mypy strict 23 files clean; pytest 66/66; live smoke: seeded DB → products total 50, single product fetch 200, merchants total 5.
+- Test isolation fixed: catalog test fixtures now wipe merchant/product tables before and after.
 
 ---
 

@@ -10,7 +10,7 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from razormesh_api.domain.ids import (
@@ -78,6 +78,10 @@ class MerchantRepository:
         with session_scope(self._factory) as s:
             return s.execute(select(Merchant).limit(limit).offset(offset)).scalars().all()
 
+    def count(self) -> int:
+        with session_scope(self._factory) as s:
+            return int(s.scalar(select(func.count()).select_from(Merchant)) or 0)
+
 
 class ProductRepository:
     def __init__(self, factory: sessionmaker[Session]) -> None:
@@ -123,6 +127,15 @@ class ProductRepository:
             if brand:
                 stmt = stmt.where(Product.brand == brand)
             return s.execute(stmt.limit(limit).offset(offset)).scalars().all()
+
+    def count(self, category: str | None = None, brand: str | None = None) -> int:
+        with session_scope(self._factory) as s:
+            stmt = select(func.count()).select_from(Product)
+            if category:
+                stmt = stmt.where(Product.category == category)
+            if brand:
+                stmt = stmt.where(Product.brand == brand)
+            return int(s.scalar(stmt) or 0)
 
 
 class IntentRepository:
