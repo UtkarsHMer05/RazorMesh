@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M22 — Merchant Catalog (next)  
-**Milestones passed:** M01–M21  
+**Current milestone:** M23 — Catalog API (next)  
+**Milestones passed:** M01–M22  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 20/20, pytest 57/57
+**Gate:** ruff clean, mypy 21 files clean, pytest 60/60
 
 ---
 
@@ -90,6 +90,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Provenance: UNTRUSTED_CONTENT cannot satisfy authority gates (M19)
 - DB: 9 tables, alembic upgrade/downgrade, audit trigger blocks mutation (M20)
 - DAL: repos + FOR UPDATE row lock, concurrency overspend guard (M21)
+- Catalog: 5 merchants/50 products seeded idempotently+atomically; IDs must be ULIDs (M22)
 
 ---
 
@@ -120,7 +121,7 @@ None yet; do not invent.
 
 # Next action
 
-M22 — Merchant Catalog: seed 20–50 synthetic products (price/seller/condition/recurring/shipping).
+M23 — Catalog API: bounded read-only endpoints with validation + pagination.
 
 ---
 

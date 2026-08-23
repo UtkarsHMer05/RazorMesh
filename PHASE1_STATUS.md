@@ -29,7 +29,7 @@
 | M19 | Provenance Model | PASS | Provenanced trust classes 6 tests PASS, UNTRUSTED cannot occupy authority slots |
 | M20 | Database Schema | PASS | 9 tables + alembic 1 revision, upgrade/downgrade verified, audit trigger blocks UPDATE/DELETE, 4 schema tests PASS |
 | M21 | Repository/Data Access Layer | PASS | Repositories for all entities; transactional scope + FOR UPDATE row lock; rollback + 5-thread concurrency overspend test PASS |
-| M22 | Merchant Catalog | NOT_STARTED | — |
+| M22 | Merchant Catalog | PASS | 5 merchants / 50 synthetic products, price+seller+condition+recurring+shipping variations, idempotent atomic seed, live DB verified, 3 tests PASS |
 | M23 | Catalog API | NOT_STARTED | — |
 | M24 | Authorization State Machine | NOT_STARTED | — |
 | M25 | Evidence Ledger | NOT_STARTED | — |
@@ -172,6 +172,12 @@ M03 — Project Charter.
 
 ### Known limitations (M03–M05)
 - Docs-only milestones; no executable validation yet. Documentation-vs-code consistency re-checked continuously from M06 onward.
+
+## M22 — Merchant Catalog — PASS
+- `catalog.py`: 5 synthetic merchants (audio/home/books/outdoor/gaming), 50 products (10 each) with price tiers, brands, conditions (new/refurbished/used), recurring flags (monthly), shipping rule (>=$2000 free else ₹499). IDs are generated ULIDs (`mrc_`/`prd_`).
+- Seed is idempotent (presence check) and atomic (single `session_scope` transaction via `repos.transaction()`).
+- Validation: ruff clean; mypy strict 21 files clean; pytest 60/60 (3 new catalog tests: seed+idempotency, variations, category/brand filtering); live DB seed run twice → 50 products/5 merchants, second call seeded 0.
+- Note: merchant/product IDs must be valid Crockford-base32 ULIDs (M15 validation); slugs are descriptive only.
 
 ---
 
