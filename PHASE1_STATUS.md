@@ -18,9 +18,9 @@
 | M08 | Root Development Commands | PASS | Makefile targets validated with make -n / make help; reset-local destructive-guarded |
 | M09 | Local PostgreSQL | PASS | postgres:18.6-alpine healthy; volume persists across restart; 127.0.0.1:15432 only |
 | M10 | Local Redis | PASS | redis:8.8.2-alpine healthy; SET/GET verified; 127.0.0.1:16379 only; coordination-only config |
-| M11 | FastAPI Scaffold | NOT_STARTED | — |
-| M12 | Python Engineering Baseline | NOT_STARTED | — |
-| M13 | Next.js Scaffold | NOT_STARTED | — |
+| M11 | FastAPI Scaffold | PASS | /health vs /ready (DB/Redis fail-closed 503); OpenAPI generates; live smoke OK |
+| M12 | Python Engineering Baseline | PASS | uv+lock py3.13; ruff strict-ish clean; mypy --strict clean; pytest 5/5; coverage configured |
+| M13 | Next.js Scaffold | IN_PROGRESS | — |
 | M14 | Frontend Test Baseline | NOT_STARTED | — |
 | M15 | Shared Identifier Types | NOT_STARTED | — |
 | M16 | Money Value Object | NOT_STARTED | — |

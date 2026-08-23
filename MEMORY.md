@@ -30,8 +30,8 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M11 — FastAPI Scaffold  
-**Milestones passed:** M01–M10  
+**Current milestone:** M13 — Next.js Scaffold  
+**Milestones passed:** M01–M12  
 **Last updated:** 2026-08-23
 
 ---

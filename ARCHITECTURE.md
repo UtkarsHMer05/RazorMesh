@@ -455,13 +455,14 @@ razormesh-trust/
 │
 ├── services/
 │   └── api/
-│       ├── api/
-│       ├── domain/
-│       ├── razor_guard/
-│       ├── execution/
-│       ├── providers/
-│       ├── audit/
-│       ├── persistence/
+│       ├── src/razormesh_api/
+│       │   ├── api/
+│       │   ├── domain/
+│       │   ├── razor_guard/
+│       │   ├── execution/
+│       │   ├── providers/
+│       │   ├── audit/
+│       │   └── persistence/
 │       └── tests/
 │
 ├── benchmark/

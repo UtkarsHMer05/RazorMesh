@@ -64,7 +64,7 @@ Newest numeric version is not automatically the correct version.
 | @testing-library/jest-dom | 7.0.1 | 2026-08-23 | npm registry | |
 | jsdom | 30.0.1 | 2026-08-23 | npm registry | Vitest DOM environment |
 | @playwright/test | 1.62.1 | 2026-08-23 | npm registry | Satisfies Next 16 suggested peer ^1.51.1 |
-| ESLint | 10.9.0 | 2026-08-23 | npm registry | eslint-config-next@16 requires >=9 |
+| ESLint | 9.39.5 | 2026-08-23 | npm registry | v10 evaluated first but bundled eslint-plugin-react@7.37.5 crashes under ESLint 10 (`contextOrFilename.getFilename is not a function`); 9.x is the newest compatible supported line |
 | @razorpay/blade | NOT SELECTED (evaluated 12.111.0) | 2026-08-23 | npm registry + github.com/razorpay/blade | Peer stack pulls styled-components@^5 + framer-motion + RN peers; styled-components v5 + React 19 RSC risk = material Phase-1 complexity → fallback token layer per DESIGN.md §3; decision recorded in DECISIONS.md D-022 |
 
 ---
@@ -87,5 +87,6 @@ Decision reference:
 
 | Date | Milestone | Component | Old | New | Reason |
 |---|---|---|---|---|---|
+| 2026-08-23 | M14 | ESLint | 10.9.0 | 9.39.5 | eslint-plugin-react@7.37.5 incompatible with ESLint 10; chose newest compatible stable per §11 policy; advisory re-check at M48 |
 | 2026-08-23 | M02 | Node.js | v20.20.2 (default) | v22.23.2 LTS default | v20 past EOL Apr 2026; human approved 22 LTS |
 | 2026-08-23 | M02 | uv | not installed | 0.12.5 | Governance prefers uv; human approved install |
