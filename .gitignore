@@ -1,0 +1,57 @@
+# --- OS noise ---
+.DS_Store
+Thumbs.db
+
+# --- Environment / secrets (keep .env.example tracked) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+infra/keys/
+**/dev_keys/
+keys/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+.turbo/
+.eslintcache
+*.tsbuildinfo
+next-env.d.ts
+
+# --- Test artifacts ---
+playwright-report/
+test-results/
+blob-report/
+coverage/
+
+# --- Local data / docker ---
+infra/data/
+*.sql.gz
+*.dump
+pgdata/
+redisdata/
+
+# --- Model weights / large artifacts (future phases) ---
+*.safetensors
+*.bin models/
+models/

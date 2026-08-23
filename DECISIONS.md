@@ -1,0 +1,377 @@
+# DECISIONS.md — RazorMesh Trust Decision Log
+
+## Policy
+
+This file is an append-only decision record.
+
+- Never delete historical accepted decisions.
+- Never silently edit a historical decision to make history look cleaner.
+- If a decision changes, create a new decision with `Supersedes: D-XXX`.
+- Update affected source-of-truth documents in the same milestone.
+- Every entry includes context, decision, rationale, consequences and evidence.
+- `DECISIONS.md` cannot override `RULES.md`, `PRD.md`, `PHASES.md` or `SECURITY.md` without explicit human approval and synchronized edits.
+
+## Template
+
+```text
+## D-XXX — Title
+Date:
+Milestone:
+Status: Proposed | Accepted | Superseded | Rejected
+Supersedes:
+Affected docs:
+
+Context:
+Decision:
+Rationale:
+Alternatives considered:
+Security/product consequences:
+Validation/evidence:
+Follow-up:
+```
+
+---
+
+## D-001 — Phase 1 is credential-free
+
+Date: 2026-08-23  
+Milestone: Governance/bootstrap  
+Status: Accepted
+
+Context: The trust core should be debugged independently of external accounts.
+
+Decision: Phase 1 uses local fixtures, a mock buyer and `MockPaymentProvider`. No Razorpay/LLM/Modal/Colab credentials are required.
+
+Rationale: Separates trust/security bugs from external integration failures and keeps Phase 1 reproducible.
+
+Consequences: Real Razorpay and AI/ML integrations are deferred to later phases.
+
+---
+
+## D-002 — Modular monolith for Phase 1
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Prefer one modular backend/API deployment boundary instead of multiple microservices during Phase 1.
+
+Rationale: Reduces operational complexity while preserving module interfaces for later extraction.
+
+---
+
+## D-003 — Money uses integer minor units
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: All money is `(amount_minor: integer, currency)`.
+
+Rationale: Avoid floating-point financial errors and make canonical hashing predictable.
+
+---
+
+## D-004 — PostgreSQL is durable financial/security authority
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Durable intent, authorization generation, decisions, spend, execution attempts, payment state and audit live in PostgreSQL.
+
+Rationale: Redis coordination must not be the sole durable truth.
+
+---
+
+## D-005 — Redis is ephemeral coordination
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Redis is used for nonce claims, short-lived locks and cache/coordination only.
+
+---
+
+## D-006 — Three-way RazorGuard decision
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: RazorGuard returns ALLOW, CHALLENGE or BLOCK.
+
+Rationale: Ambiguity should not automatically become fraud nor automatically become approval.
+
+---
+
+## D-007 — Deterministic hard authorization
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Amount, merchant, currency, quantity, expiry, recurring permission, aggregate budget, ticket/context and replay checks are deterministic.
+
+Rationale: Probabilistic AI must not be the final authority over financial side effects.
+
+---
+
+## D-008 — Execution ticket separates proposal from side effect
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: The buyer/agent cannot directly invoke `PaymentProvider`. RazorGuard authorization produces a signed execution ticket consumed by a trusted executor.
+
+---
+
+## D-009 — Ed25519 Phase-1 signing
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Use Ed25519 via established libraries for local execution-ticket signing.
+
+Rationale: Simple modern asymmetric signing suitable for local issuer/verifier separation.
+
+---
+
+## D-010 — Strong ticket context binding
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Tickets bind principal, agent, intent hash, authorization generation, authorization-relevant checkout hash, merchant, amount, currency, decision, policy version, nonce and expiry.
+
+Rationale: Prevent context theft, stale authorization and cross-principal/agent/merchant reuse.
+
+---
+
+## D-011 — Canonical authorization hashing
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Use an explicit deterministic canonical JSON strategy, preferably RFC 8785/JCS-compatible semantics where practical.
+
+Rationale: Avoid accidental cross-language hash disagreement.
+
+---
+
+## D-012 — Hash only authorization-relevant checkout projection
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Checkout authorization hash excludes purely presentational metadata and includes authority-sensitive product/merchant/financial/recurring terms.
+
+Rationale: Prevent both stale-authority execution and unnecessary invalidation on irrelevant UI metadata changes.
+
+---
+
+## D-013 — Spend reservation lifecycle
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Aggregate authorization uses authorized/reserved/committed semantics.
+
+Rationale: A failed provider attempt must not permanently consume budget; an unknown outcome must not release budget too early.
+
+---
+
+## D-014 — Durable execution attempts
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: A durable `ExecutionAttempt` is created/tracked for provider side-effect attempts with states including CREATED, EXECUTING, PROVIDER_UNKNOWN, SUCCEEDED and FAILED.
+
+Rationale: Timeout-after-success cannot safely be treated as "nothing happened".
+
+---
+
+## D-015 — Unknown provider outcome must reconcile
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: A provider-unknown outcome is not retried as a fresh payment operation. The original execution identity is preserved and reconciled.
+
+---
+
+## D-016 — Audit is append-oriented and tamper-evident
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Application exposes append/create only for audit events; historical content is hash-chained; DB mutation restrictions are applied where practical.
+
+Rationale: Detect and discourage historical tampering without falsely claiming absolute immutability.
+
+---
+
+## D-017 — Stateful/property-based security testing
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Hypothesis stateful testing will exercise authorization/payment lifecycle sequences in addition to example-based tests.
+
+---
+
+## D-018 — Real concurrency tests are mandatory
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Replay and aggregate-spend guarantees must be tested with actual concurrent attempts, including a many-worker same-ticket case.
+
+---
+
+## D-019 — Design follows RazorSense principles, not a deceptive clone
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Use Razorpay's public RazorSense/Blade principles and components/tokens where compatible, while clearly presenting RazorMesh as an unofficial hackathon prototype and not inventing proprietary brand specifications.
+
+Rationale: Strong Razorpay fit without pretending official endorsement.
+
+---
+
+## D-020 — Phase-1 benchmark is synthetic and paired
+
+Date: 2026-08-23  
+Status: Accepted
+
+Decision: Use safe/unsafe paired scenarios, compute real metrics, and label all monetary impact as synthetic benchmark GMV.
+
+Rationale: Prevent a "block everything" system from appearing safe and avoid fake merchant-impact claims.
+
+---
+
+## D-021 — Git behavior for this repository
+
+Date: 2026-08-23  
+Milestone: M05 (recorded), effective from repo init  
+Status: Accepted  
+Affected docs: `RULES.md` (Git section), `AI_WORKFLOW.md`
+
+Context: The governance pack says commits require explicit authorization. The human owner explicitly authorized "init git + commit per milestone" in the planning session that postdates the pack.
+
+Decision: Initialize git in the repository root; create one coherent local commit per milestone whose gate has genuinely passed. Never push, force-push, or rewrite history. If the owner revokes this, stop committing immediately and keep evidence in files only.
+
+Rationale: Checkpointed history protects against accidental loss while keeping every commit tied to verified state.
+
+Alternatives considered: no commits at all (weaker protection); commit-per-file (noise).
+
+Security/product consequences: None on runtime; improves auditability of engineering process.
+
+Validation/evidence: `git log` shows one commit per PASS milestone.
+
+Follow-up: Re-confirm at any human gate if ambiguous.
+
+---
+
+## D-022 — Razorpay Blade not selected for Phase 1 UI; fallback tokens used
+
+Date: 2026-08-23  
+Milestone: M05  
+Status: Accepted  
+Supersedes: none (refines D-019)  
+Affected docs: `DESIGN.md`, `VERSION_MANIFEST.md`, `RESEARCH.md`
+
+Context: DESIGN.md prefers official @razorpay/blade when compatible/appropriate. Live registry evaluation found blade@12.111.0 with web peers styled-components@^5, framer-motion, react-hot-toast (+ RN peers).
+
+Decision: Phase 1 uses the documented RazorMesh fallback design-token layer (`DESIGN.md` §5) with RazorSense-inspired state principles. Blade is deferred to Phase 5 polish unless a compatibility re-check passes cleanly.
+
+Rationale: styled-components v5 under React 19 / Next 16 App Router RSC plus heavy peer stack = material compatibility risk for a trust-critical prototype; custom trust components (DecisionCard, CheckoutDiff…) are the actual product surface.
+
+Alternatives considered: install Blade anyway (risk + weight); partial token import from Blade (still pulls peer deps).
+
+Security/product consequences: No security impact; UI remains serious fintech aesthetic per DESIGN.md gates.
+
+Validation/evidence: VERSION_MANIFEST frontend table records the evaluation; RESEARCH.md R-008.
+
+Follow-up: Re-evaluate Blade in Phase 5 against final React/Next versions.
+
+---
+
+## D-023 — Trusted/untrusted content separation as a hard architectural boundary
+
+Date: 2026-08-23  
+Milestone: M05  
+Status: Accepted  
+Affected docs: `SECURITY.md`, `ARCHITECTURE.md`, `RULES.md`
+
+Context: Buyer-agent output, merchant text, search results and browser state can influence what is proposed, but must never redefine authority.
+
+Decision: Every authorization-relevant field carries provenance (trust classes USER_AUTHORITY / TRUSTED_SYSTEM / VERIFIED_MERCHANT_DATA / UNTRUSTED_CONTENT / DERIVED). Untrusted sources cannot construct or mutate fields consumed by policy, thresholds, nonce/ticket issuance, or executor permissions; the boundary is enforced by typed models and deterministic code paths, not by prompt hygiene.
+
+Rationale: Prompt-injection-resistant by construction; untrusted content stays data.
+
+Alternatives considered: filtering/sanitizing malicious-looking text (unreliable, arms race); trusting merchant "verified" flags without provenance typing.
+
+Security consequences: Direct mitigation for TH-18; enables M40 boundary tests.
+
+Validation/evidence: Provenance model tests (M19) prove untrusted values cannot occupy authority-typed slots.
+
+---
+
+## D-024 — Future AI/model components enter only through interfaces
+
+Date: 2026-08-23  
+Milestone: M05  
+Status: Accepted  
+Affected docs: `ARCHITECTURE.md`
+
+Context: Later phases add an LLM intent compiler and DeBERTa NLI semantic verifier; Phase 1 must remain credential-free and deterministic.
+
+Decision: Define `IntentCompiler` (Phase 1: FixtureIntentCompiler) and `SemanticVerifier` (Phase 1: NullSemanticVerifier, DeterministicScenarioSemanticVerifier) abstractions now. Model outputs may only advise/challenge; they cannot override hard rules or sign tickets.
+
+Rationale: Dependency inversion keeps the deterministic core stable while ML arrives later.
+
+Alternatives considered: retrofitting interfaces after models exist (higher churn); shipping a fake "AI risk score" (forbidden by PRD honesty rules).
+
+Security consequences: Preserves D-007 determinism at the financial boundary.
+
+Validation/evidence: Interface tests in M41; no Transformer dependency exists in Phase 1.
+
+---
+
+## D-025 — Payment provider access isolated behind PaymentProvider interface
+
+Date: 2026-08-23  
+Milestone: M05  
+Status: Accepted  
+Affected docs: `ARCHITECTURE.md`, `SECURITY.md`
+
+Context: Only the trusted executor may cause payment side effects today (mock) and tomorrow (Razorpay test-mode).
+
+Decision: `PaymentProvider` exposes a narrow surface (create/initiate order-like op, execute/confirm payment, query/reconcile, verify event). Phase 1 implements MockPaymentProvider only. The buyer/agent layer never receives the provider object or credentials; FastAPI dependency wiring enforces this structurally.
+
+Rationale: Phase-2 Razorpay adapter becomes an isolated swap; blast radius of provider bugs/failures stays inside the executor path.
+
+Alternatives considered: letting routes call providers directly (violates SEC-001); abstracting too early over hypothetical Razorpay specifics (overfitting risk — interface kept conceptual).
+
+Security consequences: Structural enforcement of SEC-001/SEC-002; supports TH-06/07 containment.
+
+Validation/evidence: M36/M37 tests; architecture test asserts agent modules hold no provider reference.
+
+---
+
+## D-026 — One Next.js application (apps/web) for all Phase-1 surfaces
+
+Date: 2026-08-23  
+Milestone: M05  
+Status: Accepted  
+Affected docs: `ARCHITECTURE.md` §11
+
+Context: The master prompt's structure sketch shows apps/buyer-web + apps/merchant-web, while Milestone 13 defines a single frontend with routes /, /buyer, /merchant, /security-lab, /audit. Human owner confirmed single-app choice during planning.
+
+Decision: Implement one Next.js app at `apps/web` containing all five route areas, matching ARCHITECTURE.md §11. Route folders group buyer/merchant/security-lab/audit surfaces.
+
+Rationale: One build/test/deploy surface for identical placeholder-grade Phase-1 needs; less resource use on the 8 GB host; no cross-app auth to fake.
+
+Alternatives considered: two separate Next.js apps (heavier, no benefit yet).
+
+Security/product consequences: None — authorization never lives in either variant of the frontend.
+
+Validation/evidence: M13 scaffold and M14 Playwright smoke run against the single app.

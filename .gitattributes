@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+*.sh text eol=lf
+*.py text eol=lf
+Makefile text eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
