@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M33 — Dev Signing Key Management (next)  
-**Milestones passed:** M01–M32  
+**Current milestone:** M34 — Context-Bound Single-Use Execution Ticket (next)  
+**Milestones passed:** M01–M33  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 34 files clean, pytest 127/127
+**Gate:** ruff clean, mypy 35 files clean, pytest 133/133
 
 ---
 
@@ -101,6 +101,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Policy rules: recurring/expiry hard fails; approval threshold -> APPROVAL_REQUIRED UNKNOWN (M30)
 - SpendManager: atomic reserve/commit/release, row-locked, concurrency-proven (M31)
 - Decision engine: state gate + FAIL->BLOCK + UNKNOWN->CHALLENGE else ALLOW (M32)
+- Dev keys: Ed25519 at infra/keys/ (gitignored), ensure/load/sign/verify (M33)
 
 ---
 
@@ -131,7 +132,7 @@ None yet; do not invent.
 
 # Next action
 
-M33 — Dev Signing Keys: local Ed25519 keygen, gitignored private keys.
+M34 — Execution Ticket: bind principal/agent/gen/hashes/merchant/amount/nonce; tamper+expiry tests.
 
 ---
 

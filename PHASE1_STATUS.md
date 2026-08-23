@@ -40,7 +40,7 @@
 | M30 | Subscription/Expiry/Approval Rules | PASS | Recurring checkout requires explicit permission; expiry inclusive-dead (now==expires_at FAIL); approval threshold boundary: total==threshold PASS, +1 -> UNKNOWN APPROVAL_REQUIRED (deterministic challenge signal); 5 tests PASS |
 | M31 | Stateful Spend Reservation and Aggregate Budget | PASS | SpendManager: reserve/commit/release under FOR UPDATE row lock; 10 threads x 150k vs 1M -> exactly 6 reserved, invariants hold; provider-unknown keeps reservation; Hypothesis random sequences (15 examples) preserve authorized>=reserved+committed |
 | M32 | Decision Engine | PASS | Deterministic matrix: state gate (non-AUTHORIZED -> BLOCK incl. BLOCKED/CHALLENGED), FAIL->BLOCK, UNKNOWN->CHALLENGE, else ALLOW; policy_version pinned; 7 tests PASS incl. 6-status gate parametrization + determinism |
-| M33 | Dev Signing Key Management | NOT_STARTED | — |
+| M33 | Dev Signing Key Management | PASS | Ed25519 pair via cryptography lib at settings-driven paths (infra/keys/, gitignored); 0o600 private perms; missing key -> actionable DevKeyError; sign/verify + cross-key rejection + idempotent ensure tested (6 tests); live keygen verified untracked |
 | M34 | Context-Bound Single-Use Execution Ticket | NOT_STARTED | — |
 | M35 | Redis Nonce Claim and Concurrency | NOT_STARTED | — |
 | M36 | Trusted Payment Executor + Durable ExecutionAttempt | NOT_STARTED | — |
@@ -242,6 +242,12 @@ M03 — Project Charter.
 - Matrix order: state gate first (`assert_executable`; non-AUTHORIZED → BLOCK STATUS_NOT_EXECUTABLE — BLOCKED never executes, CHALLENGED cannot until reauthorization); any FAIL → BLOCK; any UNKNOWN → CHALLENGE (fail-closed step-up, e.g. APPROVAL_REQUIRED); else ALLOW. No ML scores anywhere.
 - `_safe` made public as `safe_evaluate` for cross-module reuse.
 - Validation: ruff clean; mypy strict 34 files clean; pytest 127/127.
+
+## M33 — Dev Signing Key Management — PASS
+- `keys.py`: `DevSigningKeys` (load / generate / ensure) over `cryptography` Ed25519; PEM PKCS8 private + SubjectPublicKeyInfo public; private file chmod 0o600; paths from settings (`dev_ticket_*_key_path`, default `./infra/keys/`).
+- Missing/unreadable/wrong-type keys raise `DevKeyError` with actionable regeneration instructions — no silent key substitution.
+- Security: `infra/keys/` + `*.pem` gitignored (verified via check-ignore); live generation run, files untracked; sign/verify roundtrip, tamper rejection, cross-pair rejection tested.
+- Validation: ruff clean; mypy strict 35 files clean; pytest 133/133.
 
 ---
 
