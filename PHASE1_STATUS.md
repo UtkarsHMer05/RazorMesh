@@ -34,7 +34,7 @@
 | M24 | Authorization State Machine | PASS | 7 statuses, exhaustive 7x7 transition matrix test (13 legal pairs, rest fail), terminal states have no exits, only AUTHORIZED executable; BLOCKED/CHALLENGED never execute; IntentStatus aligned |
 | M25 | Evidence Ledger | PASS | JCS(RFC 8785)-canonicalized SHA-256 hash chain, genesis + link checks, advisory-lock serialized appends (5x10 concurrent = single linear chain), tampered payload/link detected; seq anchor migration round-trips |
 | M26 | Canonical Authorization Hashing | PASS | JCS(RFC 8785) canonicalization with RFC known-answer vectors; documented checkout/intent projections; untrusted text + presentation drift provably excluded; relevant drift (price/qty/revision/recurring/generation) changes hash; 7 tests PASS |
-| M27 | RazorGuard Rule Engine Foundation | NOT_STARTED | — |
+| M27 | RazorGuard Rule Engine Foundation | PASS | StrEnum PASS/FAIL/UNKNOWN outcomes, FunctionRule + AllOf combinators, stable reason codes + explanations, crashing rules degrade to UNKNOWN (fail-closed), duplicate rule ids rejected, determinism test; 7 tests PASS |
 | M28 | Money Rules | NOT_STARTED | — |
 | M29 | Merchant/Product/Quantity Rules | NOT_STARTED | — |
 | M30 | Subscription/Expiry/Approval Rules | NOT_STARTED | — |
@@ -207,6 +207,12 @@ M03 — Project Charter.
 - Security properties tested: untrusted display-name text change → hash unchanged; observed_at drift → unchanged; subscription description → unchanged. Price/qty/revision/recurring changes and intent generation bump → hash changes.
 - Known-answer vectors pin RFC 8785 behavior (key sorting, null, escaping) so a canonicalization regression cannot pass silently.
 - Validation: ruff clean; mypy strict 27 files clean; pytest 84/84.
+
+## M27 — RazorGuard Rule Engine Foundation — PASS
+- `rules/engine.py`: `RuleOutcome` StrEnum (PASS/FAIL/UNKNOWN), frozen `RuleResult` (rule_id, outcome, reason_codes, explanation, details), `EvaluationContext` (intent + checkout + committed/reserved spend snapshot), `FunctionRule` adapter, `AllOf` combinator (first-FAIL aggregation with merged reason codes; UNKNOWN preserved), `RazorGuardEngine` pipeline preserving rule order.
+- Fail-closed guarantees: crashing rules → UNKNOWN with RULE_ERROR (never PASS); UNKNOWN blocks overall pass; duplicate rule ids rejected at construction; invalid outcomes rejected in RuleResult.
+- Determinism: same context → identical report (tested).
+- Validation: ruff clean; mypy strict 29 files clean; pytest 91/91.
 
 ---
 
