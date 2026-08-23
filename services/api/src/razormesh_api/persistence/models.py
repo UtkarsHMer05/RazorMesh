@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -204,11 +205,18 @@ class AuditEvent(Base):
     __tablename__ = "audit_events"
     __table_args__ = (
         UniqueConstraint("current_event_hash", name="uq_audit_current_hash"),
+        UniqueConstraint("seq", name="uq_audit_seq"),
         Index("ix_audit_timestamp", "timestamp"),
         Index("ix_audit_intent_id", "intent_id"),
     )
 
     event_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    seq: Mapped[int] = mapped_column(
+        BigInteger,
+        nullable=False,
+        unique=True,
+        server_default=text("nextval('audit_events_seq_seq')"),
+    )
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
     actor: Mapped[str] = mapped_column(String(64), nullable=False)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

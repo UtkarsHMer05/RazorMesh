@@ -32,7 +32,7 @@
 | M22 | Merchant Catalog | PASS | 5 merchants / 50 synthetic products, price+seller+condition+recurring+shipping variations, idempotent atomic seed, live DB verified, 3 tests PASS |
 | M23 | Catalog API | PASS | GET /catalog/merchants + /catalog/products (+/{id}) read-only; pagination bounds (1..100), filter validation, typed ProductId path param (422 malformed / 404 missing); 6 API tests PASS |
 | M24 | Authorization State Machine | PASS | 7 statuses, exhaustive 7x7 transition matrix test (13 legal pairs, rest fail), terminal states have no exits, only AUTHORIZED executable; BLOCKED/CHALLENGED never execute; IntentStatus aligned |
-| M25 | Evidence Ledger | NOT_STARTED | — |
+| M25 | Evidence Ledger | PASS | JCS(RFC 8785)-canonicalized SHA-256 hash chain, genesis + link checks, advisory-lock serialized appends (5x10 concurrent = single linear chain), tampered payload/link detected; seq anchor migration round-trips |
 | M26 | Canonical Authorization Hashing | NOT_STARTED | — |
 | M27 | RazorGuard Rule Engine Foundation | NOT_STARTED | — |
 | M28 | Money Rules | NOT_STARTED | — |
@@ -194,6 +194,13 @@ M03 — Project Charter.
 - Semantics: BLOCKED is terminal (no revival; a new contract/generation is required); only successful human reauthorization returns CHALLENGED → AUTHORIZED; terminal states have no exits; execution permitted ONLY from AUTHORIZED.
 - `IntentStatus` extended additively with BLOCKED/EXPIRED; alignment test pins both enums to identical value sets.
 - Validation: ruff clean; mypy strict 24 files clean; pytest 73/73 (7 new: exhaustive 7×7 matrix — every non-legal pair raises IllegalTransitionError; executable guard over all statuses).
+
+## M25 — Evidence Ledger — PASS
+- `domain/evidence.py`: `compute_event_hash` = SHA-256 over RFC 8785 (JCS) canonical JSON of the logical record + `previous_event_hash`; `GENESIS_HASH` = 64 zeros; timestamps normalized to UTC ISO.
+- `ledger.py`: `EvidenceLedger.append` serializes concurrent writers with `pg_advisory_xact_lock(727001)`, reads the true tip (`seq DESC`), inserts atomically via `session_scope` (commit-on-success); `uq_audit_current_hash` is a second race backstop. `verify()` re-walks the chain and recomputes every hash from stored fields; reports broken link vs altered-record reasons.
+- Migration `c5f21a9d3e10`: adds `audit_events.seq` BIGINT (sequence-backed, unique) as physical ordering anchor; upgrade/downgrade verified live.
+- Validation: ruff clean; mypy strict 26 files clean; pytest 77/77. Tests: genesis/link verification, tampered payload detected (bypassing trigger to simulate attacker), tampered link detected, 5 threads x 10 appends → 50 events, strictly increasing seq, chain verifies.
+- Hardening: verify() on an empty ledger returns valid=True but tests assert exact `events_checked` so vacuous passes cannot mask regressions.
 
 ---
 
