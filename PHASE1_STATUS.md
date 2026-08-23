@@ -20,8 +20,8 @@
 | M10 | Local Redis | PASS | redis:8.8.2-alpine healthy; SET/GET verified; 127.0.0.1:16379 only; coordination-only config |
 | M11 | FastAPI Scaffold | PASS | /health vs /ready (DB/Redis fail-closed 503); OpenAPI generates; live smoke OK |
 | M12 | Python Engineering Baseline | PASS | uv+lock py3.13; ruff strict-ish clean; mypy --strict clean; pytest 5/5; coverage configured |
-| M13 | Next.js Scaffold | IN_PROGRESS | — |
-| M14 | Frontend Test Baseline | NOT_STARTED | — |
+| M13 | Next.js Scaffold | PASS | Next 16.3.2/React 19.2.8/TS 5.9.3; 5 routes; prod build OK; tsc clean |
+| M14 | Frontend Test Baseline | PASS | Vitest+RTL smoke 3/3; Playwright chromium E2E 2/2; eslint 9.39.5 clean (v10 fallback documented) |
 | M15 | Shared Identifier Types | NOT_STARTED | — |
 | M16 | Money Value Object | NOT_STARTED | — |
 | M17 | Intent Contract Model | NOT_STARTED | — |
