@@ -30,8 +30,8 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M06 — Repository Scaffold  
-**Milestones passed:** M01–M05  
+**Current milestone:** M09 — Local PostgreSQL  
+**Milestones passed:** M01–M08  
 **Last updated:** 2026-08-23
 
 ---

@@ -13,9 +13,9 @@
 | M03 | Project Charter | PASS | docs/PROJECT_CHARTER.md created; charter statements verified |
 | M04 | Threat Model | PASS | docs/threat-model/PHASE1_THREAT_MODEL.md created; 24 threats mapped to invariants+milestones |
 | M05 | Architecture Decisions | PASS | D-021..D-026 appended; all 10 master-prompt ADR topics now covered |
-| M06 | Repository Scaffold | NOT_STARTED | — |
-| M07 | Secret Hygiene | NOT_STARTED | — |
-| M08 | Root Development Commands | NOT_STARTED | — |
+| M06 | Repository Scaffold | PASS | git init (main), layout per ARCHITECTURE §11, .gitignore/.editorconfig/.gitattributes/README; bootstrap commit e5e0446 |
+| M07 | Secret Hygiene | PASS | .env.example placeholders only; ignores verified via check-ignore; secret scan clean |
+| M08 | Root Development Commands | PASS | Makefile targets validated with make -n / make help; reset-local destructive-guarded |
 | M09 | Local PostgreSQL | NOT_STARTED | — |
 | M10 | Local Redis | NOT_STARTED | — |
 | M11 | FastAPI Scaffold | NOT_STARTED | — |
