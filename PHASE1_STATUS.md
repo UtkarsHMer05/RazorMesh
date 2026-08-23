@@ -45,7 +45,7 @@
 | M35 | Redis Nonce Claim and Concurrency | PASS | SET NX EX atomic claim; replay rejected; TTL bounded; holder-only Lua release; 20-worker same-nonce race -> exactly 1 winner; Redis down -> CoordinationUnavailable fail-closed; 5 tests PASS |
 | M36 | Trusted Payment Executor + Durable ExecutionAttempt | PASS | Only executor calls PaymentProvider; durable attempts CREATED->EXECUTING->SUCCEEDED/FAILED/PROVIDER_UNKNOWN (transition-guarded); idempotency-key re-entry returns same attempt (never fresh op); unknown keeps reservation, failure releases, success commits; ticket persisted for FK/audit; 6 tests PASS |
 | M37 | Mock Payment Provider | PASS | 7 modes (success/failure/timeout-before/timeout-after-success/duplicate/delayed/out-of-order) driving REAL executor: provider-side effects ledger proves money-moved-vs-not; unknown+reconciliation resolves to SUCCEEDED; duplicate delivery keeps 1 effect; 7 tests PASS |
-| M38 | Checkout Service | NOT_STARTED | — |
+| M38 | Checkout Service | PASS | Server recomputes ALL amounts from trusted catalog (client total mismatch rejected loudly); blocked intents refused pre-rules; propose persists checkout + ledger event; authorize runs full rule set -> durable decision + hashes; ALLOW-only ticket issuance; 7 tests PASS |
 | M39 | Live Checkout Revalidation | NOT_STARTED | — |
 | M40 | Untrusted Content Boundary | NOT_STARTED | — |
 | M41 | Future SemanticVerifier Interface | NOT_STARTED | — |
@@ -273,6 +273,11 @@ M03 — Project Charter.
 - Tests drive the REAL TrustedPaymentExecutor: success→SUCCEEDED+commit; failure→FAILED+release+zero effects; timeout-before→UNKNOWN+held reservation+NO money moved; timeout-after→UNKNOWN but reconciliation via pending_events resolves to SUCCEEDED.
 - Test infra: shared FK-safe `wipe_business_tables` in conftest used by all integration fixtures (fixes cross-fixture pollution).
 - Validation: ruff clean; mypy strict 39 files clean; pytest 159/159.
+
+## M38 — Checkout Service — PASS
+- `checkout_service.py`: `CheckoutService.propose` (clients name product_id+quantity ONLY; prices/shipping from trusted catalog rows; single-merchant enforcement; quantity caps; client_total disagreement → ClientTotalMismatch; durable Checkout projection + CHECKOUT_PROPOSED ledger event) and `authorize` (full rule set via DecisionEngine over trusted facts; durable Decision row with intent/checkout hashes + reason codes + per-rule outcomes; DECISION_RECORDED + TICKET_ISSUED ledger events; ALLOW-only ticket issuance with 120s validity).
+- Security: BLOCKED/CHALLENGED intents refused before rule evaluation; untrusted merchant text never enters rule inputs; amount manipulation cannot pass because totals are server-recomputed.
+- Validation: ruff clean; mypy strict 40 files clean; pytest 166/166.
 
 ---
 
