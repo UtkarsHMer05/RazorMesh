@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M26 — Canonical Authorization Hashing (next)  
-**Milestones passed:** M01–M25  
+**Current milestone:** M27 — RazorGuard Rule Engine Foundation (next)  
+**Milestones passed:** M01–M26  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 26 files clean, pytest 77/77
+**Gate:** ruff clean, mypy 27 files clean, pytest 84/84
 
 ---
 
@@ -94,6 +94,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - API: read-only /catalog endpoints, bounded pagination, typed-ID path params (M23)
 - State machine: 7 statuses, exhaustive matrix tested, only AUTHORIZED executable (M24)
 - Evidence ledger: JCS+SHA256 hash chain, advisory-lock appends, tamper detection (M25)
+- Authz hashing: JCS canonical projections; untrusted text provably excluded (M26)
 
 ---
 
@@ -124,7 +125,7 @@ None yet; do not invent.
 
 # Next action
 
-M26 — Canonical Authorization Hashing: JCS/RFC8785 projection hashing for checkout/intent.
+M27 — RazorGuard Rule Engine: composable deterministic rules, PASS/FAIL/UNKNOWN, reason codes.
 
 ---
 

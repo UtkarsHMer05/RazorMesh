@@ -33,7 +33,7 @@
 | M23 | Catalog API | PASS | GET /catalog/merchants + /catalog/products (+/{id}) read-only; pagination bounds (1..100), filter validation, typed ProductId path param (422 malformed / 404 missing); 6 API tests PASS |
 | M24 | Authorization State Machine | PASS | 7 statuses, exhaustive 7x7 transition matrix test (13 legal pairs, rest fail), terminal states have no exits, only AUTHORIZED executable; BLOCKED/CHALLENGED never execute; IntentStatus aligned |
 | M25 | Evidence Ledger | PASS | JCS(RFC 8785)-canonicalized SHA-256 hash chain, genesis + link checks, advisory-lock serialized appends (5x10 concurrent = single linear chain), tampered payload/link detected; seq anchor migration round-trips |
-| M26 | Canonical Authorization Hashing | NOT_STARTED | — |
+| M26 | Canonical Authorization Hashing | PASS | JCS(RFC 8785) canonicalization with RFC known-answer vectors; documented checkout/intent projections; untrusted text + presentation drift provably excluded; relevant drift (price/qty/revision/recurring/generation) changes hash; 7 tests PASS |
 | M27 | RazorGuard Rule Engine Foundation | NOT_STARTED | — |
 | M28 | Money Rules | NOT_STARTED | — |
 | M29 | Merchant/Product/Quantity Rules | NOT_STARTED | — |
@@ -201,6 +201,12 @@ M03 — Project Charter.
 - Migration `c5f21a9d3e10`: adds `audit_events.seq` BIGINT (sequence-backed, unique) as physical ordering anchor; upgrade/downgrade verified live.
 - Validation: ruff clean; mypy strict 26 files clean; pytest 77/77. Tests: genesis/link verification, tampered payload detected (bypassing trigger to simulate attacker), tampered link detected, 5 threads x 10 appends → 50 events, strictly increasing seq, chain verifies.
 - Hardening: verify() on an empty ledger returns valid=True but tests assert exact `events_checked` so vacuous passes cannot mask regressions.
+
+## M26 — Canonical Authorization Hashing — PASS
+- `domain/authz_hash.py`: `jcs_bytes`/`jcs_sha256` (RFC 8785 via rfc8785 lib, schema-version domain-separated); `checkout_authorization_projection` (ids, revision, merchant, line items product/qty/price/condition, tax/shipping/fees/computed total, subscription recurring+frequency) and `intent_authorization_projection` (identity, generation, allowlists sorted, caps, thresholds, authorized_at/expires_at).
+- Security properties tested: untrusted display-name text change → hash unchanged; observed_at drift → unchanged; subscription description → unchanged. Price/qty/revision/recurring changes and intent generation bump → hash changes.
+- Known-answer vectors pin RFC 8785 behavior (key sorting, null, escaping) so a canonicalization regression cannot pass silently.
+- Validation: ruff clean; mypy strict 27 files clean; pytest 84/84.
 
 ---
 
