@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M24 — Authorization State Machine (next)  
-**Milestones passed:** M01–M23  
+**Current milestone:** M25 — Evidence Ledger (next)  
+**Milestones passed:** M01–M24  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 23 files clean, pytest 66/66
+**Gate:** ruff clean, mypy 24 files clean, pytest 73/73
 
 ---
 
@@ -92,6 +92,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - DAL: repos + FOR UPDATE row lock, concurrency overspend guard (M21)
 - Catalog: 5 merchants/50 products seeded idempotently+atomically; IDs must be ULIDs (M22)
 - API: read-only /catalog endpoints, bounded pagination, typed-ID path params (M23)
+- State machine: 7 statuses, exhaustive matrix tested, only AUTHORIZED executable (M24)
 
 ---
 
@@ -122,7 +123,7 @@ None yet; do not invent.
 
 # Next action
 
-M24 — Authorization State Machine: explicit states, illegal transitions fail, BLOCKED/CHALLENGE never execute.
+M25 — Evidence Ledger: append-oriented hash chain + tamper detection tests.
 
 ---
 

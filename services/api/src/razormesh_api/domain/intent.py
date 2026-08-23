@@ -14,8 +14,10 @@ class IntentStatus(StrEnum):
     DRAFT = "DRAFT"
     AUTHORIZED = "AUTHORIZED"
     CHALLENGED = "CHALLENGED"
+    BLOCKED = "BLOCKED"
     SUPERSEDED = "SUPERSEDED"
     REVOKED = "REVOKED"
+    EXPIRED = "EXPIRED"
 
 
 class BrandRestriction(BaseModel):

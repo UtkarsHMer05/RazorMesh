@@ -31,7 +31,7 @@
 | M21 | Repository/Data Access Layer | PASS | Repositories for all entities; transactional scope + FOR UPDATE row lock; rollback + 5-thread concurrency overspend test PASS |
 | M22 | Merchant Catalog | PASS | 5 merchants / 50 synthetic products, price+seller+condition+recurring+shipping variations, idempotent atomic seed, live DB verified, 3 tests PASS |
 | M23 | Catalog API | PASS | GET /catalog/merchants + /catalog/products (+/{id}) read-only; pagination bounds (1..100), filter validation, typed ProductId path param (422 malformed / 404 missing); 6 API tests PASS |
-| M24 | Authorization State Machine | NOT_STARTED | — |
+| M24 | Authorization State Machine | PASS | 7 statuses, exhaustive 7x7 transition matrix test (13 legal pairs, rest fail), terminal states have no exits, only AUTHORIZED executable; BLOCKED/CHALLENGED never execute; IntentStatus aligned |
 | M25 | Evidence Ledger | NOT_STARTED | — |
 | M26 | Canonical Authorization Hashing | NOT_STARTED | — |
 | M27 | RazorGuard Rule Engine Foundation | NOT_STARTED | — |
@@ -188,6 +188,12 @@ M03 — Project Charter.
 - Security regression: OpenAPI paths under `/catalog` expose GET only (test asserts no write methods).
 - Validation: ruff clean; mypy strict 23 files clean; pytest 66/66; live smoke: seeded DB → products total 50, single product fetch 200, merchants total 5.
 - Test isolation fixed: catalog test fixtures now wipe merchant/product tables before and after.
+
+## M24 — Authorization State Machine — PASS
+- `domain/state_machine.py`: `AuthorizationStatus` (DRAFT, AUTHORIZED, CHALLENGED, BLOCKED, SUPERSEDED, REVOKED, EXPIRED), explicit legal-transition map, `require_transition`, `assert_executable` (fail-closed), `is_terminal`.
+- Semantics: BLOCKED is terminal (no revival; a new contract/generation is required); only successful human reauthorization returns CHALLENGED → AUTHORIZED; terminal states have no exits; execution permitted ONLY from AUTHORIZED.
+- `IntentStatus` extended additively with BLOCKED/EXPIRED; alignment test pins both enums to identical value sets.
+- Validation: ruff clean; mypy strict 24 files clean; pytest 73/73 (7 new: exhaustive 7×7 matrix — every non-legal pair raises IllegalTransitionError; executable guard over all statuses).
 
 ---
 
