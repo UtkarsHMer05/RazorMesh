@@ -245,3 +245,76 @@ def build_payment_provider(settings: Settings) -> tuple[object, object]:
     from razormesh_api.providers.mock import MockMode, MockPaymentProvider
 
     return MockPaymentProvider(mode=MockMode.SUCCESS), "mock"
+
+
+class RazorpayAuthDiagnostic:
+    """Read-only credential verification (P2-M12).
+
+    Performs a bounded, read-only GET /orders?count=1 against the configured
+    account. Authentication failures surface as RAZORPAY_AUTH_FAILED; success
+    proves ONLY that the credentials are valid Test Mode credentials. The
+    result never contains secret material.
+    """
+
+    def __init__(self, client: RazorpayClient) -> None:
+        self._client = client
+
+    def run(self) -> dict[str, object]:
+        import time as _time
+
+        started = _time.perf_counter_ns()
+        try:
+            response = self._client._client.get("/orders", params={"count": 1})
+        except httpx.TimeoutException:
+            return {
+                "ok": False,
+                "code": "RAZORPAY_PROVIDER_OUTCOME_UNKNOWN",
+                "detail": "timeout during read-only diagnostic",
+            }
+        except httpx.TransportError:
+            return {
+                "ok": False,
+                "code": "RAZORPAY_PROVIDER_OUTCOME_UNKNOWN",
+                "detail": "network failure during read-only diagnostic",
+            }
+
+        elapsed_ms = round((_time.perf_counter_ns() - started) / 1e6, 2)
+
+        if response.status_code in (401, 403):
+            return {
+                "ok": False,
+                "code": "RAZORPAY_AUTH_FAILED",
+                "detail": f"provider rejected credentials (HTTP {response.status_code})",
+            }
+        if response.status_code != 200:
+            return {
+                "ok": False,
+                "code": "RAZORPAY_PROVIDER_STATE_CONFLICT",
+                "detail": f"unexpected diagnostic status {response.status_code}",
+            }
+        try:
+            payload: Any = response.json()
+            count = payload.get("count") if isinstance(payload, dict) else None
+            items = payload.get("items") if isinstance(payload, dict) else None
+        except ValueError:
+            return {
+                "ok": False,
+                "code": "RAZORPAY_PROVIDER_STATE_CONFLICT",
+                "detail": "malformed JSON in diagnostic response",
+            }
+
+        return {
+            "ok": True,
+            "code": "OK",
+            "detail": "credentials accepted by provider (read-only)",
+            "mode": "test (guard passed)",
+            "listed_orders": len(items) if isinstance(items, list) else None,
+            "response_count_field": count,
+            "latency_ms": elapsed_ms,
+        }
+
+
+def razorpay_auth_diagnostic_from_settings(settings: Settings) -> dict[str, object]:
+    """Fail-safe entry point used by scripts and admin tooling."""
+    provider = RazorpayPaymentProvider.from_settings(settings)
+    return RazorpayAuthDiagnostic(provider.client).run()

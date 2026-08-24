@@ -173,3 +173,29 @@ def build_payment_provider_for_test(settings: Settings) -> tuple[object, str]:
     provider, kind = build_payment_provider(settings)
     assert isinstance(kind, str)
     return provider, kind
+
+
+def test_auth_diagnostic_success_and_failure() -> None:
+    from razormesh_api.providers.razorpay import RazorpayAuthDiagnostic
+
+    ok_transport = httpx.MockTransport(
+        lambda request: httpx.Response(200, json={"count": 0, "items": []})
+    )
+    bad_transport = httpx.MockTransport(lambda request: httpx.Response(401))
+    timeout_transport = httpx.MockTransport(
+        lambda request: (_ for _ in ()).throw(httpx.ConnectTimeout("t", request=request))
+    )
+
+    def make(transport: httpx.BaseTransport) -> RazorpayAuthDiagnostic:
+        client = RazorpayClientForTest(transport)
+        return RazorpayAuthDiagnostic(client._inner)
+
+    ok = make(ok_transport).run()
+    assert ok["ok"] is True and ok["code"] == "OK"
+    assert ok["listed_orders"] == 0
+
+    bad = make(bad_transport).run()
+    assert bad["ok"] is False and bad["code"] == "RAZORPAY_AUTH_FAILED"
+
+    slow = make(timeout_transport).run()
+    assert slow["ok"] is False and "UNKNOWN" in str(slow["code"])

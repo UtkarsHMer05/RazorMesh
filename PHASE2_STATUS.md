@@ -21,7 +21,7 @@
 | M09 | Razorpay Test-Mode Fail-Safe | PASS | validate_payment_provider_config(): live prefix rejected in any mode; real provider requires test+3 creds (names only, never values); mock needs nothing; 5 new tests; suite 236/236 |
 | M10 | Phase-2 Governance Transition | PASS | PHASES marked ACTIVE; PRD §11 PRD-RZP-001..012; ARCHITECTURE §14 provider flow + state dimensions; SECURITY P2-S01..S24 + T19..T24; TESTING §13 gates; D-030; R-013..R-015 |
 | M11 | Razorpay Provider Skeleton | PASS | providers/razorpay.py: typed client+errors (auth/rejection/unknown/config), order create/fetch, no-retry proven via MockTransport call counts; DI factory keeps mock default; buyer layer untouched; 9 tests; suite 245/245 |
-| M12 | Safe Auth Diagnostic | NOT_STARTED | — |
+| M12 | Safe Auth Diagnostic | PASS | scripts/rzp_auth_check.py vs REAL Test keys: read-only GET /orders?count=1 → 200 OK, credentials accepted, 677ms; zero secrets printed; mock-transport tests for ok/401/timeout; suite 246/246 |
 | M13 | DB Schema for Razorpay Correlation | NOT_STARTED | — |
 | M14 | Internal→Razorpay Order Mapping | NOT_STARTED | — |
 | M15 | Server-Side Order Creation | NOT_STARTED | — |
@@ -475,3 +475,43 @@ the server-authoritative amount.
 
 ### Next
 - M12 — Safe Razorpay Authentication Diagnostic (first permitted real interaction).
+
+
+## M12 — Safe Razorpay Authentication Diagnostic
+
+MILESTONE: M12
+STATUS: PASS
+REAL RAZORPAY INTERACTION: READ_ONLY (first permitted real interaction)
+
+Requirements: master prompt M12/§7 — verify real Test credentials without printing
+secrets; read-only bounded operation; timeout + structured errors.
+Security invariants: P2-S01..S03 exercised against reality.
+
+### Implementation
+- `providers/razorpay.py`: `RazorpayAuthDiagnostic` (read-only GET /orders?count=1;
+  401/403→RAZORPAY_AUTH_FAILED; timeout/network→UNKNOWN; non-200→STATE_CONFLICT)
+  and `razorpay_auth_diagnostic_from_settings` fail-safe entry.
+- `scripts/rzp_auth_check.py`: prints variable NAMES + PRESENT markers only.
+
+### Real validation (executed this milestone)
+```text
+uv run --project services/api python scripts/rzp_auth_check.py
+  → ok: True, code: OK, credentials accepted by provider (read-only),
+    latency_ms: 677.08, listed_orders: 0
+```
+Human-provided Test keys authenticated successfully. No secret value ever printed,
+logged, or stored outside the gitignored `.env`.
+
+### Validation commands + results
+```text
+pytest tests/test_provider_razorpay.py   → 10 passed (diagnostic ok/401/timeout cases)
+pytest (full)                            → 246 passed
+ruff / mypy strict                       → clean
+```
+
+### Known limitations
+- The diagnostic proves credential validity only — not capture settings or webhook
+  configuration (later milestones).
+
+### Next
+- M13 — Database Schema for Razorpay Correlation.
