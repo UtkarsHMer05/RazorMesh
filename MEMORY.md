@@ -29,11 +29,11 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 # Current snapshot
 
 **Project:** RazorMesh Trust  
-**Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** NONE — Phase 1 complete, awaiting human Phase-2 approval  
-**Milestones passed:** M01–M50 (50/50)  
+**Active phase:** Phase 1 COMPLETE — Phase 2 bootstrap (declared active at M05 per plan)  
+**Current milestone:** P2-M02 — Phase-1 Full Quality Revalidation (next)  
+**Phase-2 milestones passed:** P2-M01  
 **Last updated:** 2026-08-24  
-**Gate:** final Phase-1 validation PASS; live acceptance 10/10; pytest 225/225 at 93.25% coverage; ruff/mypy/security audits/frontend build/E2E green; local final commit requested
+**Gate:** M01 hygiene/scaffold PASS; human authorized Phase 2 + provided Test credentials (in gitignored .env, never printed); baseline = user hardening commit cef5a6f (225 tests, D-027/028/029, 16 scenarios, 14 pairs)
 
 ---
 
@@ -150,7 +150,7 @@ See `DECISIONS.md`, currently D-001 through D-029.
 
 # Next action
 
-HUMAN GATE: Phase-1 exit requires human approval per PHASES.md. Do not start Phase 2 (Razorpay test-mode adapter) without it.
+P2-M02 — re-run ALL Phase-1 quality gates (ruff/mypy/pytest 225/frontend/build/E2E/security-check/benchmark smoke); repair regressions before any Razorpay work.
 
 ---
 
