@@ -23,7 +23,7 @@
 | M11 | Razorpay Provider Skeleton | PASS | providers/razorpay.py: typed client+errors (auth/rejection/unknown/config), order create/fetch, no-retry proven via MockTransport call counts; DI factory keeps mock default; buyer layer untouched; 9 tests; suite 245/245 |
 | M12 | Safe Auth Diagnostic | PASS | scripts/rzp_auth_check.py vs REAL Test keys: read-only GET /orders?count=1 → 200 OK, credentials accepted, 677ms; zero secrets printed; mock-transport tests for ok/401/timeout; suite 246/246 |
 | M13 | DB Schema for Razorpay Correlation | PASS | migration a93c7d5e21f0: 8 correlation columns on attempts + partial unique idx (order/payment id) + provider_events inbox (event_id PK, verified, payload_sha256); up/down round-trip; dedup tests; suite 248/248 |
-| M14 | Internal→Razorpay Order Mapping | NOT_STARTED | — |
+| M14 | Internal→Razorpay Order Mapping | PASS | build_order_correlation(): receipt=r_{attempt_id} (≤40), notes=4 opaque refs+generation (≤15×256), no PII/secrets; parse_order_correlation() round-trip; 4 tests; suite 252/252 |
 | M15 | Server-Side Order Creation | NOT_STARTED | — |
 | M16 | Razorpay Error Taxonomy | NOT_STARTED | — |
 | M17 | First Real Test Order | NOT_STARTED | — |
@@ -554,3 +554,33 @@ ruff / mypy strict                             → clean
 
 ### Next
 - M14 — Internal→Razorpay Order Mapping.
+
+
+## M14 — Internal→Razorpay Order Mapping
+
+MILESTONE: M14
+STATUS: PASS
+
+Requirements: master prompt M14 — exact correlation within official limits; opaque refs only.
+Security invariants: P2-S05 (one order per trusted execution context), P2-S22.
+
+### Contract (implemented in providers/razorpay.py)
+- receipt = `r_{execution_attempt_id}` → ≤40 chars (official limit); embeds the
+  durable execution identity so any provider row traces back to ONE attempt.
+- notes = {intent_id, checkout_id, decision_id, ticket_id, authorization_generation}
+  → 5 pairs × ≤256 chars (official ≤15×256). Opaque ULID tokens only; no secrets,
+  no contact/PII fields, no free text.
+- parse_order_correlation() recovers references from provider notes for reconciliation.
+
+### Validation commands + results
+```text
+pytest tests/test_order_mapping.py -v   → 4 passed (limits, no-secret scan, round-trip, oversize rejection)
+pytest (full)                           → 252 passed
+ruff / mypy strict                      → clean
+```
+
+### Real Razorpay interaction
+- NONE.
+
+### Next
+- M15 — Server-Side Razorpay Order Creation.

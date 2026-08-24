@@ -318,3 +318,57 @@ def razorpay_auth_diagnostic_from_settings(settings: Settings) -> dict[str, obje
     """Fail-safe entry point used by scripts and admin tooling."""
     provider = RazorpayPaymentProvider.from_settings(settings)
     return RazorpayAuthDiagnostic(provider.client).run()
+
+
+# ---------------------------------------------------------------------------
+# P2-M14: internal -> Razorpay order correlation (receipt/notes contract)
+# Official limits (R-013): receipt <= 40 chars; notes <= 15 pairs, values <= 256.
+# Only OPAQUE internal identifiers travel to the provider — never secrets,
+# user identifiers beyond opaque tokens, or free text (P2-S22).
+# ---------------------------------------------------------------------------
+
+_RECEIPT_MAX = 40
+_NOTES_MAX_PAIRS = 15
+_NOTE_VALUE_MAX = 256
+
+_NOTE_KEYS = ("intent_id", "checkout_id", "decision_id", "ticket_id")
+
+
+def build_order_correlation(
+    *,
+    execution_attempt_id: str,
+    intent_id: str,
+    checkout_id: str,
+    decision_id: str,
+    ticket_id: str,
+    authorization_generation: int,
+) -> tuple[str, dict[str, str]]:
+    """Return ``(receipt, notes)`` binding a Razorpay order to ONE execution context.
+
+    The receipt embeds the durable execution-attempt id so any provider-side row
+    can be traced back without storing provider state internally first.
+    """
+    receipt = f"r_{execution_attempt_id}"
+    if len(execution_attempt_id) > _RECEIPT_MAX - 2:
+        raise ValueError("execution attempt id exceeds receipt budget")
+    if len(receipt) > _RECEIPT_MAX:
+        raise ValueError("receipt exceeds Razorpay limit")
+
+    notes = {
+        "intent_id": intent_id,
+        "checkout_id": checkout_id,
+        "decision_id": decision_id,
+        "ticket_id": ticket_id,
+        "authorization_generation": str(authorization_generation),
+    }
+    if len(notes) > _NOTES_MAX_PAIRS:
+        raise ValueError("too many note pairs")
+    for key, value in notes.items():
+        if len(key) > _NOTE_VALUE_MAX or len(value) > _NOTE_VALUE_MAX:
+            raise ValueError(f"note pair exceeds limit: {key}")
+    return receipt, notes
+
+
+def parse_order_correlation(notes: dict[str, str]) -> dict[str, str]:
+    """Extract the internal references from provider order notes."""
+    return {key: notes[key] for key in _NOTE_KEYS if key in notes}
