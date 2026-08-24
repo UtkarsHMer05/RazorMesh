@@ -16,11 +16,15 @@ exist; reconciliation (fetch by known correlation) resolves it later.
 """
 
 from dataclasses import dataclass
-from typing import Any
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
 from razormesh_api.settings import Settings
+
+if TYPE_CHECKING:
+    from razormesh_api.persistence.repositories import Repositories
 
 
 class RazorpayError(Exception):
@@ -383,3 +387,88 @@ def build_order_correlation(
 def parse_order_correlation(notes: dict[str, str]) -> dict[str, str]:
     """Extract the internal references from provider order notes."""
     return {key: notes[key] for key in _NOTE_KEYS if key in notes}
+
+
+# ---------------------------------------------------------------------------
+# P2-M18: fetch-based reconciliation against internal authority
+# ---------------------------------------------------------------------------
+
+
+class RazorpayProviderStateConflict(RazorpayError):
+    """Provider state contradicts durable internal authority — never silently rewritten."""
+
+    def __init__(self, code: str, detail: str) -> None:
+        super().__init__(code, detail)
+
+
+@dataclass(frozen=True)
+class ReconcileResult:
+    attempt_id: str
+    order_id: str
+    provider_status: str
+    payment_status: str | None
+    consistent: bool
+
+
+def reconcile_attempt(
+    *,
+    repos: "Repositories",
+    provider: RazorpayPaymentProvider,
+    attempt_id: str,
+    now: datetime,
+) -> ReconcileResult:
+    """Fetch a KNOWN razorpay order and validate it against the durable attempt.
+
+    Amount/currency mismatches raise RAZORPAY_AMOUNT_MISMATCH /
+    RAZORPAY_CURRENCY_MISMATCH (P2-S06: provider never rewrites authority).
+    Provider status is snapshotted onto the attempt; business settlement remains
+    the reducer's job (M26+), so this call performs NO terminal transitions.
+    """
+    from razormesh_api.persistence.models import ExecutionAttempt
+
+    with repos.transaction() as session:
+        attempt = session.get(ExecutionAttempt, attempt_id, with_for_update=True)
+        if attempt is None:
+            raise ValueError(f"unknown attempt {attempt_id}")
+        if not attempt.razorpay_order_id:
+            raise ValueError(f"attempt {attempt_id} has no correlated razorpay order to reconcile")
+        order_id = attempt.razorpay_order_id
+
+    fetched = provider.fetch_order(order_id)
+
+    if fetched.amount_minor != attempt.amount_minor:
+        raise RazorpayProviderStateConflict(
+            "RAZORPAY_AMOUNT_MISMATCH",
+            f"provider {fetched.amount_minor} != internal {attempt.amount_minor}",
+        )
+    if fetched.currency != attempt.currency:
+        raise RazorpayProviderStateConflict(
+            "RAZORPAY_CURRENCY_MISMATCH",
+            f"provider {fetched.currency} != internal {attempt.currency}",
+        )
+    if fetched.receipt is not None and fetched.receipt != f"r_{attempt.execution_attempt_id}":
+        raise RazorpayProviderStateConflict(
+            "RAZORPAY_ORDER_CONTEXT_MISMATCH",
+            f"provider receipt {fetched.receipt!r} does not reference this attempt",
+        )
+
+    payment_status = None
+    if fetched.status in ("paid", "attempted"):
+        # orders entity exposes attempts/payments separately; capture evidence
+        # arrives through payments/webhooks and is settled by the reducer.
+        payment_status = "captured" if fetched.status == "paid" else None
+
+    with repos.transaction() as session:
+        row = session.get(ExecutionAttempt, attempt_id, with_for_update=True)
+        if row is None:
+            raise ValueError(f"attempt vanished: {attempt_id}")
+        row.razorpay_order_status = fetched.status
+        row.updated_at = now
+
+    return ReconcileResult(
+        attempt_id=attempt_id,
+        order_id=order_id,
+        provider_status=fetched.status,
+        payment_status=payment_status,
+        consistent=True,
+    )

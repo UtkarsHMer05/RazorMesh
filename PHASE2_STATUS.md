@@ -27,7 +27,7 @@
 | M15 | Server-Side Order Creation | PASS | executor Razorpay path: order created via trusted prelude, correlation persisted, attempt EXECUTING; timeout→UNKNOWN+REQUIRED+reservation held; 400→FAILED+release; idempotent re-entry (1 call); strict-mypy config gap found & closed (30 latent errors fixed); suite 255/255 |
 | M16 | Razorpay Error Taxonomy | PASS | exhaustive matrix test (21 cases): 401/403→AUTH; 400/404/422/429/3xx/4xx-residual→REJECTED(definitive, no-effect); 5xx/timeout/connect/malformed/bad-entity→UNKNOWN(never retried, calls==1); suite 276/276 |
 | M17 | First Real Test Order | PASS | scripts/rzp_first_order.py: real ALLOW→reserve→ticket→nonce→attempt→order_TTaTD5sEvimzoD (created, 64890 INR minor); fetch matches amount/currency/receipt; security regressions green post-mutation |
-| M18 | Order Fetch & Reconciliation | NOT_STARTED | — |
+| M18 | Order Fetch & Reconciliation | PASS | reconcile_attempt(): amount/currency/receipt validated vs durable authority; conflicts raise AMOUNT/CURRENCY/CONTEXT_MISMATCH; paid classified as capture evidence WITHOUT settling (reducer owns that); 6 mock tests + REAL reconcile of order_TTagLmM6FL6oB4 consistent=True; suite 282/282 |
 | M19 | Checkout Launch Contract | NOT_STARTED | — |
 | M20 | Checkout Script Integration | NOT_STARTED | — |
 | M21 | Real Checkout UI | NOT_STARTED | — |
@@ -700,3 +700,39 @@ requires captured/paid evidence per P2-S15/M25.
 
 ### Next
 - M18 — Razorpay Order Fetch and Reconciliation.
+
+
+## M18 — Razorpay Order Fetch & Reconciliation
+
+MILESTONE: M18
+STATUS: PASS
+REAL RAZORPAY INTERACTION: READ_ONLY (fetch of the M17 test order)
+
+### Implementation
+- `providers/razorpay.py`: `RazorpayProviderStateConflict` + `reconcile_attempt()`:
+  - requires an attempt with a correlated razorpay_order_id;
+  - validates fetched amount/currency/receipt against DURABLE authority —
+    mismatches raise RAZORPAY_AMOUNT_MISMATCH / RAZORPAY_CURRENCY_MISMATCH /
+    RAZORPAY_ORDER_CONTEXT_MISMATCH and are never silently rewritten (P2-S06);
+  - snapshots razorpay_order_status onto the attempt; classifies `paid` as
+    capture EVIDENCE but performs NO settlement (reducer owns transitions, M26+);
+  - read-only/idempotent: repeated calls cause no business mutation.
+
+### Validation commands + results
+```text
+pytest tests/test_razorpay_reconcile.py -v → 6 passed (created/paid classification,
+  amount+currency+receipt conflicts, unknown attempt, double-call idempotency)
+pytest (full)                              → 282 passed
+ruff / mypy strict                         → clean
+REAL reconcile (repo-root cwd):
+  {attempt: exa_01M0SRGA007VXHVB9Z9DM9K1SH,
+   order_id: order_TTagLmM6FL6oB4, status: created, consistent: True}
+```
+
+### Known limitations
+- pydantic-settings resolves `.env` relative to CWD; scripts must run from repo
+  root. Noted for M19+ launch tooling; typed-config hardening can pin an absolute
+  default path later.
+
+### Next
+- M19 — Checkout Launch Contract.
