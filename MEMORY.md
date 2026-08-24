@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M50 — Clean-Room Phase-1 Acceptance (final)  
-**Milestones passed:** M01–M49  
+**Current milestone:** NONE — Phase 1 complete, awaiting human Phase-2 approval  
+**Milestones passed:** M01–M50 (50/50)  
 **Last updated:** 2026-08-24  
-**Gate:** ruff clean, mypy 48 files clean, pytest 213/213, secret scan 0, pip-audit clean, pnpm audit clean, vitest 3/3, Playwright E2E 2/2
+**Gate:** clean-room acceptance 10/10 PASS; pytest 213/213; ruff/mypy/audit/E2E all green; docs/PHASE1_COMPLETION_REPORT.md exists
 
 ---
 
@@ -118,6 +118,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Audit dashboard: timeline/verify/state/tamper-test endpoints + UI live (M47)
 - Deep gate: stateful lifecycle props; Makefile entry points repaired; security_check.py real; pip-audit 2.10.1 added; React hooks lint fixed; 213 tests (M48)
 - Perf baseline: scripts/perf_baseline.py -> docs/PHASE1_PERFORMANCE.json; decide 0.035ms, verify 0.20ms, e2e happy path ~31ms, benchmark suite 0.54s (M49)
+- Clean-room acceptance: fresh volume->migrate->seed->API; scripts/acceptance.py 10/10 PASS; replay race now 409 NONCE_REPLAY_REJECTED; completion report written (M50)
 
 ---
 
@@ -148,7 +149,7 @@ None yet; do not invent.
 
 # Next action
 
-M50 — Clean-Room acceptance: documented setup from scratch, migrations, seeds, API+web, tests, benchmark, scenarios A–F equivalents, completion report; then STOP for human Phase-2 approval.
+HUMAN GATE: Phase-1 exit requires human approval per PHASES.md. Do not start Phase 2 (Razorpay test-mode adapter) without it.
 
 ---
 

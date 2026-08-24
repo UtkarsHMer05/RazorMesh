@@ -24,6 +24,7 @@ from razormesh_api.domain.ids import IntentId, new_ulid
 from razormesh_api.domain.state_machine import NotExecutableError
 from razormesh_api.keys import DevSigningKeys
 from razormesh_api.ledger import EvidenceLedger
+from razormesh_api.nonce import NonceAlreadyClaimed
 from razormesh_api.persistence.models import IntentContract as RowIntent
 from razormesh_api.persistence.repositories import Repositories
 from razormesh_api.revalidation import Revalidator
@@ -136,9 +137,7 @@ def propose(
     except CheckoutError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except NotExecutableError as exc:
-        raise HTTPException(
-            status_code=422, detail=f"authorization not executable: {exc}"
-        ) from exc
+        raise HTTPException(status_code=422, detail=f"authorization not executable: {exc}") from exc
 
     return DecisionBody(
         decision=result.outcome.decision.value,
@@ -215,6 +214,10 @@ def execute(
         raise HTTPException(
             status_code=403, detail={"code": exc.code, "detail": exc.detail}
         ) from exc
+    except NonceAlreadyClaimed:
+        # A concurrent/replayed use of the same single-use authority is a
+        # business denial (error taxonomy: replay), never a server fault.
+        raise HTTPException(status_code=409, detail={"code": "NONCE_REPLAY_REJECTED"}) from None
 
     return ExecutionBody(state=attempt.state, attempt_id=attempt.execution_attempt_id)
 
@@ -251,4 +254,3 @@ def _nonce_registry():  # type: ignore[no-untyped-def]
 
 # imported late to avoid circulars in route typing
 from razormesh_api.persistence.models import Checkout as RowCheckoutForSelect  # noqa: E402
-

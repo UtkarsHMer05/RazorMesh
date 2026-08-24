@@ -57,7 +57,7 @@
 | M47 | Audit Dashboard | PASS | GET /audit/timeline (chronological + hash heads + reason codes), /audit/verify, /audit/state/{intent} (spend/decisions/tickets/attempts), POST /audit/tamper-test (simulates trigger bypass -> DETECTED -> self-restores); dashboard page renders all views; 5 tests PASS; tsc+build clean |
 | M48 | Deep Test and Security Gate | PASS | pytest 213/213 incl. new Hypothesis stateful lifecycle; secret scan 0; pip-audit 2.10.1 clean; pnpm audit clean; eslint/tsc/vitest 3/3/build OK; Playwright E2E 2/2; Makefile entry points repaired; benchmark CLI writes artifact |
 | M49 | Performance/Resource Baseline | PASS | scripts/perf_baseline.py -> docs/PHASE1_PERFORMANCE.json: micro (hash ~0.03ms, sign 0.11ms, verify 0.20ms, decide 0.035ms), e2e happy path mean 31.0ms, benchmark suite 0.54s, in-process API latencies; hardware+version context recorded; LOCAL ONLY |
-| M50 | Clean-Room Phase-1 Acceptance | NOT_STARTED | — |
+| M50 | Clean-Room Phase-1 Acceptance | PASS | Fresh volume -> migrate -> seed -> live API: scripts/acceptance.py 10/10 PASS (purchase, replay collapse, forged sig 403, 20-worker race =1 effect, lab 7/7, audit verify+tamper detect, benchmark artifact); pytest 213/213; build+E2E green; completion report written |
 
 ---
 
@@ -349,21 +349,28 @@ M03 — Project Charter.
 - Validation: ruff clean; mypy strict clean; pytest 213/213 regression after harness addition.
 - Known limits: single-machine local numbers only; no load generation beyond stated n; ASGI transport for API figures; no production capacity claims.
 
+## M50 — Clean-Room Phase-1 Acceptance — PASS
+- Clean-room reproduction: `docker compose down -v` (razormesh volume only) → `up -d` healthy → `make migrate` (2 revisions on empty DB) → `make seed` (50 products) → API started fresh on 127.0.0.1:8000, /ready ok.
+- New `scripts/acceptance.py` runs PRD §9 demonstrations over live HTTP; result **10/10 PASS**: readiness+mock banner; normal purchase ALLOW→SUCCEEDED (total 64890 minor); replay collapses to same durable attempt (1 effect); forged signature → 403 SIGNATURE_INVALID pre-provider; 20-worker same-ticket race → distinct_attempts=1, durable=1, succeeded=1; security-lab real-pipeline suite 7/7 (CONTEXT_SWAP, REPLAY, CHECKOUT_DRIFT, APPROVAL_SPLIT, PROVIDER_UNKNOWN, EXPIRED_AUTHORIZATION + safe baseline); audit verify valid before AND after tamper-test; tamper DETECTED (hash mismatch) then self-restored; benchmark artifact present with computed confusion metrics.
+- Repair surfaced by acceptance: concurrent/replayed nonce use returned HTTP 500 via uncaught NonceAlreadyClaimed; now returns 409 NONCE_REPLAY_REJECTED per error taxonomy (replay is a business denial, not a server fault). Lint/mypy re-verified.
+- Final gates on clean deployment: pytest 213/213; next production build OK; Playwright chromium E2E 2/2; ruff+mypy clean.
+- `docs/PHASE1_COMPLETION_REPORT.md` written: architecture summary, live demonstration table, benchmark metrics (labelled synthetic), LOCAL-ONLY performance baseline, honest limitations, phase-transition request.
+
 ---
 
 # Final Phase-1 exit checklist
 
-- [ ] 50/50 milestones PASS
-- [ ] normal authorized flow works
-- [ ] BLOCK cannot execute
-- [ ] CHALLENGE cannot execute before reauthorization
-- [ ] 20-worker same-ticket provider effect count = 1
-- [ ] aggregate budget concurrency invariant passes
-- [ ] wrong principal/agent/merchant ticket fails
-- [ ] stale/superseded authorization fails
-- [ ] provider-unknown path does not blindly duplicate
-- [ ] audit tamper test detected
-- [ ] benchmark metrics generated from actual runner
-- [ ] dependency/security findings classified
-- [ ] clean-room setup succeeds
-- [ ] `docs/PHASE1_COMPLETION_REPORT.md` exists
+- [x] 50/50 milestones PASS
+- [x] normal authorized flow works
+- [x] BLOCK cannot execute
+- [x] CHALLENGE cannot execute before reauthorization
+- [x] 20-worker same-ticket provider effect count = 1
+- [x] aggregate budget concurrency invariant passes
+- [x] wrong principal/agent/merchant ticket fails
+- [x] stale/superseded authorization fails
+- [x] provider-unknown path does not blindly duplicate
+- [x] audit tamper test detected
+- [x] benchmark metrics generated from actual runner
+- [x] dependency/security findings classified
+- [x] clean-room setup succeeds
+- [x] `docs/PHASE1_COMPLETION_REPORT.md` exists

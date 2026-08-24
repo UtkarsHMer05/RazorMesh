@@ -47,5 +47,6 @@ docker-compose.yml PostgreSQL 18 + Redis 8 (loopback-only host bindings)
 
 ## Status
 
-Phase 1 in progress — see `PHASE1_STATUS.md` for milestone-by-milestone evidence.
+**Phase-1 local prototype complete** — all 50 milestones PASS with evidence in
+`PHASE1_STATUS.md`; see `docs/PHASE1_COMPLETION_REPORT.md`.
 All payment flows are **simulated** and labeled as such in the product UI.
