@@ -363,3 +363,17 @@ T22 Out-of-order webhooks (captured before authorized; order.paid before capture
 T23 failed→captured same transaction → reconciled to captured exactly once.
 T24 Timeout after send → PROVIDER_UNKNOWN + reservation held + reconciliation path;
     never a blind second order/payment.
+
+# 15. Webhook error precedence note (P2-M36)
+
+`POST /api/v1/webhooks/razorpay` validates in this order: size cap (413) ->
+x-razorpay-event-id presence (400 RAZORPAY_WEBHOOK_EVENT_UNKNOWN) -> HMAC
+signature over the raw body (403 RAZORPAY_WEBHOOK_SIGNATURE_INVALID).
+
+The event-id check firing BEFORE the signature check is intentional and
+cryptographically safe: both rejections occur before any body parsing, reducer
+invocation, inbox claim, or ledger write. An unauthenticated caller learning
+which structural check failed gains no advantage — every path to business state
+requires a valid signature computed with the secret. Pinned by tests
+(test_unauthenticated_variants_cause_zero_state_mutation) asserting zero rows in
+provider_events and audit_events across all unauthenticated header variants.

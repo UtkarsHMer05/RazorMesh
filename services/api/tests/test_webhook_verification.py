@@ -160,3 +160,79 @@ def test_unknown_event_type_accepted_ignored(hook_client: TestClient) -> None:
     assert res.status_code == 200
     body = res.json()
     assert body["processed"] is False and body["reason"] == "IGNORED_EVENT_TYPE"
+
+
+# ---------------------------------------------------------------------------
+# P2-M36: error PRECEDENCE safety — event-id check fires before signature
+# check, but BOTH paths reject before ANY parsing/reduction/inbox write.
+# Cryptographic safety does not depend on which 4xx an unauthenticated caller
+# sees: no code path reaches business logic without a VALID signature over the
+# exact received bytes. These tests pin zero-mutation behavior for both orders.
+# ---------------------------------------------------------------------------
+
+
+def _inbox_count() -> int:
+    from sqlalchemy import text as _t
+
+    from razormesh_api.persistence.db import create_db_engine
+
+    engine = create_db_engine(get_settings().database_url)
+    with engine.connect() as c:
+        return int(
+            c.execute(_t("SELECT count(*) FROM provider_events")).scalar_one()
+        )
+
+
+def _audit_count() -> int:
+    from sqlalchemy import text as _t
+
+    from razormesh_api.persistence.db import create_db_engine
+
+    engine = create_db_engine(get_settings().database_url)
+    with engine.connect() as c:
+        return int(c.execute(_t("SELECT count(*) FROM audit_events")).scalar_one())
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {},  # no signature, no event id (the human's manual curl case)
+        {"x-razorpay-event-id": "evt_prec_1"},  # event id but no signature
+        {"X-Razorpay-Signature": "0" * 64},  # signature but no event id
+    ],
+)
+def test_unauthenticated_variants_cause_zero_state_mutation(
+    hook_client: TestClient, headers: dict[str, str]
+) -> None:
+    raw = _payload()
+    inbox_before = _inbox_count()
+    audit_before = _audit_count()
+
+    res = hook_client.post("/api/v1/webhooks/razorpay", content=raw, headers=headers)
+
+    assert res.status_code in (400, 403)  # controlled rejection, never 500
+    assert res.status_code != 200
+    assert res.json()["detail"]["code"] in (
+        "RAZORPAY_WEBHOOK_SIGNATURE_INVALID",
+        "RAZORPAY_WEBHOOK_EVENT_UNKNOWN",
+    )
+    assert _inbox_count() == inbox_before  # no durable claim
+    assert _audit_count() == audit_before  # no ledger event
+
+
+def test_precedence_event_id_before_signature_is_documented_behavior(
+    hook_client: TestClient,
+) -> None:
+    """400 EVENT_UNKNOWN precedes 403 SIGNATURE_INVALID by design.
+
+    Rationale: the event-id presence check is a cheap structural validation of
+    the REQUEST CONTRACT; leaking 'you omitted a required header' to an
+    unauthenticated caller discloses no secret material and cannot bypass the
+    subsequent HMAC gate. Any request failing EITHER check is dropped before
+    parse/reduce/inbox. A caller holding neither the secret nor an event id
+    learns nothing that shortens a brute-force path.
+    """
+    raw = _payload()
+    res = hook_client.post("/api/v1/webhooks/razorpay", content=raw)
+    assert res.status_code == 400
+    assert res.json()["detail"]["code"] == "RAZORPAY_WEBHOOK_EVENT_UNKNOWN"
