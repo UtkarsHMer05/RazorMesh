@@ -28,7 +28,7 @@
 | M16 | Razorpay Error Taxonomy | PASS | exhaustive matrix test (21 cases): 401/403→AUTH; 400/404/422/429/3xx/4xx-residual→REJECTED(definitive, no-effect); 5xx/timeout/connect/malformed/bad-entity→UNKNOWN(never retried, calls==1); suite 276/276 |
 | M17 | First Real Test Order | PASS | scripts/rzp_first_order.py: real ALLOW→reserve→ticket→nonce→attempt→order_TTaTD5sEvimzoD (created, 64890 INR minor); fetch matches amount/currency/receipt; security regressions green post-mutation |
 | M18 | Order Fetch & Reconciliation | PASS | reconcile_attempt(): amount/currency/receipt validated vs durable authority; conflicts raise AMOUNT/CURRENCY/CONTEXT_MISMATCH; paid classified as capture evidence WITHOUT settling (reducer owns that); 6 mock tests + REAL reconcile of order_TTagLmM6FL6oB4 consistent=True; suite 282/282 |
-| M19 | Checkout Launch Contract | NOT_STARTED | — |
+| M19 | Checkout Launch Contract | PASS | CheckoutLaunchPayload frozen dataclass (public key id, order id, amount, currency, safe correlation); issued ONLY for EXECUTING attempts with order claim; secret-leak tests; buyer route returns launch on razorpay path; suite 282/282 |
 | M20 | Checkout Script Integration | NOT_STARTED | — |
 | M21 | Real Checkout UI | NOT_STARTED | — |
 | M22 | Client Success Handler | NOT_STARTED | — |
@@ -736,3 +736,37 @@ REAL reconcile (repo-root cwd):
 
 ### Next
 - M19 — Checkout Launch Contract.
+
+
+## M19 — Checkout Launch Contract
+
+MILESTONE: M19
+STATUS: PASS
+
+Requirements: master prompt M19 — backend-defined launch payload; public data only;
+issued only after trust/execution checks.
+Security invariants: P2-S03/S04 (secrets never to browser), P2-S05/S06.
+
+### Implementation
+- `CheckoutLaunchPayload` (frozen): public_key_id, razorpay_order_id, amount_minor,
+  currency, execution_attempt_id, intent_id, checkout_id.
+- `build_launch_payload()`: refuses non-EXECUTING attempts and order-less attempts;
+  amount/currency come from the DURABLE attempt, not the browser.
+- `POST /buyer/execute`: when the trusted executor returns an EXECUTING attempt with
+  an order claim (razorpay path only), the response now carries `launch`; mock mode
+  responses unchanged.
+
+### Validation commands + results
+```text
+pytest tests/test_launch_contract.py -v → 5 passed (field whitelist, secret-absence
+  scan against populated Key/Webhook secrets, terminal-attempt refusal,
+  missing-correlation refusal, immutability)
+pytest (full)                            → 282 passed
+ruff / mypy strict                       → clean
+```
+
+### Real Razorpay interaction
+- NONE (contract + wiring; live browser flow arrives at M21+ with the human gates).
+
+### Next
+- M20 — Checkout Script Integration.

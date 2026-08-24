@@ -472,3 +472,54 @@ def reconcile_attempt(
         payment_status=payment_status,
         consistent=True,
     )
+
+
+# ---------------------------------------------------------------------------
+# P2-M19: Checkout launch contract (browser receives PUBLIC data ONLY)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class CheckoutLaunchPayload:
+    """Everything Standard Checkout needs — and NOTHING secret."""
+
+    public_key_id: str
+    razorpay_order_id: str
+    amount_minor: int
+    currency: str
+    execution_attempt_id: str
+    intent_id: str
+    checkout_id: str
+
+
+def build_launch_payload(
+    *,
+    attempt_state: str,
+    attempt_amount_minor: int,
+    attempt_currency: str,
+    attempt_execution_attempt_id: str,
+    attempt_intent_id: str,
+    attempt_checkout_id: str,
+    attempt_razorpay_order_id: str | None,
+    settings: Settings,
+) -> CheckoutLaunchPayload:
+    """Issue a launch payload ONLY for an EXECUTING attempt holding an order claim."""
+    if attempt_state != "EXECUTING":
+        raise RazorpayError(
+            "RAZORPAY_PAYMENT_NOT_CAPTURED",
+            f"launch requires an in-progress order (attempt state {attempt_state})",
+        )
+    if not attempt_razorpay_order_id:
+        raise RazorpayError(
+            "RAZORPAY_ORDER_CONTEXT_MISMATCH",
+            "launch requires a correlated razorpay order",
+        )
+    return CheckoutLaunchPayload(
+        public_key_id=settings.razorpay_key_id,
+        razorpay_order_id=attempt_razorpay_order_id,
+        amount_minor=attempt_amount_minor,
+        currency=attempt_currency,
+        execution_attempt_id=attempt_execution_attempt_id,
+        intent_id=attempt_intent_id,
+        checkout_id=attempt_checkout_id,
+    )

@@ -92,10 +92,23 @@ class ExecuteIn(BaseModel):
     signature_hex: str = Field(min_length=32, max_length=256)
 
 
+class LaunchPayload(BaseModel):
+    """Public Standard Checkout data — never contains secrets (P2-S03/S04)."""
+
+    public_key_id: str
+    razorpay_order_id: str
+    amount_minor: int
+    currency: str
+    execution_attempt_id: str
+    intent_id: str
+    checkout_id: str
+
+
 class ExecutionBody(BaseModel):
     state: str
     attempt_id: str
     detail: str | None = None
+    launch: LaunchPayload | None = None
 
 
 @router.post("/buyer/fixture-intent")
@@ -234,7 +247,22 @@ def execute(
             status_code=503, detail={"code": "NONCE_COORDINATION_UNAVAILABLE"}
         ) from exc
 
-    return ExecutionBody(state=attempt.state, attempt_id=attempt.execution_attempt_id)
+    result_body = ExecutionBody(state=attempt.state, attempt_id=attempt.execution_attempt_id)
+    if attempt.state == "EXECUTING" and attempt.razorpay_order_id:
+        from razormesh_api.providers.razorpay import build_launch_payload
+
+        launch = build_launch_payload(
+            attempt_state=attempt.state,
+            attempt_amount_minor=attempt.amount_minor,
+            attempt_currency=attempt.currency,
+            attempt_execution_attempt_id=attempt.execution_attempt_id,
+            attempt_intent_id=attempt.intent_id,
+            attempt_checkout_id=attempt.checkout_id,
+            attempt_razorpay_order_id=attempt.razorpay_order_id,
+            settings=get_settings(),
+        )
+        result_body.launch = LaunchPayload(**launch.__dict__)
+    return result_body
 
 
 def _checkout_hash(env: CheckoutEnvelope) -> str:
