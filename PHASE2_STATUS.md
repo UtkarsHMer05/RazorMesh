@@ -10,8 +10,8 @@
 
 | # | Milestone | Status | Evidence summary |
 |---|---|---|---|
-| M01 | Repository & Governance Integrity Re-read | IN_PROGRESS | scaffold created; hygiene checks clean |
-| M02 | Phase-1 Full Quality Revalidation | NOT_STARTED | — |
+| M01 | Repository & Governance Integrity Re-read | PASS | hygiene sweep clean; scaffold created; hardening commit cef5a6f absorbed; .env ignored w/ credentials PRESENT |
+| M02 | Phase-1 Full Quality Revalidation | PASS | ruff+mypy strict clean; pytest 225/225 (cov 96% TOTAL under current flags); eslint/tsc/vitest3/build OK; Playwright 2/2; security-check PASS (pip+pnpm audits clean); benchmark smoke 14 pairs P=R=F1=1.0 |
 | M03 | Phase-1 Security Invariant Revalidation | NOT_STARTED | — |
 | M04 | Phase-1 Clean-Room Acceptance Re-run | NOT_STARTED | — |
 | M05 | Freeze Phase-2 Baseline | NOT_STARTED | — |
@@ -129,3 +129,48 @@ grep -rn "rzp_live_" . --include="*.py" --include="*.ts" --include="*.tsx"  # no
 
 ### Next
 - M02 — Phase-1 Full Quality Revalidation.
+
+## M02 — Phase-1 Full Quality Revalidation
+
+MILESTONE: M02
+STATUS: PASS
+
+Requirements: master prompt §2 (independent revalidation, no shortened substitutes).
+Security invariants: all Phase-1 invariants re-proven by suite; S30 audits.
+
+### Implementation / findings
+- No repair needed: every gate passed on first run against the user's hardened
+  baseline (`cef5a6f`).
+- Test-count reconciliation vs reported evidence: 225/225 matches the reported
+  Phase-1 final count exactly (the earlier 213 was pre-hardening). Coverage under
+  current flags measures TOTAL 96% (5310 stmts / 196 miss); the reported 93.25%
+  figure used a different flag set — both are honest local measurements, not a
+  regression.
+- Benchmark smoke regenerated `docs/PHASE1_BENCHMARK.json`: 14 pairs, TP=14 FP=0
+  TN=14 FN=0, P=R=F1=1.0, unsafe_execution_rate 0.0 — matches hardened pipeline.
+
+### Validation commands + results
+```text
+docker compose ps                       → postgres+redis healthy
+ruff check .                            → All checks passed
+mypy -p razormesh_api                   → no issues in 48 files
+pytest -q --cov                         → 225 passed; TOTAL 96%
+pnpm lint / typecheck / test            → clean / clean / 3 passed
+pnpm build                              → OK (static prerender)
+playwright test                         → 2 passed
+make security-check                     → secret scan 0; pip-audit clean; pnpm audit clean
+make benchmark                          → 14 pairs P=R=F1=1.0
+```
+
+### Real Razorpay interaction
+- NONE.
+
+### Security regression
+- Full pytest suite includes the permanent execution-integrity regressions added by
+  the human hardening commit; all pass. Secret scan clean; no secrets logged.
+
+### Known limitations
+- None new.
+
+### Next
+- M03 — Phase-1 Security Invariant Revalidation (focused security run).
