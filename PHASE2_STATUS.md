@@ -36,10 +36,10 @@
 | M24 | Callback Adversarial Tests | PASS | 5 adversarial cases: valid signature marks verified; forged → 403 no mutation; swapped browser order → CONTEXT_MISMATCH; duplicate verified callback idempotent; wrong-secret signature rejected; suite 292/292 |
 | M25 | Post-Callback Provider Verification | PASS | valid signature ≠ fulfilment: callback fetches provider order; `paid` → confirm_captured() settles SUCCEEDED exactly-once (reserved→committed, razorpay_payment_id claim, fulfilment ELIGIBLE, RAZORPAY_PAYMENT_VERIFIED event); otherwise EXECUTING + NOT_CAPTURED; duplicate-after-settlement idempotent; suite 294/294 |
 | M26 | Provider State Reducer | PASS | reducer.py: single idempotent applier for verified events; dimensions separated; captured/order.paid exactly-once; authorized informative-only; failed→FAILED(release) with guarded FAILED→SUCCEEDED late-capture reconcile (capacity-checked, audited); 4 permutation tests; suite 298/298 |
-| M27 | payment.authorized Handling | NOT_STARTED | — |
-| M28 | payment.captured Handling | NOT_STARTED | — |
-| M29 | payment.failed Handling | NOT_STARTED | — |
-| M30 | order.paid Handling | NOT_STARTED | — |
+| M27 | payment.authorized Handling | PASS | D-031: subscribed informative-only; lagged snapshot cannot regress SUCCEEDED nor fulfil EXECUTING (test) |
+| M28 | payment.captured Handling | PASS | confirm_captured exactly-once; captured-then-paid dup no-op proven; reservation reserved-to-committed once |
+| M29 | payment.failed Handling | PASS | record_provider_failure settles EXECUTING-to-FAILED releasing reservation; duplicate failure no-op; late capture reconciles via guarded path |
+| M30 | order.paid Handling | PASS | order.paid alone settles exactly-once without prior captured event; duplicates no-op |
 | M31 | Raw-Body Webhook Endpoint | NOT_STARTED | — |
 | M32 | Webhook Signature Verification | NOT_STARTED | — |
 | M33 | Durable Webhook Inbox & Dedup | NOT_STARTED | — |
@@ -952,3 +952,33 @@ ruff / mypy strict (50 files)   → clean
 
 ### Next
 - M27 — payment.authorized Handling.
+
+
+## M27-M30 - Payment Event Semantics (reducer-backed)
+
+MILESTONES: M27, M28, M29, M30
+STATUS: ALL PASS
+
+Requirements: master prompt M27-M30 + sections 22/23; R-014 semantics.
+Security invariants: P2-S15/S16, P2-S13/S14.
+
+### Decisions and implementation
+- D-031: payment.authorized subscribed as informative-only (lagged snapshots).
+- payment.captured -> exactly-once settlement via confirm_captured; repeated
+  captured/order.paid events collapse to no-ops.
+- payment.failed -> definitive for that payment: FAILED + atomic release;
+  NOT unrecoverable - later verified capture reconciles via guarded
+  reconcile_failed_to_succeeded (capacity-checked, loudly audited).
+- order.paid -> correlated success evidence; alone it settles exactly once;
+  after captured it is a no-op.
+
+### Validation
+pytest tests/test_reducer.py -v -> 7 passed
+pytest (full)                   -> 301 passed
+ruff / mypy strict              -> clean
+
+### Real Razorpay interaction
+- NONE.
+
+### Next
+- M31 - Raw-Body Webhook Endpoint.

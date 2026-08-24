@@ -464,3 +464,25 @@ internal provider-error classes (M16).
 Validation/evidence: R-013/R-014/R-015 research entries; wrapper tests use
 httpx.MockTransport fixtures including timeout-before-response and
 timeout-after-send cases; blanket-retry absence asserted by code review test.
+
+---
+
+## D-031 — payment.authorized is subscribed as informative-only
+
+Date: 2026-08-24
+Milestones: Phase-2 M27
+Status: Accepted
+Affected docs: `ARCHITECTURE.md`, `TESTING.md`
+
+Decision: The webhook/event subscription INCLUDES `payment.authorized`, but the
+reducer treats it strictly as an informative correlation signal. It can never
+settle a reservation or set fulfilment eligibility. Rationale from current docs
+(R-014): authorized payloads are snapshots that may lag (a payment may already be
+captured when the authorized event is processed); Standard Checkout best practices
+recommend captured/failed/order.paid for automation.
+
+Security consequences: reinforces P2-S15 (authorized alone never fulfils) and the
+M25 rule that only captured/paid evidence settles.
+
+Validation/evidence: reducer tests prove authorized events cannot regress a
+SUCCEEDED state nor fulfil an EXECUTING attempt.

@@ -213,3 +213,61 @@ def test_captured_resolves_provider_unknown(reducer_env) -> None:  # type: ignor
     assert out.state == AttemptState.SUCCEEDED.value
     row3 = _spend_row(repos, contract.intent_id)
     assert row3.committed_minor == binding.amount_minor
+
+
+def test_lagged_authorized_snapshot_cannot_regress_state(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    """M27: authorized payload may LAG reality (docs R-014) — never regresses."""
+    repos, keys, spend, executor, reducer = reducer_env
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+    attempt = executor.execute(
+        signed_ticket=signed, binding=binding, intent_id=contract.intent_id
+    )
+    oid = str(attempt.razorpay_order_id)
+    reducer.apply_event(_captured(oid))
+    before = _attempt_state(repos, oid)
+
+    out = reducer.apply_event(_authorized(oid))  # late/duplicated snapshot
+    assert out.state == AttemptState.SUCCEEDED.value
+    assert _attempt_state(repos, oid) == before
+
+
+def test_failure_releases_reservation_definitively(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    """M29: verified failure releases capacity; duplicate failure is a no-op."""
+    repos, keys, spend, executor, reducer = reducer_env
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+    attempt = executor.execute(
+        signed_ticket=signed, binding=binding, intent_id=contract.intent_id
+    )
+    oid = str(attempt.razorpay_order_id)
+
+    first = reducer.apply_event(_failed(oid))
+    second = reducer.apply_event(_failed(oid))
+
+    assert first.state == AttemptState.FAILED.value
+    assert second.state == AttemptState.FAILED.value
+    row = _spend_row(repos, contract.intent_id)
+    assert row.reserved_minor == 0 and row.committed_minor == 0
+    state, fulfilment = _attempt_state(repos, oid)
+    assert (state, fulfilment) == ("FAILED", "NOT_ELIGIBLE")
+
+
+def test_order_paid_alone_settles_exactly_once(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    """M30: order.paid WITHOUT prior captured still yields ONE settlement."""
+    repos, keys, spend, executor, reducer = reducer_env
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+    attempt = executor.execute(
+        signed_ticket=signed, binding=binding, intent_id=contract.intent_id
+    )
+    oid = str(attempt.razorpay_order_id)
+
+    out1 = reducer.apply_event(_paid_order_event(oid))
+    out2 = reducer.apply_event(_paid_order_event(oid))
+
+    assert out1.state == AttemptState.SUCCEEDED.value
+    assert out2.state == AttemptState.SUCCEEDED.value
+    row = _spend_row(repos, contract.intent_id)
+    assert row.committed_minor == binding.amount_minor
+    assert row.reserved_minor == 0
