@@ -30,7 +30,7 @@
 | M18 | Order Fetch & Reconciliation | PASS | reconcile_attempt(): amount/currency/receipt validated vs durable authority; conflicts raise AMOUNT/CURRENCY/CONTEXT_MISMATCH; paid classified as capture evidence WITHOUT settling (reducer owns that); 6 mock tests + REAL reconcile of order_TTagLmM6FL6oB4 consistent=True; suite 282/282 |
 | M19 | Checkout Launch Contract | PASS | CheckoutLaunchPayload frozen dataclass (public key id, order id, amount, currency, safe correlation); issued ONLY for EXECUTING attempts with order claim; secret-leak tests; buyer route returns launch on razorpay path; suite 282/282 |
 | M20 | Checkout Script Integration | PASS | src/lib/razorpay.ts: idempotent official checkout.js loader (once per page, typed states, retry-on-error, no secrets); 3 vitest cases; lint/tsc clean; suite 287 backend + 6 web |
-| M21 | Real Checkout UI | NOT_STARTED | — |
+| M21 | Real Checkout UI | PASS | buyer page: TEST MODE banner, Pay→backend launch→official modal (server fields only), VERIFYING/CAPTURED/FAILED/PROVIDER_UNKNOWN states, no dangerous re-pay on unknown; typecheck/lint/vitest/build green |
 | M22 | Client Success Handler | NOT_STARTED | — |
 | M23 | Server Checkout Signature Verification | NOT_STARTED | — |
 | M24 | Callback Adversarial Tests | NOT_STARTED | — |
@@ -799,3 +799,29 @@ pnpm lint        → clean
 
 ### Next
 - M21 — Real Checkout UI.
+
+
+## M21 — Real Checkout UI
+
+MILESTONE: M21
+STATUS: PASS
+
+Requirements: master prompt M21/§29 — trust-first Test Mode checkout screen.
+Security invariants: P2-S03/S04/S06, §29 labeling.
+
+### Implementation (apps/web/src/app/buyer/page.tsx)
+- Visible banner: "Razorpay Test Mode — simulated payment, no real money."
+- ALLOW → single Pay action → POST /buyer/execute → server-issued launch payload
+  opens the official modal. Browser NEVER supplies key/order/amount/currency.
+- Phases: awaiting_checkout → verifying (POST /buyer/callback) → CAPTURED/PAID |
+  FAILED | PROVIDER_UNKNOWN with explicit no-fresh-pay note on unknown.
+- Retry only re-opens the SAME order's checkout; unknown outcome intentionally
+  offers no new-payment action.
+
+### Validation commands + results
+```text
+pnpm typecheck / lint / test / build → clean / clean / 6 passed / OK
+```
+
+### Next
+- M22 — Client Success Handler (callback submission hardening + tests).

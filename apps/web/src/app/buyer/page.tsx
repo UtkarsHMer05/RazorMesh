@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { loadRazorpayCheckout } from "@/lib/razorpay";
 
 type Product = {
   id: string;
@@ -20,7 +21,35 @@ type Decision = {
   signature_hex: string | null;
 };
 
-type ExecutionState = { state: string; attempt_id: string };
+type ExecutionState = {
+  state: string;
+  attempt_id: string;
+  detail?: string | { code?: string } | null;
+  launch?: {
+    public_key_id: string;
+    razorpay_order_id: string;
+    amount_minor: number;
+    currency: string;
+    execution_attempt_id: string;
+    intent_id: string;
+    checkout_id: string;
+  } | null;
+};
+
+type RazorpayHandlerResponse = {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+};
+
+type PayPhase = "idle" | "awaiting_checkout" | "verifying" | "captured" | "failed" | "provider_unknown";
+
+type RazorpayInstance = { open: () => void };
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => RazorpayInstance;
+  }
+}
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
@@ -34,6 +63,8 @@ export default function BuyerPage() {
   const [quantity, setQuantity] = useState(1);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [execution, setExecution] = useState<ExecutionState | null>(null);
+  const [payPhase, setPayPhase] = useState<PayPhase>("idle");
+  const lastLaunchRef = useRef<NonNullable<ExecutionState["launch"]> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -64,6 +95,7 @@ export default function BuyerPage() {
       setIntentId(body.intent_id);
       setDecision(null);
       setExecution(null);
+      setPayPhase("idle");
     } catch (e) {
       setError(String(e));
     } finally {
@@ -111,17 +143,88 @@ export default function BuyerPage() {
           signature_hex: decision.signature_hex,
         }),
       });
-      const body = await res.json();
-      if (!res.ok)
+      const body = (await res.json()) as ExecutionState & { detail?: unknown };
+      if (!res.ok) {
+        const d: unknown = body.detail;
         throw new Error(
-          typeof body.detail === "string" ? body.detail : (body.detail?.code ?? `execute ${res.status}`),
+          typeof d === "string" ? d : ((d as { code?: string })?.code ?? `execute ${res.status}`),
         );
+      }
       setExecution(body);
+      if (body.launch) {
+        // Server-authoritative launch: browser may not alter any field.
+        lastLaunchRef.current = body.launch;
+        setPayPhase("awaiting_checkout");
+        void openRazorpayCheckout(body.launch);
+      }
     } catch (e) {
       setError(String(e));
     } finally {
       setBusy(false);
     }
+  };
+
+  const submitCallback = useCallback(
+    async (payload: RazorpayHandlerResponse, launch: NonNullable<ExecutionState["launch"]>) => {
+      setPayPhase("verifying");
+      try {
+        const res = await fetch(`${API}/buyer/callback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            intent_id: launch.intent_id,
+            checkout_id: launch.checkout_id,
+            razorpay_payment_id: payload.razorpay_payment_id,
+            razorpay_order_id: payload.razorpay_order_id,
+            razorpay_signature: payload.razorpay_signature,
+          }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(typeof body.detail === "string" ? body.detail : (body.detail?.code ?? "callback failed"));
+        setExecution((prev) =>
+          prev
+            ? { ...prev, state: body.state ?? body.decision ?? prev.state }
+            : prev,
+        );
+        const state = String(body.state ?? "");
+        if (state === "SUCCEEDED") setPayPhase("captured");
+        else if (state === "FAILED") setPayPhase("failed");
+        else setPayPhase("provider_unknown");
+      } catch (e) {
+        setError(`Verification failed: ${String(e)} — the backend remains authoritative.`);
+        setPayPhase("provider_unknown");
+      }
+    },
+    [],
+  );
+
+  const openRazorpayCheckout = async (
+    launch: NonNullable<ExecutionState["launch"]>,
+  ): Promise<void> => {
+    const ok = await loadRazorpayCheckout();
+    if (!ok || !window.Razorpay) {
+      setError(
+        "Razorpay Checkout script failed to load. No payment was initiated; you can retry safely.",
+      );
+      setPayPhase("idle");
+      return;
+    }
+    const Rz = window.Razorpay;
+    if (!Rz) return;
+    const rzp = new Rz({
+      key: launch.public_key_id,
+      order_id: launch.razorpay_order_id,
+      amount: launch.amount_minor,
+      currency: launch.currency,
+      name: "RazorMesh Trust",
+      description: "RAZORPAY TEST MODE — simulated payment, no real money",
+      theme: { color: "#3399cc" },
+      handler: (response: RazorpayHandlerResponse) => {
+        void submitCallback(response, launch);
+      },
+      modal: { confirm_close: true },
+    });
+    rzp.open();
   };
 
   const stepClass = (done: boolean, active: boolean) =>
@@ -220,15 +323,48 @@ export default function BuyerPage() {
 
       {/* Step 4 */}
       <div className={stepClass(Boolean(execution), decision?.decision === "ALLOW")} data-testid="step-execution">
-        <h3>Step 4 · Simulated execution</h3>
+        <h3>Step 4 · Trusted execution</h3>
+        <p data-testid="test-mode-banner">
+          <strong>Razorpay Test Mode — simulated payment, no real money.</strong>
+        </p>
         {execution ? (
-          <p data-testid="execution-state">
-            Payment state: <strong>{execution.state}</strong> (attempt{" "}
-            <code>{execution.attempt_id}</code>)
-          </p>
+          <>
+            <p data-testid="execution-state">
+              Payment state: <strong data-testid="pay-state">{payPhase === "captured" ? "CAPTURED/PAID" : payPhase === "verifying" ? "VERIFYING" : payPhase === "failed" ? "FAILED" : payPhase === "provider_unknown" ? "PROVIDER_UNKNOWN" : execution.state}</strong>{" "}
+              (attempt <code>{execution.attempt_id}</code>)
+            </p>
+            {execution.launch && (
+              <p data-testid="launch-summary">
+                Order <code>{execution.launch.razorpay_order_id}</code> ·{" "}
+                {fmtINR(execution.launch.amount_minor)}{" "}
+                {execution.launch.currency} — server-issued values only.
+              </p>
+            )}
+            {payPhase !== "captured" && payPhase !== "failed" && (
+              <button
+                data-testid="retry-pay"
+                disabled={busy || payPhase === "verifying"}
+                onClick={() => {
+                  const launch = lastLaunchRef.current;
+                  if (launch) void openRazorpayCheckout(launch);
+                }}
+              >
+                Re-open Razorpay Test Checkout
+              </button>
+            )}
+            {payPhase === "verifying" && (
+              <p role="status">Verifying payment server-side… do not close this page.</p>
+            )}
+            {payPhase === "provider_unknown" && (
+              <p data-testid="unknown-note" role="alert">
+                Outcome could not be confirmed yet. The backend holds the reservation and will
+                reconcile with the provider — starting a NEW payment is intentionally unavailable.
+              </p>
+            )}
+          </>
         ) : decision?.decision === "ALLOW" ? (
-          <button onClick={execute} disabled={busy}>
-            Execute payment (mock provider)
+          <button onClick={execute} disabled={busy} data-testid="pay-action">
+            Pay securely via Razorpay (Test Mode)
           </button>
         ) : (
           <p>

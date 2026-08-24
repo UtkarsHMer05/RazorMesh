@@ -12,12 +12,6 @@ const SCRIPT_ID = "razorpay-checkout-v1";
 
 let inflight: Promise<boolean> | null = null;
 
-declare global {
-  interface Window {
-    Razorpay?: unknown;
-  }
-}
-
 function inject(): Promise<boolean> {
   return new Promise((resolve) => {
     const existing = document.getElementById(SCRIPT_ID);
