@@ -49,7 +49,7 @@
 | M39 | Live Checkout Revalidation | PASS | Revalidator re-reads durable checkout, rebuilds exact authz projection (condition/currency persisted), recomputes hash: relevant drift -> STALE_CHECKOUT; generation/status drift -> AUTHORIZATION_SUPERSEDED/STALE; untrusted title changes proven NOT to invalidate; 5 tests PASS |
 | M40 | Untrusted Content Boundary | PASS | Hostile payloads (SQLi/prompt-injection/forged authority JSON) stored verbatim as UNTRUSTED_CONTENT; authorization hashes + decisions unaffected; smuggled policy/nonce strings stay inert; authority-slot attempt -> TrustViolation; ledger chain intact with hostile rows; 5 tests PASS |
 | M41 | Future SemanticVerifier Interface | PASS | Protocol + NullSemanticVerifier (UNDECIDED default) + DeterministicKeywordVerifier test double; rule adapter maps SAFE/UNSAFE/UNDECIDED -> PASS/FAIL/UNKNOWN fail-closed; zero ML deps asserted; 6 tests PASS |
-| M42 | Attack Scenario Specification | NOT_STARTED | — |
+| M42 | Attack Scenario Specification | PASS | Pydantic-validated ScenarioSpec (id pattern, family-specific invariants: swap/replay>=2/drift-field/split>=2); registry covers all 7 required families exactly once; expected labels isolated from decision inputs; 5 tests PASS |
 | M43 | Adversarial Evaluation Runner | NOT_STARTED | — |
 | M44 | Safe/Unsafe Paired Benchmark | NOT_STARTED | — |
 | M45 | Buyer Experience UI | NOT_STARTED | — |
@@ -298,6 +298,11 @@ M03 — Project Charter.
 - `semantic.py`: `SemanticVerifier` protocol, `SemanticAssessment` (SAFE/UNSAFE/UNDECIDED), `NullSemanticVerifier` (Phase-1 default), `DeterministicKeywordVerifier` (case-insensitive banned-phrase double), and `semantic_rule` adapter into the RazorGuard matrix: SAFE→PASS, UNSAFE→FAIL SEMANTIC_UNSAFE, UNDECIDED→UNKNOWN SEMANTIC_UNDECIDED (fail-closed).
 - Phase boundary enforced by test: transformers/torch/onnxruntime must not appear in sys.modules.
 - Validation: ruff clean; mypy strict 42 files clean; pytest 182/182.
+
+## M42 — Attack Scenario Specification — PASS
+- `scenarios.py`: `ScenarioSpec` (pydantic, frozen) with family-specific invariants (CONTEXT_SWAP needs swap_principal_to; REPLAY needs replay_count>=2; CHECKOUT_DRIFT needs drift_field; APPROVAL_SPLIT needs split_parts>=2); `ExpectedOutcome` enum keeps EXPECTED labels separate from runner inputs.
+- Registry: 7 scenarios covering every required family exactly once — safe baseline, context swap, 5x replay, checkout drift, 3-way approval split, provider-unknown retry, expired authorization. `validate_registry()` guards duplicates + coverage.
+- Validation: ruff clean; mypy strict 43 files clean; pytest 190/190.
 
 ---
 

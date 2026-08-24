@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M42 — Attack Scenario Specification (next)  
-**Milestones passed:** M01–M41  
+**Current milestone:** M43 — Adversarial Evaluation Runner (next)  
+**Milestones passed:** M01–M42  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 42 files clean, pytest 182/182
+**Gate:** ruff clean, mypy 43 files clean, pytest 190/190
 
 ---
 
@@ -110,6 +110,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Revalidation: rebuild hash from DB pre-execution; drift blocks, cosmetics don't (M39)
 - Untrusted boundary: hostile text inert end-to-end; authority slots protected (M40)
 - Semantic seam: Null + deterministic keyword verifier; UNDECIDED fail-closed (M41)
+- Scenarios: 7 families schema-validated; expected labels isolated (M42)
 
 ---
 
@@ -140,7 +141,7 @@ None yet; do not invent.
 
 # Next action
 
-M42 — Attack Scenario Specification: schema-validated safe/unsafe synthetic scenarios.
+M43 — Adversarial Runner: execute scenarios through real pipeline; never leak labels.
 
 ---
 
