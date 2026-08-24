@@ -356,3 +356,28 @@ Impact: candidate for M07 client decision; blanket automatic retries MUST stay O
 for mutating calls (master prompt §27; P2-S19). Final decision recorded at M07.
 
 Confidence: High (authoritative registry + repo).
+
+---
+
+# R-016 — How Razorpay Test Mode webhook events are triggered (re-check)
+
+Date checked: 2026-08-24 (Phase 2 M36 close)
+Source: Official Razorpay docs — webhook validation/testing
+URL: https://razorpay.com/docs/webhooks/validate-test/
+Type: Official
+
+Key findings:
+- Current page states: "Test events get triggered on a transaction done in the
+  Test mode." It describes NO Dashboard "Send test notification" button.
+- Human owner confirmed on the live Test Mode Dashboard: the registered webhook
+  (Enabled, 4 events) exposes no test-notification action for this account.
+- OTP guidance unchanged: default OTP 754081 when setting up, editing or
+  deleting a Test Mode webhook.
+
+Impact: the M36 acceptance line "verify at least one real signed event" cannot
+be satisfied by a manual Dashboard test notification; it is deferred to the
+first real Test Mode transaction at M38 (decision D-032). No evidence may be
+recorded as if a test notification had occurred.
+
+Confidence: High (current official documentation + live Dashboard inspection by
+the human owner, same date).

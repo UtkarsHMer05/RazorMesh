@@ -486,3 +486,45 @@ M25 rule that only captured/paid evidence settles.
 
 Validation/evidence: reducer tests prove authorized events cannot regress a
 SUCCEEDED state nor fulfil an EXECUTING attempt.
+
+---
+
+## D-032 — M36 live signed-webhook delivery proof deferred to M38
+
+Date: 2026-08-24
+Milestones: Phase-2 M36, M38
+Status: Accepted (explicit human instruction, 2026-08-24)
+Affected docs: `PHASE2_STATUS.md`, `MEMORY.md`, `RESEARCH.md` (R-016)
+
+Decision: M36 closes as PASS on the verified Dashboard + tunnel configuration.
+The original M36 acceptance line "verify at least one real signed event" is
+deferred to M38, where the first controlled real Test Mode transaction will
+generate actual payment.authorized / payment.captured / payment.failed /
+order.paid deliveries.
+
+Rationale:
+1. Human inspection of the live Test Mode Dashboard: the registered webhook
+   (Enabled, 4 events) exposes NO "Send test notification" action for this
+   account.
+2. Current official documentation (R-016, re-checked 2026-08-24): "Test events
+   get triggered on a transaction done in the Test mode." The current page
+   describes no Dashboard test-notification button.
+3. Therefore the only non-fabricated path to a real signed delivery is a real
+   Test Mode transaction, which is exactly the content of M38.
+
+Explicit non-fabrication statement: at M36 close, provider_events contains ZERO
+real Razorpay deliveries (synthetic `evt_ok_*` fixtures only). Live signed
+delivery + raw-body HMAC verification + event-id dedup against a REAL provider
+event remains UNPROVEN until M38.
+
+Carried-forward obligation: the M38 gate MUST include, before PASS, at least
+one REAL signed event in provider_events (verified=true, event_id not matching
+the `evt_ok_*` fixture pattern). If no real signed event arrives during M38,
+M38 cannot PASS.
+
+Security consequences: no invariant weakened. P2-S13/P2-S14 (raw-body HMAC,
+durable dedup) remain implemented and covered by signed-fixture tests
+(M31–M34); only the live-delivery proof moves from M36 to M38. This deferral
+changes evidence timing, not product scope or security behavior; it resolves
+the conflict between the original M36 wording and the live Dashboard/docs
+reality, per the human owner's explicit instruction.

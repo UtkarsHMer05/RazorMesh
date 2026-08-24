@@ -45,7 +45,7 @@
 | M33 | Durable Webhook Inbox & Dedup | PASS | webhook_inbox.py: provider_events PK claim via insert-race; loser classified DUPLICATE with zero processing; PROCESSED/ERROR states recorded; route wired through inbox; suite 308/308 |
 | M34 | Ordering & Reconciliation Tests | PASS | permutation matrix (15 cases): canonical, captured-first, failed-then-captured, paid-before-captured, all-dups, delayed-auth-only, fail-no-capture, and EVERY capture-ending ordering converges to single commit; suite 316/316 |
 | M35 | Public Webhook Tunnel Preparation | PASS | zrok installed via brew; scripts/webhook_tunnel.sh + docs/PHASE2_TUNNEL.md (Dashboard steps, OTP 754081, event list, secret handling); enable step requires human token -> combined gate with M36 |
-| M36 | HUMAN GATE — Webhook Dashboard | IN_PROGRESS | human confirmed Dashboard webhook config; zrok tunnel verified end-to-end (public HTTPS → local API); M01–M37 audit remediation applied (5 defects fixed, gates re-greened at 323 tests); awaiting ≥1 REAL signed event |
+| M36 | HUMAN GATE — Webhook Dashboard | PASS | Dashboard webhook verified (Enabled, 4 events) + tunnel end-to-end; M01–M37 audit remediation (5 defects fixed, 323 tests green); live signed-delivery proof DEFERRED to M38 per human instruction + D-032/R-016 (current docs: test events are triggered by Test Mode transactions; no test-notification action exists) |
 | M37 | Real Success Checkout Readiness Gate | NOT_STARTED | — |
 | M38 | HUMAN GATE — Real Test Success | NOT_STARTED | — |
 | M39 | Success Evidence Reconciliation | NOT_STARTED | — |
@@ -1085,7 +1085,8 @@ STATUS: PASS (preparation complete; enable+share requires human action)
 ## M36 — HUMAN GATE — Razorpay Test Webhook Dashboard (+ M01–M37 audit remediation)
 
 MILESTONE: M36
-STATUS: IN_PROGRESS (human action confirmed; one REAL signed event outstanding)
+STATUS: PASS (Dashboard + tunnel configuration verified; live signed-delivery
+proof explicitly deferred to M38 per D-032 — NOT fabricated, NOT claimed)
 
 Requirements: master prompt M36 — endpoint + public URL verified before the gate;
 human registers webhook with the EXISTING .env secret (never pasted into chat);
@@ -1167,9 +1168,36 @@ live /ready (local + via tunnel)  → payment_provider=razorpay, mock=false (hon
 ### Real Razorpay interaction
 - NONE new this milestone (tunnel verification only; no orders/payments created).
 
-### Outstanding for M36 PASS
-- At least one REAL Razorpay-signed event in the provider_events inbox
-  (Dashboard "send test notification" with the tunnel live, or the M38 payment).
+### Close-out ruling (2026-08-24, explicit human instruction → D-032)
+
+The original M36 acceptance line "verify at least one real signed event" could
+not be executed as written:
+
+- Human owner inspected the live Test Mode Dashboard: the registered webhook
+  (Enabled, 4 events at the zrok URL) exposes NO "Send test notification"
+  action for this account.
+- Current official documentation re-checked the same date (R-016): "Test events
+  get triggered on a transaction done in the Test mode." The page describes no
+  Dashboard test-notification button.
+
+Ruling, per the human owner's explicit instruction (highest governance
+precedence, AGENTS.md §3), recorded as decision D-032:
+
+1. The Dashboard/tunnel configuration portion of M36 is VERIFIED (evidence
+   above: webhook Enabled with 4 events at the exact public URL; public HTTPS
+   reaches the local API; unauthenticated probes get controlled 400 with zero
+   mutation; /ready honest in razorpay mode).
+2. The signed-delivery proof is DEFERRED to M38, where the first controlled
+   real Test Mode transaction will actually generate payment.authorized /
+   payment.captured / payment.failed / order.paid events.
+3. NON-FABRICATION STATEMENT: at M36 close, provider_events contains ZERO real
+   Razorpay deliveries (17 synthetic `evt_ok_*` fixture rows only; query
+   `event_id NOT LIKE 'evt_ok_%'` returned 0 rows on 2026-08-24 22:35 and
+   again after the gate re-runs). No test notification occurred; none is
+   recorded as having occurred.
+4. Carried-forward obligation: M38 cannot PASS without ≥1 REAL signed event
+   (verified=true, non-fixture event_id) in provider_events.
 
 ### Next
-- Capture the real signed event → M36 PASS → M37 readiness gate → M38 human gate.
+- M37 readiness gate → M38 human gate (real Test Mode success checkout; its
+  gate evidence MUST include the deferred real signed webhook event).

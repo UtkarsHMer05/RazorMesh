@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 2 — Razorpay Test Mode Integration (ACTIVE since P2-M05)  
-**Current milestone:** P2-M36 — HUMAN GATE (webhook Dashboard config) — human confirmed; awaiting 1 REAL signed event  
-**Phase-2 milestones passed:** P2-M01..P2-M35  
+**Current milestone:** P2-M37 — Real Success Checkout Readiness Gate (M36 PASS; signed-delivery proof deferred to M38 per D-032)  
+**Phase-2 milestones passed:** P2-M01..P2-M36  
 **Last updated:** 2026-08-24  
-**Gate:** M01–M37 audit completed per human instruction: 5 defects found+fixed (ruff format gap, security-check fixture findings, /ready hardcoded flag, tests reading real .env, CRITICAL /buyer/execute hardcoded mock provider). All gates re-greened: pytest 323/323, ruff format+check clean, mypy strict 52 files, frontend clean, Playwright 2/2, security-check PASS. Tunnel live: https://1pvdxdizehva.shares.zrok.io → :8000; RAZORPAY_WEBHOOK_PUBLIC_URL set in .env; live /ready honestly reports razorpay mode.
+**Gate:** M36 closed PASS per explicit human instruction + D-032/R-016: Dashboard webhook verified (Enabled, 4 events at zrok URL); current official docs say test events are triggered by Test Mode transactions (no Dashboard test-notification button exists). Live signed-delivery proof NOT fabricated — provider_events has 0 real deliveries; that proof is a carried-forward M38 gate obligation (M38 cannot PASS without ≥1 real signed event verified=true). Full re-verification 2026-08-24 22:35: pytest 323/323, ruff format+check+eslint clean, mypy strict 52 files (both roots), tsc+vitest 6/6+build OK, Playwright 2/2, security-check PASS (0 secrets, audits clean), live auth diagnostic OK, webhook route via tunnel controlled 400 zero mutation, /ready honest in razorpay mode local+tunnel.
 
 ---
 
@@ -137,7 +137,7 @@ None recorded.
 
 # Active decisions
 
-See `DECISIONS.md`, currently D-001 through D-029.
+See `DECISIONS.md`, currently D-001 through D-032 (D-032: M36 live signed-webhook delivery proof deferred to M38).
 
 ---
 
@@ -150,13 +150,15 @@ See `DECISIONS.md`, currently D-001 through D-029.
 
 # Next action
 
-M36 close-out: with the tunnel live (zrok share 1pvdxdizehva), human sends one
-Dashboard "test notification" (or any test transaction); agent verifies a REAL
-signed event lands verified=true in provider_events → M36 PASS → M37 readiness
-gate → M38 human gate (real success checkout via buyer UI). See
-docs/PHASE2_TUNNEL.md. If the tunnel share dies, re-run scripts/webhook_tunnel.sh
-and UPDATE the Dashboard URL + .env RAZORPAY_WEBHOOK_PUBLIC_URL (share is not
-reserved).
+M37 readiness gate: re-run full gate suite, verify the readiness checklist
+(order creation, Checkout UI, callback verification, webhook verification/dedup,
+provider fetch, reducer, reservation, audit, Test Mode guard, Phase-1
+regressions), provide one reliable start workflow → M37 PASS + commit. Then
+M38 human gate: real Test Mode success checkout via buyer UI; M38 gate evidence
+MUST include ≥1 REAL signed webhook event (verified=true, non-fixture event_id)
+— the obligation deferred from M36 (D-032). See docs/PHASE2_TUNNEL.md. If the
+tunnel share dies, re-run scripts/webhook_tunnel.sh and UPDATE the Dashboard
+URL + .env RAZORPAY_WEBHOOK_PUBLIC_URL (share is not reserved).
 
 ---
 
