@@ -45,7 +45,7 @@
 | M33 | Durable Webhook Inbox & Dedup | PASS | webhook_inbox.py: provider_events PK claim via insert-race; loser classified DUPLICATE with zero processing; PROCESSED/ERROR states recorded; route wired through inbox; suite 308/308 |
 | M34 | Ordering & Reconciliation Tests | PASS | permutation matrix (15 cases): canonical, captured-first, failed-then-captured, paid-before-captured, all-dups, delayed-auth-only, fail-no-capture, and EVERY capture-ending ordering converges to single commit; suite 316/316 |
 | M35 | Public Webhook Tunnel Preparation | PASS | zrok installed via brew; scripts/webhook_tunnel.sh + docs/PHASE2_TUNNEL.md (Dashboard steps, OTP 754081, event list, secret handling); enable step requires human token -> combined gate with M36 |
-| M36 | HUMAN GATE — Webhook Dashboard | NOT_STARTED | — |
+| M36 | HUMAN GATE — Webhook Dashboard | IN_PROGRESS | human confirmed Dashboard webhook config; zrok tunnel verified end-to-end (public HTTPS → local API); M01–M37 audit remediation applied (5 defects fixed, gates re-greened at 323 tests); awaiting ≥1 REAL signed event |
 | M37 | Real Success Checkout Readiness Gate | NOT_STARTED | — |
 | M38 | HUMAN GATE — Real Test Success | NOT_STARTED | — |
 | M39 | Success Evidence Reconciliation | NOT_STARTED | — |
@@ -1080,3 +1080,96 @@ STATUS: PASS (preparation complete; enable+share requires human action)
 ### Human input required next (combined with M36)
 - `zrok enable <token>` (token from my.zrok.io) then run the script, and
   register the webhook in the Test Dashboard using the existing .env secret.
+
+
+## M36 — HUMAN GATE — Razorpay Test Webhook Dashboard (+ M01–M37 audit remediation)
+
+MILESTONE: M36
+STATUS: IN_PROGRESS (human action confirmed; one REAL signed event outstanding)
+
+Requirements: master prompt M36 — endpoint + public URL verified before the gate;
+human registers webhook with the EXISTING .env secret (never pasted into chat);
+verify at least one real signed event after confirmation.
+Security invariants: P2-S04/S10/S11/S12 exercised against reality.
+
+### Human action (confirmed by human owner 2026-08-24)
+- zrok environment enabled by human; Test Mode Dashboard webhook registered with
+  the secret already stored in `.env` (secret never entered into chat by instruction).
+
+### Tunnel + endpoint verification (agent-executed)
+```text
+zrok overview                    → share 1pvdxdizehva.shares.zrok.io → http://127.0.0.1:8000
+curl https://<share>/ready       → 200 ok (postgres ok, redis ok)
+curl -X POST https://<share>/api/v1/webhooks/razorpay (unauthenticated)
+                                 → controlled 400 (event-id required), zero mutation
+.env                             → RAZORPAY_WEBHOOK_PUBLIC_URL set to the share URL
+```
+
+### M01–M37 audit (per human instruction: verify every milestone, fix defects)
+
+M01–M35 evidence was re-checked against commits, code and live re-validation.
+Claims found ACCURATE: governance scaffold, baseline freeze, research R-013..R-015,
+D-030/D-031, typed config + fail-safes, schema a93c7d5e21f0 (current head),
+correlation contract, error taxonomy, real orders order_TTaTD5sEvimzoD /
+order_TTagLmM6FL6oB4 (evidence recorded at the time; DB since wiped by test
+runs — provider_events rows present today are synthetic `evt_ok_*` fixtures,
+NOT real Razorpay deliveries), launch contract, checkout UI/handler, callback
+verification, reducer + inbox + permutation matrix, tunnel prep.
+
+Defects FOUND AND FIXED during the audit:
+
+1. **`ruff format --check` violation** in tests/test_webhook_verification.py
+   (introduced with M31/M32; `make lint` ran `ruff check` only, so later
+   milestone gates did not catch it). Fixed: file formatted; `make lint` now
+   runs `ruff format --check` as well (TESTING.md §15).
+2. **`make security-check` FAIL (3 BLOCKING)** — secret scanner flagged test
+   fixtures added in M23–M32 (two synthetic HMAC secrets; the intentional
+   `rzp_live_` literal required to prove live-key rejection). Earlier
+   "security-check PASS" claims predated those files. Fixed: narrow documented
+   allowlist in scripts/security_check.py pinning exact file+rule+literal with
+   justifications; policy recorded in TESTING.md §15. Scan now PASS, audits clean.
+3. **`/ready` hardcoded `mock_payment_provider=True`** (Phase-1 leftover) —
+   lied about provider mode in razorpay deployments. Fixed: reports the actual
+   loaded settings (`payment_provider` + derived flag); FastAPI description
+   updated to Phase-2 wording; test updated (TESTING.md §14 item 10).
+4. **Test suite read the REAL root `.env`** — the session settings fixture did
+   not disable dotenv, so tests ran with PAYMENT_PROVIDER=razorpay and real
+   Test credentials in scope (determinism + P2-S20 violation). Fixed:
+   `Settings(_env_file=None, ...)` in conftest; suite is now mock/credential-free
+   regardless of local .env (TESTING.md §15).
+5. **CRITICAL — `/buyer/execute` hardcoded MockPaymentProvider** (buyer.py
+   `_executor`), ignoring PAYMENT_PROVIDER. Consequences if shipped: razorpay
+   mode would have settled transactions SUCCEEDED with NO provider order and
+   committed reservations without any real payment; the launch-payload branch
+   (M19) was unreachable through the API. The M19 status line "buyer route
+   returns launch on razorpay path" was NOT covered by any route-level test and
+   was false until this fix — corrected here, history preserved. Fixed:
+   `_provider_for(settings)` seam over `build_payment_provider` (fail-safe guard
+   included; no silent fallback P2-S21); callback `_razorpay_provider` now uses
+   `from_settings` so the guard applies there too; misconfiguration fails closed
+   with 503 RAZORPAY_CONFIG_UNAVAILABLE (names only). New regression file
+   tests/test_buyer_execute_provider_wiring.py (3 tests): razorpay mode →
+   EXECUTING + launch payload (public fields only, no secrets) + durable order
+   correlation + reservation HELD; mock mode → SUCCEEDED without launch;
+   razorpay-without-credentials → controlled 503.
+
+### Full gate re-validation after remediation (2026-08-24)
+```text
+pytest (full)                     → 323 passed (320 prior + 3 wiring regressions)
+ruff format --check / ruff check  → clean / clean
+mypy strict (services/api + root) → no issues in 52 source files (both dirs)
+pnpm lint / typecheck / test      → clean / clean / 6 passed
+playwright                        → 2 passed
+make security-check               → PASS (secret scan 0; pip-audit clean; pnpm audit clean)
+live /ready (local + via tunnel)  → payment_provider=razorpay, mock=false (honest)
+```
+
+### Real Razorpay interaction
+- NONE new this milestone (tunnel verification only; no orders/payments created).
+
+### Outstanding for M36 PASS
+- At least one REAL Razorpay-signed event in the provider_events inbox
+  (Dashboard "send test notification" with the tunnel live, or the M38 payment).
+
+### Next
+- Capture the real signed event → M36 PASS → M37 readiness gate → M38 human gate.

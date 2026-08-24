@@ -178,9 +178,7 @@ def _inbox_count() -> int:
 
     engine = create_db_engine(get_settings().database_url)
     with engine.connect() as c:
-        return int(
-            c.execute(_t("SELECT count(*) FROM provider_events")).scalar_one()
-        )
+        return int(c.execute(_t("SELECT count(*) FROM provider_events")).scalar_one())
 
 
 def _audit_count() -> int:

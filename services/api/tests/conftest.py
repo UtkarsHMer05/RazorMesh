@@ -35,7 +35,12 @@ def wipe_business_tables(engine: Engine) -> None:
 
 @pytest.fixture(scope="session")
 def settings() -> Settings:
+    # Tests must be deterministic and credential-free (P2-S20): the real root
+    # .env is NEVER read, so a local PAYMENT_PROVIDER=razorpay selection (or
+    # real Test credentials) can never leak into the suite or trigger real
+    # provider calls. DB/Redis URLs stay overridable for CI.
     return Settings(
+        _env_file=None,
         database_url=os.environ.get(
             "RAZORMESH_TEST_DATABASE_URL",
             "postgresql+psycopg://razormesh:razormesh_local_dev@127.0.0.1:15432/razormesh",

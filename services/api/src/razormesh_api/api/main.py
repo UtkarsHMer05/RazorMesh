@@ -20,7 +20,10 @@ from razormesh_api.settings import Settings, get_settings
 app = FastAPI(
     title="RazorMesh Trust API",
     version="0.1.0",
-    description="Phase-1 local trust core. All payments are simulated via MockPaymentProvider.",
+    description=(
+        "Phase-2 trust core: Razorpay Test Mode payments through the trusted "
+        "executor; MockPaymentProvider remains for local tests/fault injection."
+    ),
 )
 
 app.include_router(catalog_router)
@@ -58,6 +61,7 @@ class HealthBody(BaseModel):
 class ReadyBody(BaseModel):
     status: str
     checks: dict[str, str]
+    payment_provider: str
     mock_payment_provider: bool
 
 
@@ -71,11 +75,14 @@ def health() -> HealthBody:
 def ready(
     engine: Annotated[Engine, Depends(_get_engine)],
     redis_client: Annotated[Redis, Depends(_get_redis)],
+    settings: settings_dep,
 ) -> ReadyBody:
     """Dependency readiness: PostgreSQL and Redis must answer.
 
     Fails closed (503) when a security-relevant dependency is unavailable,
-    because authorization/nonce coordination cannot safely proceed.
+    because authorization/nonce coordination cannot safely proceed. Reports
+    the provider selector actually loaded from settings (Phase 2), so
+    operators can distinguish mock from Razorpay Test Mode at a glance.
     """
     checks: dict[str, str] = {}
     overall_ok = True
@@ -99,7 +106,8 @@ def ready(
     body = ReadyBody(
         status="ok" if overall_ok else "degraded",
         checks=checks,
-        mock_payment_provider=True,
+        payment_provider=settings.payment_provider,
+        mock_payment_provider=settings.payment_provider == "mock",
     )
     if not overall_ok:
         raise HTTPException(status_code=503, detail=body.model_dump())

@@ -29,7 +29,9 @@ def test_ready_ok_when_infra_available(client: TestClient) -> None:
     assert body["status"] == "ok"
     assert body["checks"]["postgres"] == "ok"
     assert body["checks"]["redis"] == "ok"
-    # Phase-1 honesty: readiness must advertise the mock provider.
+    # Readiness must advertise the ACTUAL configured provider (Phase 2): the
+    # isolated test fixture is mock; a hardcoded flag would lie in razorpay mode.
+    assert body["payment_provider"] == "mock"
     assert body["mock_payment_provider"] is True
 
 

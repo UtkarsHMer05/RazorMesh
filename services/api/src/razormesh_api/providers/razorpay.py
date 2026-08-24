@@ -25,6 +25,7 @@ from razormesh_api.settings import Settings
 
 if TYPE_CHECKING:
     from razormesh_api.persistence.repositories import Repositories
+    from razormesh_api.providers.mock import MockPaymentProvider
 
 
 class RazorpayError(Exception):
@@ -247,7 +248,9 @@ class RazorpayPaymentProvider:
         return self._client.fetch_order(order_id)
 
 
-def build_payment_provider(settings: Settings) -> tuple[object, object]:
+def build_payment_provider(
+    settings: Settings,
+) -> "tuple[MockPaymentProvider | RazorpayPaymentProvider, str]":
     """Dependency-injection seam for trusted execution components.
 
     Returns ``(provider, kind)`` where kind is ``"mock"`` or ``"razorpay"``.

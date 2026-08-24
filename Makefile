@@ -28,7 +28,8 @@ format: ## Format backend and apply frontend lint fixes
 	$(UV) run --project $(API_DIR) ruff check --fix .
 	@if [ -f "$(WEB_DIR)/package.json" ]; then cd $(WEB_DIR) && pnpm lint --fix; fi
 
-lint: ## Lint backend (ruff) and frontend (eslint)
+lint: ## Lint backend (ruff format check + ruff) and frontend (eslint)
+	$(UV) run --project $(API_DIR) ruff format --check .
 	$(UV) run --project $(API_DIR) ruff check .
 	@if [ -d "$(WEB_DIR)" ]; then cd $(WEB_DIR) && pnpm lint; else echo "skip eslint: not scaffolded yet"; fi
 

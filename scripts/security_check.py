@@ -60,6 +60,34 @@ _SCAN_SKIP_DIRS = {
     "__pycache__",
     "test-results",
 }
+
+# Explicit, narrowly-scoped allowlist for synthetic test fixtures that must
+# look secret-shaped to prove the security controls around them. Each entry
+# pins (relative path, rule) to the EXACT literal(s) accepted; any other
+# value in the same file — or the same value anywhere else — still fails the
+# scan. Adding an entry requires a justification recorded in TESTING.md.
+_ALLOWED_TEST_FIXTURES: dict[tuple[str, str], frozenset[str]] = {
+    # HMAC fixture secret for callback signature tests (synthetic value).
+    (
+        "services/api/tests/test_callback_verification.py",
+        "credential-assignment",
+    ): frozenset({"test-hook-secret-value"}),
+    # HMAC fixture secret for raw-body webhook tests (synthetic value).
+    (
+        "services/api/tests/test_webhook_verification.py",
+        "credential-assignment",
+    ): frozenset({"webhook-secret-test-value"}),
+    # rzp_live_ literal REQUIRED to prove live-key rejection (P2-S02).
+    (
+        "services/api/tests/test_settings_phase2.py",
+        "razorpay-key-shape",
+    ): frozenset({"rzp_live_CkYzExample"}),
+    # The allowlist definition above necessarily repeats the pinned literal.
+    (
+        "scripts/security_check.py",
+        "razorpay-key-shape",
+    ): frozenset({"rzp_live_CkYzExample"}),
+}
 _SCAN_SUFFIXES = {
     ".py",
     ".ts",
@@ -141,6 +169,11 @@ def scan_secrets() -> list[Finding]:
                 match = pattern.search(line_text)
                 if match is None:
                     continue
+                allowed = _ALLOWED_TEST_FIXTURES.get((str(rel), rule))
+                if allowed is not None:
+                    literals = {g for g in match.groups() if g} | {match.group(0)}
+                    if literals & allowed:
+                        continue
                 if "env.example" in str(rel) and rule == "credential-assignment":
                     groups = [g for g in match.groups() if g]
                     if groups and all(

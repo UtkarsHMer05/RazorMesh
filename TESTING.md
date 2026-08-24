@@ -259,7 +259,7 @@ The final Phase-1 gate must also prove:
 
 ---
 
-# 13. Phase-2 test gates (Razorpay Test Mode — active)
+# 14. Phase-2 test gates (Razorpay Test Mode — active)
 
 Release-blocking additions on top of all Phase-1 gates:
 
@@ -282,7 +282,48 @@ Release-blocking additions on top of all Phase-1 gates:
    for volume): 20 same-ticket attempts → ≤1 provider/business effect.
 8. Frontend: launch payload contains public data only; VERIFYING/CAPTURED/FAILED/
    PROVIDER_UNKNOWN states render; no secrets in rendered output/bundle checks.
+9. Provider-selector wiring at the API boundary (P2-M37 audit remediation):
+   `/buyer/execute` must honor `PAYMENT_PROVIDER` — razorpay mode returns the
+   launch payload and stays EXECUTING awaiting capture evidence; mock mode keeps
+   Phase-1 SUCCEEDED semantics; razorpay mode without credentials fails closed
+   with 503 `RAZORPAY_CONFIG_UNAVAILABLE`. Route-level tests must cover this —
+   unit-testing the payload builder alone is not sufficient.
+10. Readiness honesty: `/ready` reports the provider selector actually loaded
+    from settings; no hardcoded provider flag.
 
 Real Razorpay interaction is limited to milestones that explicitly require it
 (M12 auth diagnostic, M17 first order, M18 fetch, M36 webhook, M38/M40 human-gated
 checkouts). All high-volume/fault tests use mock/fakes so Razorpay is not spammed.
+
+---
+
+# 15. Test isolation and secret-scan policy (P2-M37 audit remediation)
+
+## Test isolation from the real environment
+
+The backend test suite must NEVER read the real root `.env`:
+
+- the session `settings` fixture constructs `Settings(_env_file=None, ...)`;
+- tests therefore run with `PAYMENT_PROVIDER=mock` and NO Razorpay credentials
+  regardless of the developer's local selection (P2-S20 determinism);
+- real-provider behavior is exercised exclusively through `httpx.MockTransport`
+  seams and monkeypatched provider factories;
+- standalone real-interaction scripts (`scripts/rzp_auth_check.py`,
+  `scripts/rzp_first_order.py`) are NOT pytest tests and read `.env` on purpose.
+
+## Format gate
+
+`ruff format --check .` must be clean in addition to `ruff check .`
+(`make lint` runs both). A milestone gate is not green if either fails.
+
+## Secret-scan allowlist
+
+`scripts/security_check.py` may carry an explicit allowlist for synthetic test
+fixtures that must look secret-shaped to prove the controls around them
+(HMAC fixture secrets; the `rzp_live_` literal required to prove live-key
+rejection, P2-S02). Rules:
+
+- each entry pins (exact file path, rule) to the exact literal(s) accepted;
+  any other value, or the same value elsewhere, still fails the scan;
+- every entry carries a justification comment in the script;
+- adding an entry requires updating this section in the same change.

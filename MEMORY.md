@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 2 — Razorpay Test Mode Integration (ACTIVE since P2-M05)  
-**Current milestone:** P2-M36 — HUMAN GATE (webhook Dashboard config) — awaiting human  
+**Current milestone:** P2-M36 — HUMAN GATE (webhook Dashboard config) — human confirmed; awaiting 1 REAL signed event  
 **Phase-2 milestones passed:** P2-M01..P2-M35  
 **Last updated:** 2026-08-24  
-**Gate:** Phase-1 fully revalidated (225/225, 10/10 clean-room, security suites green); baseline frozen in docs/PHASE2_BASELINE.md; real auth diag OK; 2 real Test orders created+reconciled; callback sig verify + raw-body webhooks + reducer + inbox all green; pytest 316/316
+**Gate:** M01–M37 audit completed per human instruction: 5 defects found+fixed (ruff format gap, security-check fixture findings, /ready hardcoded flag, tests reading real .env, CRITICAL /buyer/execute hardcoded mock provider). All gates re-greened: pytest 323/323, ruff format+check clean, mypy strict 52 files, frontend clean, Playwright 2/2, security-check PASS. Tunnel live: https://1pvdxdizehva.shares.zrok.io → :8000; RAZORPAY_WEBHOOK_PUBLIC_URL set in .env; live /ready honestly reports razorpay mode.
 
 ---
 
@@ -150,10 +150,13 @@ See `DECISIONS.md`, currently D-001 through D-029.
 
 # Next action
 
-HUMAN GATE (M36): enable zrok (token from my.zrok.io), run scripts/webhook_tunnel.sh,
-register public URL in Test Dashboard (OTP 754081) with events payment.authorized/
-captured/failed + order.paid using the .env webhook secret. Then M37 readiness ->
-M38 real success checkout -> M40 real failure checkout. See docs/PHASE2_TUNNEL.md.
+M36 close-out: with the tunnel live (zrok share 1pvdxdizehva), human sends one
+Dashboard "test notification" (or any test transaction); agent verifies a REAL
+signed event lands verified=true in provider_events → M36 PASS → M37 readiness
+gate → M38 human gate (real success checkout via buyer UI). See
+docs/PHASE2_TUNNEL.md. If the tunnel share dies, re-run scripts/webhook_tunnel.sh
+and UPDATE the Dashboard URL + .env RAZORPAY_WEBHOOK_PUBLIC_URL (share is not
+reserved).
 
 ---
 

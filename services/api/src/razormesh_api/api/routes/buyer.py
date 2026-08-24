@@ -34,12 +34,13 @@ from razormesh_api.nonce import (
 from razormesh_api.persistence.models import ExecutionAttempt as ExecutionAttemptForCallback
 from razormesh_api.persistence.models import IntentContract as RowIntent
 from razormesh_api.persistence.repositories import Repositories
-from razormesh_api.providers.razorpay import RazorpayPaymentProvider
+from razormesh_api.providers.mock import MockPaymentProvider
+from razormesh_api.providers.razorpay import RazorpayPaymentProvider, build_payment_provider
 from razormesh_api.revalidation import Revalidator
 from razormesh_api.rules.catalog_rules import CATALOG_RULES
 from razormesh_api.rules.money_rules import MONEY_RULES
 from razormesh_api.rules.policy_rules import POLICY_RULES
-from razormesh_api.settings import Settings, get_settings
+from razormesh_api.settings import ProviderConfigError, Settings, get_settings
 from razormesh_api.spend import SpendError, SpendManager
 from razormesh_api.tickets import CurrentBinding, SignedTicket, TicketRejected
 
@@ -233,7 +234,15 @@ def execute(
     )
 
     spend = SpendManager(repos)
-    executor = _executor(repos, keys.ensure(), spend)
+    try:
+        provider = _provider_for(settings)
+    except ProviderConfigError as exc:
+        # Fail-closed server misconfiguration (names only, never values, M09).
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "RAZORPAY_CONFIG_UNAVAILABLE", "detail": "; ".join(exc.problems)},
+        ) from exc
+    executor = _executor(repos, keys.ensure(), spend, provider)
     try:
         attempt = executor.execute(
             signed_ticket=SignedTicket(body.ticket_json, body.signature_hex),
@@ -282,14 +291,28 @@ def _checkout_hash(env: CheckoutEnvelope) -> str:
     return checkout_authorization_hash(env)
 
 
-def _executor(repos: Repositories, pair: DevKeyPair, spend: SpendManager) -> TrustedPaymentExecutor:
-    from razormesh_api.providers.mock import MockMode, MockPaymentProvider
+def _provider_for(settings: Settings) -> MockPaymentProvider | RazorpayPaymentProvider:
+    """Test seam: provider selection for trusted execution (D-030).
 
+    Honors the typed PAYMENT_PROVIDER selector: razorpay construction runs the
+    fail-safe config guard via build_payment_provider and never falls back to
+    mock (P2-S21); mock stays credential-free (P2-S20).
+    """
+    provider, _kind = build_payment_provider(settings)
+    return provider
+
+
+def _executor(
+    repos: Repositories,
+    pair: DevKeyPair,
+    spend: SpendManager,
+    provider: MockPaymentProvider | RazorpayPaymentProvider,
+) -> TrustedPaymentExecutor:
     return TrustedPaymentExecutor(
         repos=repos,
         keys=pair,
         nonces=_nonce_registry(),
-        provider=MockPaymentProvider(mode=MockMode.SUCCESS),
+        provider=provider,
         spend=spend,
     )
 
@@ -398,13 +421,9 @@ def checkout_callback(
 
 
 def _razorpay_provider(settings: Settings) -> RazorpayPaymentProvider:
-    """Test seam: unit tests monkeypatch this to inject a MockTransport client."""
-    from razormesh_api.providers.razorpay import RazorpayClient, RazorpayPaymentProvider
+    """Test seam: unit tests monkeypatch this to inject a MockTransport client.
 
-    client = RazorpayClient(
-        key_id=settings.razorpay_key_id,
-        key_secret=settings.razorpay_key_secret.get_secret_value(),
-        base_url=settings.razorpay_api_base_url,
-        timeout_seconds=settings.razorpay_request_timeout_seconds,
-    )
-    return RazorpayPaymentProvider(client)
+    Construction goes through from_settings so the fail-safe config guard
+    (P2-S01..S03) applies to the callback path as well.
+    """
+    return RazorpayPaymentProvider.from_settings(settings)
