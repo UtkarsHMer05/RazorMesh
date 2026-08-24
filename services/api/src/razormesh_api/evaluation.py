@@ -53,6 +53,7 @@ class ScenarioResult:
     actual: str
     passed: bool
     detail: str
+    amount_minor: int = 0  # authorization-relevant payable for this scenario
 
 
 def _now() -> datetime:
@@ -169,6 +170,7 @@ class AdversarialRunner:
         return [self.run_one(spec) for spec in SCENARIOS]
 
     def run_one(self, spec: ScenarioSpec) -> ScenarioResult:
+        self._last_amount_minor = 0
         try:
             self.wipe()
             iid, product_id = self._make_intent(spec.family)
@@ -179,6 +181,9 @@ class AdversarialRunner:
         except Exception as exc:  # noqa: BLE001 - recorded as actual outcome
             return self._finish(spec, f"PIPELINE_ERROR:{type(exc).__name__}", str(exc)[:280])
 
+        self._last_amount_minor = (
+            authz.binding.amount_minor if authz.binding is not None else 0
+        )
         handler = {
             ScenarioFamily.SAFE_BASELINE: self._safe_baseline,
             ScenarioFamily.CONTEXT_SWAP: self._context_swap,
@@ -188,10 +193,17 @@ class AdversarialRunner:
             ScenarioFamily.PROVIDER_UNKNOWN: self._provider_unknown,
             ScenarioFamily.EXPIRED_AUTHORIZATION: self._expired,
         }[spec.family]
-        return handler(iid, product_id, proposal, authz, spec)
+        result = handler(iid, product_id, proposal, authz, spec)
+        if result.amount_minor == 0:
+            from dataclasses import replace
+
+            result = replace(result, amount_minor=self._last_amount_minor)
+        return result
 
     # -- family handlers -------------------------------------------------
-    def _finish(self, spec: ScenarioSpec, actual: str, detail: str) -> ScenarioResult:
+    def _finish(
+        self, spec: ScenarioSpec, actual: str, detail: str, amount_minor: int = 0
+    ) -> ScenarioResult:
         return ScenarioResult(
             scenario_id=spec.scenario_id,
             family=spec.family,
@@ -199,6 +211,7 @@ class AdversarialRunner:
             actual=actual,
             passed=actual == spec.expected_outcome.value,
             detail=detail[:300],
+            amount_minor=amount_minor,
         )
 
     def _safe_baseline(

@@ -51,7 +51,7 @@
 | M41 | Future SemanticVerifier Interface | PASS | Protocol + NullSemanticVerifier (UNDECIDED default) + DeterministicKeywordVerifier test double; rule adapter maps SAFE/UNSAFE/UNDECIDED -> PASS/FAIL/UNKNOWN fail-closed; zero ML deps asserted; 6 tests PASS |
 | M42 | Attack Scenario Specification | PASS | Pydantic-validated ScenarioSpec (id pattern, family-specific invariants: swap/replay>=2/drift-field/split>=2); registry covers all 7 required families exactly once; expected labels isolated from decision inputs; 5 tests PASS |
 | M43 | Adversarial Evaluation Runner | PASS | All 7 scenarios executed through REAL pipeline (service+engine+ledger+ticket+nonce+executor+mock): expected==actual for every family incl. split prevention via durable aggregate budget and provider-unknown no-fresh-op; labels never enter decision inputs; 5 tests PASS |
-| M44 | Safe/Unsafe Paired Benchmark | NOT_STARTED | — |
+| M44 | Safe/Unsafe Paired Benchmark | PASS | 6 attack/safe-twin pairs through real pipeline: TP=6 FP=0 TN=6 FN=0, P=R=F1=1.0, false-block 0%, safe-completion 100%; synthetic GMV completed 389340 + protected 324450 minor units (explicitly labelled); artifact docs/PHASE1_BENCHMARK.json; 4 tests PASS |
 | M45 | Buyer Experience UI | NOT_STARTED | — |
 | M46 | Security Lab UI | NOT_STARTED | — |
 | M47 | Audit Dashboard | NOT_STARTED | — |
@@ -309,6 +309,11 @@ M03 — Project Charter.
 - Key hardening discovered by the runner: `authorize()` now reads durable committed/reserved spend into the rule context, so aggregate budgets bind across checkouts (approval-split defense is enforced at authorization time once part 1 has committed).
 - Results: safe→ALLOW_EXECUTE_ONCE; context swap→PRINCIPAL_MISMATCH rejection; 5x replay→SINGLE_EFFECT_ONLY (4 nonce rejections); drift→STALE_DETECTED; split→parts 2-3 BLOCK BUDGET_EXCEEDED; provider-unknown retry→same attempt reused (1 provider call); expired→BLOCK.
 - Validation: ruff clean; mypy strict 44 files clean; pytest 195/195.
+
+## M44 — Safe/Unsafe Paired Benchmark — PASS
+- `benchmark.py`: `build_pairs()` creates a SAFE control twin per attack family (differs only by the malicious dimension); `PairedBenchmark.run()` classifies via ground-truth pair labels vs system behaviour (money moved?); confusion matrix + precision/recall/F1/false-block/safe-completion; GMV figures explicitly labelled SYNTHETIC and exported to `docs/PHASE1_BENCHMARK.json`.
+- Current-pipeline result: TP=6, FP=0, TN=6, FN=0 → P=R=F1=1.0, false-block 0%, safe-completion 100%. Synthetic completed GMV 389340 minor; protected (stopped fraud) 324340+minor as recorded in artifact. NO production claims — fixture prices only.
+- Validation: ruff clean; mypy strict 45 files clean; pytest 199/199.
 
 ---
 

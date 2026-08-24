@@ -1,0 +1,17 @@
+{
+  "label": "SYNTHETIC Phase-1 local benchmark (fixture data only)",
+  "pairs": 6,
+  "confusion": {
+    "TP": 6,
+    "FP": 0,
+    "TN": 6,
+    "FN": 0
+  },
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1": 1.0,
+  "false_block_rate": 0.0,
+  "safe_completion_rate": 1.0,
+  "synthetic_gmv_completed_minor": 389340,
+  "synthetic_gmv_protected_minor": 324450
+}
