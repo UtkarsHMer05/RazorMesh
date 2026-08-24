@@ -123,7 +123,7 @@ class TrustedPaymentExecutor:
         repos: Repositories,
         keys: DevKeyPair,
         nonces: NonceRegistry,
-        provider: PaymentProvider | RazorpayPaymentProvider,
+        provider: PaymentProvider | RazorpayPaymentProvider | None,
         spend: SpendManager | None = None,
     ) -> None:
         self._repos = repos
@@ -228,6 +228,8 @@ class TrustedPaymentExecutor:
             currency=claims.currency,
             nonce=str(claims.nonce),
         )
+        if self._provider is None:
+            raise ValueError("no payment provider configured for this executor")
         try:
             result = self._provider.charge(command)
         except Exception as exc:  # noqa: BLE001 - any blowup means UNKNOWN
@@ -607,3 +609,63 @@ class TrustedPaymentExecutor:
         if refreshed is None:
             raise ValueError(f"attempt vanished: {attempt_id}")
         return refreshed
+
+    def record_provider_failure(
+        self,
+        attempt_id: str,
+        *,
+        error_code: str,
+        now: datetime,
+    ) -> ExecutionAttempt:
+        """Settle EXECUTING -> FAILED on a definitive provider failure event.
+
+        Atomic settlement releases the reservation (D-028). Late capture may
+        still reconcile via reconcile_failed_to_succeeded (P2-S16).
+        """
+        return self._settle(attempt_id, AttemptState.FAILED, now, error_code=error_code)
+
+    def reconcile_failed_to_succeeded(
+        self,
+        attempt_id: str,
+        *,
+        provider_reference: str,
+        now: datetime,
+    ) -> ExecutionAttempt:
+        """P2-S16: guarded FAILED->SUCCEEDED after VERIFIED late capture.
+
+        Requires remaining authorized capacity to re-fund the commitment; audited
+        by the reducer with RAZORPAY_RECONCILED_LATE_CAPTURE.
+        """
+        if self._spend is None:
+            raise ValueError("late-capture reconciliation requires spend tracking")
+        attempt = self._repos.attempts.get(ExecutionAttemptId(attempt_id))
+        if attempt is None:
+            raise ValueError(f"unknown attempt {attempt_id}")
+        if attempt.state != AttemptState.FAILED.value:
+            raise IllegalAttemptTransition(
+                f"late capture reconciles only FAILED attempts, got {attempt.state}"
+            )
+        with self._repos.transaction() as session:
+            row = session.get(ExecutionAttempt, attempt_id, with_for_update=True)
+            if row is None or row.state != AttemptState.FAILED.value:
+                raise IllegalAttemptTransition("attempt changed during reconciliation")
+            spend_row = session.get(AuthorizationSpend, row.intent_id, with_for_update=True)
+            if spend_row is None:
+                raise ValueError(f"authorization capacity missing for {row.intent_id}")
+            room = spend_row.authorized_minor - spend_row.reserved_minor - spend_row.committed_minor
+            if room < row.amount_minor:
+                raise IllegalAttemptTransition(
+                    "insufficient authorization capacity for late-capture reconciliation"
+                )
+            spend_row.committed_minor += row.amount_minor
+            spend_row.version += 1
+            spend_row.updated_at = now
+            row.state = AttemptState.SUCCEEDED.value
+            row.provider_reference = provider_reference
+            row.razorpay_payment_id = provider_reference
+            row.razorpay_payment_status = "captured"
+            row.fulfilment_state = "ELIGIBLE"
+            row.reconcile_state = "RESOLVED"
+            row.error_code = None
+            row.updated_at = now
+        return self._refresh_by_id(attempt_id)

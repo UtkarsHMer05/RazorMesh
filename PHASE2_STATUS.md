@@ -35,7 +35,7 @@
 | M23 | Server Checkout Signature Verification | PASS | verify_checkout_signature(): HMAC-SHA256(SERVER-stored order|payment_id, key_secret), constant-time compare; POST /buyer/callback verifies BEFORE any mutation; 403 codes SIGNATURE_INVALID/CONTEXT_MISMATCH; DI settings fix |
 | M24 | Callback Adversarial Tests | PASS | 5 adversarial cases: valid signature marks verified; forged → 403 no mutation; swapped browser order → CONTEXT_MISMATCH; duplicate verified callback idempotent; wrong-secret signature rejected; suite 292/292 |
 | M25 | Post-Callback Provider Verification | PASS | valid signature ≠ fulfilment: callback fetches provider order; `paid` → confirm_captured() settles SUCCEEDED exactly-once (reserved→committed, razorpay_payment_id claim, fulfilment ELIGIBLE, RAZORPAY_PAYMENT_VERIFIED event); otherwise EXECUTING + NOT_CAPTURED; duplicate-after-settlement idempotent; suite 294/294 |
-| M26 | Provider State Reducer | NOT_STARTED | — |
+| M26 | Provider State Reducer | PASS | reducer.py: single idempotent applier for verified events; dimensions separated; captured/order.paid exactly-once; authorized informative-only; failed→FAILED(release) with guarded FAILED→SUCCEEDED late-capture reconcile (capacity-checked, audited); 4 permutation tests; suite 298/298 |
 | M27 | payment.authorized Handling | NOT_STARTED | — |
 | M28 | payment.captured Handling | NOT_STARTED | — |
 | M29 | payment.failed Handling | NOT_STARTED | — |
@@ -918,3 +918,37 @@ ruff / mypy strict                            → clean
 
 ### Next
 - M26 — Provider State Reducer.
+
+
+## M26 — Provider State Reducer
+
+MILESTONE: M26
+STATUS: PASS
+
+Requirements: master prompt M26/§23 — ONE idempotent reducer; separate state dimensions.
+Security invariants: P2-S13/S14/S15/S16.
+
+### Implementation
+- `reducer.py`: `ProviderStateReducer.apply_event(VerifiedProviderEvent)` — the only
+  business-mutation path for verified provider events:
+  - EXECUTING + captured/order.paid → confirm_captured (exactly-once);
+  - EXECUTING + authorized → no-op (informative; M27 semantics);
+  - EXECUTING + failed → record_provider_failure (atomic release);
+  - PROVIDER_UNKNOWN + captured → resolve_unknown(SUCCEEDED)+ELIGIBLE;
+  - PROVIDER_UNKNOWN + failed → resolve_unknown(FAILED);
+  - FAILED + captured → `reconcile_failed_to_succeeded` (NEW executor method):
+    capacity-guarded commit + ELIGIBLE + RAZORPAY_RECONCILED_LATE_CAPTURE audit;
+  - SUCCEEDED + anything → no-op (duplicates can never double-commit).
+- Executor gained `record_provider_failure` and the guarded reconciliation method.
+
+### Validation commands + results
+```text
+pytest tests/test_reducer.py -v → 4 passed (captured→paid dedup to one effect;
+  authorized never fulfils; failed→captured reconciles once with capacity guard;
+  captured resolves PROVIDER_UNKNOWN)
+pytest (full)                   → 298 passed
+ruff / mypy strict (50 files)   → clean
+```
+
+### Next
+- M27 — payment.authorized Handling.
