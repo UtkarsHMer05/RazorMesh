@@ -95,8 +95,10 @@ def main() -> int:
         return 1
 
     spend = SpendManager(repos)
+    # P2-M49 clean-room fix: the executor owns reservation (D-028) — a manual
+    # reserve here double-held capacity and leaked a ghost reservation after
+    # settlement. Only durable authorization capacity is prepared here.
     spend.ensure_authorization(iid, authorized_minor=10_000_000)
-    spend.reserve(iid, authz.binding.amount_minor)
 
     nonces = NonceRegistry(
         __import__("redis").Redis.from_url(settings.redis_url, decode_responses=True),

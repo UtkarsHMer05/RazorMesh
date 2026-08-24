@@ -58,7 +58,7 @@
 | M46 | Automated E2E w/ External Checkout Boundary | PASS | e2e/checkout.spec.ts: checkout.js replaced by deterministic in-browser stub + API boundary route-mocked; 3 paths proven (success handler->CAPTURED/PAID with server-issued fields only; FAILED note + no payment actions; network-fail -> PROVIDER_UNKNOWN refresh-only); DOM+request secret scan (key_secret/webhook_secret fixtures never appear); Playwright 5/5 |
 | M47 | Phase-2 Performance & Network Baseline | PASS | docs/PHASE2_PERFORMANCE.json (scripts/rzp_perf_phase2.py): LOCAL trusted executor path p50 58.5ms incl. DB; callback HMAC verify p50 0.002ms; webhook HMAC+inbox+reducer+settle end-to-end p50 67.6ms; REAL Test Mode create_order mean 188.8ms / fetch_order mean 475.8ms (n=5, order entities only, disposable); local vs network clearly separated; human wall-time labeled non-system; artifact structure gate test added; suite 353/353 |
 | M48 | Full Phase-2 Security & Dependency Gate | PASS | ALL GATES GREEN: ruff clean; mypy strict 54 files BOTH roots; pytest 353/353 (incl. hypothesis stateful, concurrency, signature/dedup/order/provider-unknown, Live-key refusal); frontend lint+tsc+vitest 11+build+Playwright 5/5 w/ DOM+wire secret scans; make security-check PASS (secret scan 0, pip-audit clean, pnpm audit clean); REAL auth diagnostic OK (read-only, 986ms); .env ignored (gitignore:6) untracked; rzp_live_ grep = guard itself + pyc only |
-| M49 | Phase-2 Clean-Room Acceptance | NOT_STARTED | — |
+| M49 | Phase-2 Clean-Room Acceptance | PASS | docker down -v -> up; make migrate (4 revisions); seed 50; mock-mode acceptance PASSED (10 live checks incl. lab 22/22, benchmark F1=1.0, tamper non-mutating); razorpay-mode /ready + REAL auth diagnostic OK; safe Test Order create/fetch authority-matched (order_TTlJ8vS3wCvEnp); LIVE signed webhook settled attempt exactly-once on fresh DB (reserved=0, committed=64890, dup inert); runtime Live-key refusal RAZORPAY_LIVE_KEY_REJECTED; full suite 353/353 on clean room. 2 clean-room findings FIXED: rzp_first_order ghost reservation (D-028 violation in script) + razormesh_test provisioning gap -> new `make test-db` |
 | M50 | Completion Report & STOP | NOT_STARTED | — |
 
 ---
@@ -1862,3 +1862,53 @@ fixed synthetic identifiers vs durable uniqueness constraints.)
 
 ### Next
 - M49 — Phase-2 Clean-Room Acceptance.
+
+
+## M49 — Phase-2 Clean-Room Acceptance
+
+MILESTONE: M49
+STATUS: PASS
+
+Requirements: master prompt M49 — disposable state reproduction: migrations,
+seed, API/web, ignored .env, provider selector, mock suite, Razorpay Test auth,
+one safe Test Order create/fetch, local webhook fixture verification, E2E
+stubs, Live-key refusal. No extra human payments (M38/M40 evidence reused).
+Security invariants: all re-proven from zero state.
+
+### Sequence executed this session
+1. `docker compose down -v && up -d` — disposable volumes only.
+2. `make migrate` → b31a01dd94f2 → c5f21a9d3e10 → d8b412f091c3 → a93c7d5e21f0;
+   `make seed` → 50 products.
+3. Provider selector proof: API relaunched under PAYMENT_PROVIDER=mock →
+   acceptance.py **PASSED** all live checks (22/22 lab scenarios, chain verify,
+   tamper non-mutation, benchmark TP20/TN20 F1=1.0). Relaunch without override →
+   /ready reports payment_provider=razorpay honestly.
+4. Razorpay Test AUTH diagnostic (read-only): ok=True, guard passed.
+5. Safe Test Order via trusted path: order_TTlGnPaDXTwSVU created; fetch
+   amount/currency/receipt matched durable authority.
+6. LIVE signed webhook against the RUNNING clean-room API: captured event →
+   processed=True; attempt SUCCEEDED/RESOLVED/ELIGIBLE; reservation released +
+   committed EXACTLY once (reserved=0, committed=64890 minor); duplicate
+   delivery classified DUPLICATE with zero second effect.
+7. Runtime Live-key refusal: validate_payment_provider_config raised
+   RAZORPAY_LIVE_KEY_REJECTED for a rzp_live_ probe; razorpay_mode='live' is
+   unrepresentable at the type level (unit-proven as well).
+8. Full pytest on the provisioned clean room: **353 passed**.
+
+### Clean-room findings REMEDIATED during this milestone
+1. scripts/rzp_first_order.py manually pre-reserved before execute() — the
+   executor's D-028 reservation then double-held and settlement left a GHOST
+   reservation (caught because committed==amount but reserved!=0). Fixed:
+   script now only ensures authorization capacity; executor owns reserve/
+   release/commit. Re-run proved reserved=0 after settlement.
+2. P2-M38's dedicated razormesh_test database was destroyed by down -v and not
+   recreated by migrate (which targets the dev DB only), failing the entire
+   suite with OperationalError. Added permanent `make test-db` target that
+   creates + migrates the test database; documented here for every future
+   reset.
+
+### Real Razorpay interaction
+- READ_ONLY diagnostic + TEST_ORDER (one disposable order entity; no checkout).
+
+### Next
+- M50 — Completion Report & STOP (human approval gate).

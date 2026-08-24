@@ -9,7 +9,7 @@ WEB_DIR := apps/web
 UV      := uv
 
 .PHONY: help setup format lint typecheck test test-backend test-frontend \
-        security-check benchmark infra-up infra-down migrate seed \
+        security-check benchmark infra-up infra-down migrate seed test-db \
         dev dev-api dev-web reset-local keys phase2-up
 
 help: ## Show available commands
@@ -60,6 +60,11 @@ infra-up: ## Start PostgreSQL + Redis via Docker Compose
 
 infra-down: ## Stop Docker Compose services (data volume preserved)
 	docker compose down
+
+test-db: ## Create + migrate the DEDICATED razormesh_test database (P2-M38 isolation; required after infra-down -v)
+	@docker compose exec -T postgres psql -U razormesh -c "CREATE DATABASE razormesh_test OWNER razormesh;" 2>/dev/null || true
+	@DATABASE_URL="postgresql+psycopg://razormesh:razormesh_local_dev@127.0.0.1:15432/razormesh_test" \
+		$(UV) run --project $(API_DIR) alembic upgrade head
 
 migrate: ## Apply database migrations (alembic upgrade head)
 	$(UV) run --project $(API_DIR) alembic upgrade head

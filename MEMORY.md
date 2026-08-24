@@ -155,11 +155,16 @@ GET /buyer/status — browser is never a source of payment truth).
 
 # Next action
 
-M49 (Clean-Room Acceptance): docker compose down -v -> up; migrations; seed;
-provider selector; mock suite green; Razorpay Test AUTH diagnostic; ONE safe
-Test Order create/fetch if appropriate; local webhook fixture verification;
-E2E stubs; Live-key refusal. NO extra human payments (reuse M38/M40 evidence).
-M48 done: full gate battery green, zero findings (see PHASE2_STATUS M48 table).
+M50 (Completion Report & STOP): write docs/PHASE2_COMPLETION_REPORT.md per
+master prompt (Phase-1 revalidation, architecture, versions, Orders/Checkout/
+callback/webhook verification, duplicate/out-of-order handling, failed->captured,
+real success/failure evidence, provider-unknown behavior, tests/security/
+performance, limitations, human gates, no-Live statement, reproduction, commits);
+update governance; prepare INTERFACES ONLY for Phase-3/4; mark Phase 3 awaiting
+human approval; STOP. M49 done: clean-room PASS; findings fixed —
+(a) rzp_first_order ghost reservation removed (executor owns D-028 reservation),
+(b) NEW `make test-db` provisions razormesh_test after volume resets (suite
+needs it; migrate alone does NOT create it). M48 done: full gate battery green, zero findings (see PHASE2_STATUS M48 table).
 M47 done: PHASE2_PERFORMANCE.json — local path p50 58.5ms vs create 111-497ms /
 fetch 430-537ms network (separated); callback HMAC 2us; webhook e2e 67.6ms.
 M46 done: e2e/checkout.spec.ts stubs checkout.js +
