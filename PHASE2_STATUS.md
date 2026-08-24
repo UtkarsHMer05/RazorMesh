@@ -32,7 +32,7 @@
 | M20 | Checkout Script Integration | PASS | src/lib/razorpay.ts: idempotent official checkout.js loader (once per page, typed states, retry-on-error, no secrets); 3 vitest cases; lint/tsc clean; suite 287 backend + 6 web |
 | M21 | Real Checkout UI | PASS | buyer page: TEST MODE banner, Pay→backend launch→official modal (server fields only), VERIFYING/CAPTURED/FAILED/PROVIDER_UNKNOWN states, no dangerous re-pay on unknown; typecheck/lint/vitest/build green |
 | M22 | Client Success Handler | PASS | buyer UI forwards ONLY payment_id/order_id/signature to POST /buyer/callback; VERIFYING phase with do-not-close notice; no browser finality |
-| M23 | Server Checkout Signature Verification | NOT_STARTED | — |
+| M23 | Server Checkout Signature Verification | PASS | verify_checkout_signature(): HMAC-SHA256(SERVER-stored order|payment_id, key_secret), constant-time compare; POST /buyer/callback verifies BEFORE any mutation; 403 codes SIGNATURE_INVALID/CONTEXT_MISMATCH; DI settings fix |
 | M24 | Callback Adversarial Tests | NOT_STARTED | — |
 | M25 | Post-Callback Provider Verification | NOT_STARTED | — |
 | M26 | Provider State Reducer | NOT_STARTED | — |
@@ -844,3 +844,24 @@ Security invariants: P2-S06 (browser never authoritative), P2-S09 groundwork.
 
 ### Validation
 - Frontend gates green (tsc/lint/vitest/build); server behavior proven in M23/M24 suites.
+
+
+## M23 — Server Checkout Signature Verification
+
+MILESTONE: M23
+STATUS: PASS
+
+Requirements: master prompt M23 — mandatory verification using SERVER-stored order id.
+Security invariants: P2-S07, P2-S08, P2-S09.
+
+### Implementation
+- `verify_checkout_signature()` (providers/razorpay.py): stdlib hmac/sha256,
+  `compare_digest`, formula exactly per official docs; order id comes from the
+  durable attempt row — the browser's order value is compared only for mismatch
+  detection and never used for verification.
+- `POST /buyer/callback`: resolves the attempt by (intent_id, checkout_id) from
+  PostgreSQL; browser-order mismatch → 403 RAZORPAY_PAYMENT_CONTEXT_MISMATCH;
+  bad signature → 403 RAZORPAY_PAYMENT_SIGNATURE_INVALID with ZERO mutation;
+  success → records callback_verified_at only (settlement waits for captured
+  evidence per M25). Route now consumes Settings via FastAPI dependency override
+  (fixes an lru_cache bypass that would have leaked real-env values into tests).
