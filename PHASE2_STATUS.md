@@ -26,7 +26,7 @@
 | M14 | Internal→Razorpay Order Mapping | PASS | build_order_correlation(): receipt=r_{attempt_id} (≤40), notes=4 opaque refs+generation (≤15×256), no PII/secrets; parse_order_correlation() round-trip; 4 tests; suite 252/252 |
 | M15 | Server-Side Order Creation | PASS | executor Razorpay path: order created via trusted prelude, correlation persisted, attempt EXECUTING; timeout→UNKNOWN+REQUIRED+reservation held; 400→FAILED+release; idempotent re-entry (1 call); strict-mypy config gap found & closed (30 latent errors fixed); suite 255/255 |
 | M16 | Razorpay Error Taxonomy | PASS | exhaustive matrix test (21 cases): 401/403→AUTH; 400/404/422/429/3xx/4xx-residual→REJECTED(definitive, no-effect); 5xx/timeout/connect/malformed/bad-entity→UNKNOWN(never retried, calls==1); suite 276/276 |
-| M17 | First Real Test Order | NOT_STARTED | — |
+| M17 | First Real Test Order | PASS | scripts/rzp_first_order.py: real ALLOW→reserve→ticket→nonce→attempt→order_TTaTD5sEvimzoD (created, 64890 INR minor); fetch matches amount/currency/receipt; security regressions green post-mutation |
 | M18 | Order Fetch & Reconciliation | NOT_STARTED | — |
 | M19 | Checkout Launch Contract | NOT_STARTED | — |
 | M20 | Checkout Script Integration | NOT_STARTED | — |
@@ -668,3 +668,35 @@ ruff / mypy strict                              → clean
 
 ### Next
 - M17 — First Real Razorpay Test Order.
+
+
+## M17 — First Real Razorpay Test Order
+
+MILESTONE: M17
+STATUS: PASS
+REAL RAZORPAY INTERACTION: TEST_ORDER (+ read-only fetch)
+
+### Execution evidence (safe identifiers only)
+```text
+intent_id:            intent_01M0SQSH0KPD76GNP48YA2ABQ4
+checkout_id:          chk_01M0SQSH0ZFA5608KGJTJMBCKQ
+execution_attempt_id: exa_01M0SQSH4NTZP0T5M1YJN4MBKW
+state:                EXECUTING            (awaiting capture evidence by design)
+amount/currency:      64890 INR minor      (server-authoritative)
+razorpay_order_id:    order_TTaTD5sEvimzoD
+order status:         created
+receipt:              r_exa_01M0SQSH4NTZP0T5M1YJN4MBKW   (≤40 chars, opaque)
+fetch reconciliation: amount✓ currency✓ receipt✓
+```
+No payment/checkout performed. Reservation HELD (not committed) — fulfilment
+requires captured/paid evidence per P2-S15/M25.
+
+### Post-mutation security regression
+- Focused security keyword suite: 66 passed.
+- Full pytest: 276 passed. Auth diagnostic re-run: ok.
+
+### Files changed
+- `scripts/rzp_first_order.py` (new, safe-evidence CLI), PHASE2_STATUS.md.
+
+### Next
+- M18 — Razorpay Order Fetch and Reconciliation.
