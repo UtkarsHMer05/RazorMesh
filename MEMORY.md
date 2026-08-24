@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M41 — SemanticVerifier Interface (next)  
-**Milestones passed:** M01–M40  
+**Current milestone:** M42 — Attack Scenario Specification (next)  
+**Milestones passed:** M01–M41  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 41 files clean, pytest 176/176
+**Gate:** ruff clean, mypy 42 files clean, pytest 182/182
 
 ---
 
@@ -109,6 +109,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Checkout service: server-authoritative totals; propose+authorize+ticket flow (M38)
 - Revalidation: rebuild hash from DB pre-execution; drift blocks, cosmetics don't (M39)
 - Untrusted boundary: hostile text inert end-to-end; authority slots protected (M40)
+- Semantic seam: Null + deterministic keyword verifier; UNDECIDED fail-closed (M41)
 
 ---
 
@@ -139,7 +140,7 @@ None yet; do not invent.
 
 # Next action
 
-M41 — SemanticVerifier interface (Null + deterministic impl only, no Transformer dep).
+M42 — Attack Scenario Specification: schema-validated safe/unsafe synthetic scenarios.
 
 ---
 

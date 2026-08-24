@@ -48,7 +48,7 @@
 | M38 | Checkout Service | PASS | Server recomputes ALL amounts from trusted catalog (client total mismatch rejected loudly); blocked intents refused pre-rules; propose persists checkout + ledger event; authorize runs full rule set -> durable decision + hashes; ALLOW-only ticket issuance; 7 tests PASS |
 | M39 | Live Checkout Revalidation | PASS | Revalidator re-reads durable checkout, rebuilds exact authz projection (condition/currency persisted), recomputes hash: relevant drift -> STALE_CHECKOUT; generation/status drift -> AUTHORIZATION_SUPERSEDED/STALE; untrusted title changes proven NOT to invalidate; 5 tests PASS |
 | M40 | Untrusted Content Boundary | PASS | Hostile payloads (SQLi/prompt-injection/forged authority JSON) stored verbatim as UNTRUSTED_CONTENT; authorization hashes + decisions unaffected; smuggled policy/nonce strings stay inert; authority-slot attempt -> TrustViolation; ledger chain intact with hostile rows; 5 tests PASS |
-| M41 | Future SemanticVerifier Interface | NOT_STARTED | — |
+| M41 | Future SemanticVerifier Interface | PASS | Protocol + NullSemanticVerifier (UNDECIDED default) + DeterministicKeywordVerifier test double; rule adapter maps SAFE/UNSAFE/UNDECIDED -> PASS/FAIL/UNKNOWN fail-closed; zero ML deps asserted; 6 tests PASS |
 | M42 | Attack Scenario Specification | NOT_STARTED | — |
 | M43 | Adversarial Evaluation Runner | NOT_STARTED | — |
 | M44 | Safe/Unsafe Paired Benchmark | NOT_STARTED | — |
@@ -293,6 +293,11 @@ M03 — Project Charter.
   4. Untrusted content attempting an authority slot raises TrustViolation;
   5. Evidence ledger chain verifies with hostile rows stored.
 - Validation: ruff clean; mypy strict 41 files clean; pytest 176/176.
+
+## M41 — Future SemanticVerifier Interface — PASS
+- `semantic.py`: `SemanticVerifier` protocol, `SemanticAssessment` (SAFE/UNSAFE/UNDECIDED), `NullSemanticVerifier` (Phase-1 default), `DeterministicKeywordVerifier` (case-insensitive banned-phrase double), and `semantic_rule` adapter into the RazorGuard matrix: SAFE→PASS, UNSAFE→FAIL SEMANTIC_UNSAFE, UNDECIDED→UNKNOWN SEMANTIC_UNDECIDED (fail-closed).
+- Phase boundary enforced by test: transformers/torch/onnxruntime must not appear in sys.modules.
+- Validation: ruff clean; mypy strict 42 files clean; pytest 182/182.
 
 ---
 
