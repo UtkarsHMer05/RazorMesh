@@ -86,7 +86,41 @@ def test_missing_signature_rejected_no_mutation(hook_client: TestClient) -> None
         headers={"x-razorpay-event-id": "evt_x"},
     )
     assert res.status_code == 403
-    assert res.json()["detail"]["code"] == "RAZORPAY_WEBHOOK_SIGNATURE_INVALID"
+    assert res.json()["detail"]["code"] == "RAZORPAY_WEBHOOK_SIGNATURE_MISSING"
+
+
+def test_signature_header_lookup_is_case_insensitive(hook_client: TestClient) -> None:
+    """P2-M38: Razorpay sends X-Razorpay-Signature; HTTP header names are
+    case-insensitive, so a lowercase variant of a VALID signature must also
+    verify (Starlette Headers lookup is case-insensitive)."""
+    raw = _payload()
+    res = hook_client.post(
+        "/api/v1/webhooks/razorpay",
+        content=raw,
+        headers={
+            "x-razorpay-signature": _sign(raw),
+            "x-razorpay-event-id": f"evt_ok_{uuid.uuid4()}",
+        },
+    )
+    assert res.status_code == 200, res.text
+
+
+def test_rejection_bodies_disclose_only_controlled_code(hook_client: TestClient) -> None:
+    """P2-M38: 403/400 rejection payloads carry exactly one controlled code.
+    No secret material, signature, digest, or body echo may leak."""
+    raw = _payload()
+    missing = hook_client.post(
+        "/api/v1/webhooks/razorpay", content=raw, headers={"x-razorpay-event-id": "evt_l1"}
+    )
+    invalid = hook_client.post(
+        "/api/v1/webhooks/razorpay",
+        content=raw,
+        headers={"X-Razorpay-Signature": "0" * 64, "x-razorpay-event-id": "evt_l2"},
+    )
+    for res in (missing, invalid):
+        detail = res.json()["detail"]
+        assert set(detail) == {"code"}
+        assert isinstance(detail["code"], str) and detail["code"].startswith("RAZORPAY_WEBHOOK_")
 
 
 def test_one_byte_body_mutation_rejected(hook_client: TestClient) -> None:
@@ -212,6 +246,7 @@ def test_unauthenticated_variants_cause_zero_state_mutation(
     assert res.status_code != 200
     assert res.json()["detail"]["code"] in (
         "RAZORPAY_WEBHOOK_SIGNATURE_INVALID",
+        "RAZORPAY_WEBHOOK_SIGNATURE_MISSING",
         "RAZORPAY_WEBHOOK_EVENT_UNKNOWN",
     )
     assert _inbox_count() == inbox_before  # no durable claim

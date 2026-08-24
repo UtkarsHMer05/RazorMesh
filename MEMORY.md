@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 2 — Razorpay Test Mode Integration (ACTIVE since P2-M05)  
-**Current milestone:** P2-M38 — HUMAN GATE: real Test Mode success checkout (M37 PASS)  
+**Current milestone:** P2-M38 — IN_PROGRESS: payment #1 succeeded (CAPTURED/PAID via callback) but real webhooks 403 = Dashboard webhook secret ≠ root .env secret (PROVEN, see Gate); local business-table evidence of payment #1 wiped by post-payment pytest runs (disclosed)  
 **Phase-2 milestones passed:** P2-M01..P2-M37  
 **Last updated:** 2026-08-24  
-**Gate:** M37 PASS: readiness checklist fully evidenced; one reliable start workflow `make phase2-up` (scripts/phase2_start.sh) proven live; gates re-run green (pytest 323/323, lint clean, mypy 52 files both roots, tsc+vitest 6/6+build OK, Playwright 2/2, security-check PASS, auth diagnostic OK read-only). R-017: current test instruments verified (success@razorpay / failure@razorpay; cards need any CVV + future expiry + 4–10-digit OTP). M36 closed PASS per D-032/R-016 (no Dashboard test-notification button; test events are triggered by Test Mode transactions). Carried obligation: M38 cannot PASS without ≥1 REAL signed webhook event (verified=true, non-fixture event_id) in provider_events.
+**Gate:** M38 pending on 2 items: (1) HUMAN must re-enter the root .env RAZORPAY_WEBHOOK_SECRET into the Dashboard Test Mode webhook (never into chat); (2) ≥1 REAL signed event must land 2xx + verified=true (D-032 obligation) — plus a repeat success payment to regenerate the local evidence chain. Proof of secret mismatch: self-signed probe with the .env secret verified 200 through the live zrok tunnel + live API process (body untransformed, runtime==file secret, no env override, 64-char clean value) while Razorpay-signed deliveries 403 SIGNATURE_INVALID. Zero mutation from 403s proven (provider_events 0 real rows; inbox writes only post-verification). New safe diagnostics: refined 403 codes (SIGNATURE_MISSING vs SIGNATURE_INVALID) + server log line with non-secret facts only (scripts/webhook_secret_check.py for hygiene). Suite 325/325; frontend gates green; hydration warning fixed (suppressHydrationWarning, browser-extension attribute).
 
 ---
 
@@ -150,17 +150,19 @@ See `DECISIONS.md`, currently D-001 through D-032 (D-032: M36 live signed-webhoo
 
 # Next action
 
-M38 human gate: human performs ONE official Test Mode success checkout via the
-buyer UI (http://localhost:3000/buyer — MUST be localhost, not 127.0.0.1:
-dev CORS allows only WEB_ORIGIN=http://localhost:3000) using
-`success@razorpay` (R-017). Stack
-must be up first: `make phase2-up`. After the payment, agent verifies
-end-to-end: ALLOW → reservation → ticket → attempt → Razorpay order → callback
-signature → provider state → REAL signed webhook(s) (verified=true, non-fixture
-event_id — the D-032 carried obligation) → exactly-once commit → audit. Then
-M39 success evidence reconciliation. If the tunnel share dies, re-run
-scripts/webhook_tunnel.sh (or make phase2-up) and UPDATE the Dashboard URL +
-.env RAZORPAY_WEBHOOK_PUBLIC_URL (share is not reserved).
+M38 close-out sequence: (1) human updates the Dashboard Test Mode webhook
+secret to EXACTLY the root .env RAZORPAY_WEBHOOK_SECRET (copy from .env
+directly; never into chat); (2) wait for Razorpay retries of payment #1 events
+and/or human performs ONE more success checkout at http://localhost:3000/buyer
+(success@razorpay, R-017) to regenerate the local evidence chain; (3) agent
+CAPTURES EVIDENCE FIRST (attempt/ticket/spend/audit/provider_events queries)
+BEFORE running any pytest — the suite wipes business tables in the dev DB
+(this is how payment #1's local evidence was lost); (4) require ≥1 REAL signed
+event 2xx + verified=true before M38 PASS; then M39 success evidence
+reconciliation (incl. read-only provider fetch of payment #1's order, which
+still exists Razorpay-side). If the tunnel share dies, re-run make phase2-up
+and UPDATE the Dashboard URL + .env RAZORPAY_WEBHOOK_PUBLIC_URL (share is not
+reserved).
 
 ---
 

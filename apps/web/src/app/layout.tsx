@@ -12,7 +12,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <div className="mock-banner" role="note" data-testid="mock-provider-banner">
           TEST ENVIRONMENT — NO REAL MONEY — UNOFFICIAL PROTOTYPE (MOCK OR RAZORPAY

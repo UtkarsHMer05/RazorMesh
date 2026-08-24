@@ -12,6 +12,7 @@ event types are accepted with 200 and recorded as ignored (Razorpay retries
 non-200 deliveries; business safety never depends on that retry behavior).
 """
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -24,6 +25,32 @@ router = APIRouter(tags=["webhooks"])
 _MAX_WEBHOOK_BYTES = 256 * 1024
 
 _KNOWN_EVENT_PREFIXES = ("payment.", "order.")
+
+_logger = logging.getLogger("razormesh.webhooks")
+
+
+def _log_safe_rejection(
+    *,
+    reason: str,
+    signature_header_present: bool,
+    event_id_present: bool,
+    body_bytes: int,
+    webhook_secret_len: int,
+) -> None:
+    """Server-side diagnostic for webhook rejections (P2-M38).
+
+    Reports ONLY non-secret facts. Never logs the secret, the signature
+    header value, the body, or any HMAC digest.
+    """
+    _logger.warning(
+        "webhook rejected: reason=%s signature_header_present=%s "
+        "event_id_present=%s body_bytes=%d webhook_secret_len=%d",
+        reason,
+        signature_header_present,
+        event_id_present,
+        body_bytes,
+        webhook_secret_len,
+    )
 
 
 @router.post("/api/v1/webhooks/razorpay")
@@ -42,12 +69,29 @@ async def razorpay_webhook(
 
     from razormesh_api.providers.razorpay import verify_webhook_signature
 
-    if not signature_header or not verify_webhook_signature(
+    if not signature_header:
+        _log_safe_rejection(
+            reason="SIGNATURE_MISSING",
+            signature_header_present=False,
+            event_id_present=True,
+            body_bytes=len(raw),
+            webhook_secret_len=len(settings.razorpay_webhook_secret.get_secret_value()),
+        )
+        raise HTTPException(status_code=403, detail={"code": "RAZORPAY_WEBHOOK_SIGNATURE_MISSING"})
+
+    if not verify_webhook_signature(
         raw_body=raw,
         signature=signature_header,
         webhook_secret=settings.razorpay_webhook_secret.get_secret_value(),
     ):
         # No business mutation on unverified input (P2-S11).
+        _log_safe_rejection(
+            reason="SIGNATURE_INVALID",
+            signature_header_present=True,
+            event_id_present=True,
+            body_bytes=len(raw),
+            webhook_secret_len=len(settings.razorpay_webhook_secret.get_secret_value()),
+        )
         raise HTTPException(status_code=403, detail={"code": "RAZORPAY_WEBHOOK_SIGNATURE_INVALID"})
 
     import json
