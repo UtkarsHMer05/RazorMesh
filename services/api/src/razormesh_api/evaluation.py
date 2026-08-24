@@ -66,8 +66,8 @@ class AdversarialRunner:
             from razormesh_api.settings import get_settings
 
             engine = create_engine(get_settings().database_url, future=True)
-        self._engine = engine
-        self._repos = Repositories(create_session_factory(engine))
+        self.engine = engine
+        self.repositories = Repositories(create_session_factory(engine))
         self._keys = (
             keys
             or DevSigningKeys(
@@ -88,14 +88,14 @@ class AdversarialRunner:
             "DELETE FROM products",
             "DELETE FROM merchants",
         )
-        with self._engine.begin() as conn:
+        with self.engine.begin() as conn:
             for stmt in statements:
                 conn.execute(text(stmt))
 
     def _make_intent(self, family: ScenarioFamily) -> tuple[IntentId, str]:
-        seed_catalog(self._repos)
+        seed_catalog(self.repositories)
         iid = IntentId.generate()
-        product = min(self._repos.products.list(limit=100), key=lambda p: p.price_minor)
+        product = min(self.repositories.products.list(limit=100), key=lambda p: p.price_minor)
         now = _now()
         expired = family is ScenarioFamily.EXPIRED_AUTHORIZATION
         split = family is ScenarioFamily.APPROVAL_SPLIT
@@ -103,7 +103,7 @@ class AdversarialRunner:
         cap = payable_total if split else 10_000_000
         from razormesh_api.persistence.models import IntentContract as RowIntent
 
-        with self._repos.transaction() as s:
+        with self.repositories.transaction() as s:
             s.merge(
                 RowIntent(
                     intent_id=str(iid),
@@ -126,7 +126,7 @@ class AdversarialRunner:
             )
         if expired:
             # simulate the passage of time after contract creation
-            with self._engine.begin() as conn:
+            with self.engine.begin() as conn:
                 conn.execute(
                     text(
                         "UPDATE intent_contracts SET "
@@ -143,14 +143,16 @@ class AdversarialRunner:
         return timedelta(minutes=m)
 
     def _service(self) -> CheckoutService:
-        ledger = EvidenceLedger(self._repos)
+        ledger = EvidenceLedger(self.repositories)
         rules = DecisionEngine([*MONEY_RULES, *CATALOG_RULES, *POLICY_RULES])
-        return CheckoutService(repos=self._repos, ledger=ledger, engine=rules, keys=self._keys)
+        return CheckoutService(
+            repos=self.repositories, ledger=ledger, engine=rules, keys=self._keys
+        )
 
     def _executor(self, provider: MockPaymentProvider) -> TrustedPaymentExecutor:
-        spend = SpendManager(self._repos)
+        spend = SpendManager(self.repositories)
         return TrustedPaymentExecutor(
-            repos=self._repos,
+            repos=self.repositories,
             keys=self._keys,
             nonces=self._nonces(),
             provider=provider,
@@ -268,14 +270,14 @@ class AdversarialRunner:
 
     def _drift(self, iid: IntentId, product_id: str, proposal, authz, spec) -> ScenarioResult:  # type: ignore[no-untyped-def]
         cid = str(proposal.envelope.checkout_id)
-        with self._engine.begin() as conn:
+        with self.engine.begin() as conn:
             conn.execute(
                 text(
                     "UPDATE checkouts SET line_items = CAST(:li AS jsonb), "
                     "computed_total_minor = 999999 WHERE checkout_id = :cid"
                 ).bindparams(li="[]", cid=cid)
             )
-        verdict = Revalidator(self._repos).revalidate(
+        verdict = Revalidator(self.repositories).revalidate(
             intent_id=str(iid),
             checkout_id=cid,
             expected_checkout_hash=proposal.checkout_hash,
@@ -339,7 +341,7 @@ class AdversarialRunner:
 
     # -- shared -----------------------------------------------------------
     def _ensure_spend(self, iid: IntentId, amount_minor: int) -> None:
-        spend = SpendManager(self._repos)
+        spend = SpendManager(self.repositories)
         spend.ensure_authorization(iid, authorized_minor=200_000)
         spend.reserve(iid, amount_minor)
 
@@ -356,5 +358,5 @@ class AdversarialRunner:
         )
 
     def _attempt_count(self) -> int:
-        with self._repos.transaction() as s:
+        with self.repositories.transaction() as s:
             return int(s.query(ExecutionAttempt).count())
