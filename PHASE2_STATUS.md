@@ -44,7 +44,7 @@
 | M32 | Webhook Signature Verification | PASS | verify_webhook_signature HMAC over RAW body; matrix: valid, one-byte mutation, wrong secret, reserialization mismatch, missing header/event-id, unknown-type accepted-ignored; DI settings fix |
 | M33 | Durable Webhook Inbox & Dedup | PASS | webhook_inbox.py: provider_events PK claim via insert-race; loser classified DUPLICATE with zero processing; PROCESSED/ERROR states recorded; route wired through inbox; suite 308/308 |
 | M34 | Ordering & Reconciliation Tests | PASS | permutation matrix (15 cases): canonical, captured-first, failed-then-captured, paid-before-captured, all-dups, delayed-auth-only, fail-no-capture, and EVERY capture-ending ordering converges to single commit; suite 316/316 |
-| M35 | Public Webhook Tunnel Preparation | NOT_STARTED | — |
+| M35 | Public Webhook Tunnel Preparation | PASS | zrok installed via brew; scripts/webhook_tunnel.sh + docs/PHASE2_TUNNEL.md (Dashboard steps, OTP 754081, event list, secret handling); enable step requires human token -> combined gate with M36 |
 | M36 | HUMAN GATE — Webhook Dashboard | NOT_STARTED | — |
 | M37 | Real Success Checkout Readiness Gate | NOT_STARTED | — |
 | M38 | HUMAN GATE — Real Test Success | NOT_STARTED | — |
@@ -1061,3 +1061,22 @@ permutation of {captured, order.paid, authorized} ending in capture evidence
 converges to exactly one commit with zero residual reservation.
 
 Full suite: 316 passed. ruff + mypy strict clean.
+
+
+## M35 — Public Webhook Tunnel Preparation
+
+MILESTONE: M35
+STATUS: PASS (preparation complete; enable+share requires human action)
+
+### Implementation
+- Installed zrok via Homebrew (verified binary).
+- `scripts/webhook_tunnel.sh`: checks/starts API, validates zrok environment,
+  shares the local API publicly; prints registration reminder.
+- `docs/PHASE2_TUNNEL.md`: exact one-time setup, per-run usage, Dashboard
+  registration steps for Test Mode incl. OTP 754081, event list
+  (payment.authorized/captured/failed, order.paid), and secret-handling rules
+  (secret stays in .env; never pasted into chat).
+
+### Human input required next (combined with M36)
+- `zrok enable <token>` (token from my.zrok.io) then run the script, and
+  register the webhook in the Test Dashboard using the existing .env secret.
