@@ -426,3 +426,41 @@ Rationale: A public demonstration endpoint must not contain a privileged path ca
 Security consequences: The demo still proves hash-mismatch detection while the durable audit chain remains unchanged and valid.
 
 Validation/evidence: API tests assert detection, unchanged event count and a valid chain before and after simulation; live acceptance confirms the same.
+
+---
+
+## D-030 — Razorpay access uses the project-standard httpx client, not the official SDK
+
+Date: 2026-08-24
+Milestones: Phase-2 M07
+Status: Accepted
+Affected docs: `ARCHITECTURE.md`, `VERSION_MANIFEST.md`, `RESEARCH.md` (R-015)
+
+Decision: All Razorpay HTTP interaction goes through one thin project wrapper over
+httpx 0.28.1 (already locked, latest stable, no known advisories). The official
+`razorpay` Python SDK (2.0.1) is deliberately NOT selected. Signature verification
+(callback and webhook) uses Python stdlib hmac/hashlib implementing exactly the
+officially documented formulas.
+
+Rationale:
+1. Exact per-call timeout control is required so a mutating call can never be
+   silently re-sent by a library-level retry helper (master prompt §27; P2-S19).
+   The SDK exposes opt-in automatic retries (`enable_retry`) which is a standing
+   foot-gun for order creation.
+2. No new dependency or transitive supply chain: the SDK pulls `requests`;
+   httpx is already pinned/audited in this repo.
+3. Only two endpoints are needed (create order, fetch order) — documented REST
+   semantics fit a small wrapper with typed errors better than a Beta-classified
+   general SDK.
+4. Verification formulas are fully specified by current docs as plain HMAC-SHA256;
+   stdlib implementation keeps the security-critical path inspectable and testable.
+5. httpx offers deterministic fault injection (MockTransport) for the failure matrix.
+
+Security consequences: Preserves P2-S17..S19 (timeout≠failure; unknown retains
+reservation; no blind retry), SEC-001 boundary unchanged — buyer/agent layers never
+receive the client or credentials. Error taxonomy maps httpx exceptions to explicit
+internal provider-error classes (M16).
+
+Validation/evidence: R-013/R-014/R-015 research entries; wrapper tests use
+httpx.MockTransport fixtures including timeout-before-response and
+timeout-after-send cases; blanket-retry absence asserted by code review test.
