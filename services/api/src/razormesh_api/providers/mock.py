@@ -51,6 +51,10 @@ class ProviderEvent:
 class MockPaymentProvider:
     """Thread-safe scriptable provider double."""
 
+    # Instance attribute (not ClassVar) so the class satisfies the
+    # PaymentProvider protocol's `name` member under mypy strict.
+    name: str = field(default="mock", init=False, repr=False)
+
     mode: MockMode = MockMode.SUCCESS
     failure_code: str = "CARD_DECLINED"
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)

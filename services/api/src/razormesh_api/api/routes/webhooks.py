@@ -184,6 +184,7 @@ def _reducer(settings: Settings) -> ProviderStateReducer:
     from razormesh_api.keys import DevSigningKeys
     from razormesh_api.nonce import NonceRegistry
     from razormesh_api.providers.razorpay import RazorpayClient, RazorpayPaymentProvider
+    from razormesh_api.spend import SpendManager
 
     keys = DevSigningKeys(
         private_path=settings.dev_ticket_private_key_path,
@@ -199,9 +200,14 @@ def _reducer(settings: Settings) -> ProviderStateReducer:
         base_url=settings.razorpay_api_base_url,
         timeout_seconds=settings.razorpay_request_timeout_seconds,
     )
+    repos = _repos_for(settings)
     return ProviderStateReducer(
-        repos=_repos_for(settings),
+        repos=repos,
         keys=keys,
         nonces=nonces,
         provider=RazorpayPaymentProvider(client),
+        # P2-M38 fix: webhook-side settlement MUST convert reserved->committed
+        # exactly like the callback/execute paths. Without a SpendManager the
+        # executor silently skipped the spend block in _settle().
+        spend=SpendManager(repos),
     )

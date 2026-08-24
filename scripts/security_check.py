@@ -77,6 +77,12 @@ _ALLOWED_TEST_FIXTURES: dict[tuple[str, str], frozenset[str]] = {
         "services/api/tests/test_webhook_verification.py",
         "credential-assignment",
     ): frozenset({"webhook-secret-test-value"}),
+    # HMAC fixture secret for the P2-M38 webhook route-wiring regression test
+    # (synthetic value; drives the REAL route + reducer to pin spend commit).
+    (
+        "services/api/tests/test_reducer.py",
+        "credential-assignment",
+    ): frozenset({"wh-route-wiring-secret"}),
     # rzp_live_ literal REQUIRED to prove live-key rejection (P2-S02).
     (
         "services/api/tests/test_settings_phase2.py",

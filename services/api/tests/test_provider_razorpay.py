@@ -154,6 +154,54 @@ def test_fetch_order_success() -> None:
     assert order.status == "paid"
 
 
+def test_fetch_payment_success_and_not_found() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith("/payments/pay_abc")
+        return httpx.Response(
+            200,
+            json={
+                "id": "pay_abc",
+                "entity": "payment",
+                "amount": 64890,
+                "currency": "INR",
+                "status": "captured",
+                "order_id": "order_abc",
+            },
+        )
+
+    provider = _provider(handler)
+    payment = provider.fetch_payment("pay_abc")
+    assert (payment.status, payment.amount_minor, payment.order_id) == (
+        "captured",
+        64890,
+        "order_abc",
+    )
+
+    def missing(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={"error": {"description": "not found"}})
+
+    with pytest.raises(RazorpayRejectionError):
+        _provider(missing).fetch_payment("pay_missing")
+
+
+def test_fetch_event_success_and_malformed() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path.endswith("/events/evt_abc")
+        return httpx.Response(
+            200, json={"id": "evt_abc", "entity": "event", "event": "payment.captured"}
+        )
+
+    provider = _provider(handler)
+    event = provider.fetch_event("evt_abc")
+    assert (event.event_id, event.event_type) == ("evt_abc", "payment.captured")
+
+    def malformed(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"id": "evt_x"})  # missing event type
+
+    with pytest.raises(RazorpayUnknownOutcomeError):
+        _provider(malformed).fetch_event("evt_x")
+
+
 def test_from_settings_requires_razorpay_selection() -> None:
     with pytest.raises(RazorpayConfigError):
         RazorpayPaymentProvider.from_settings(_settings(payment_provider="mock"))

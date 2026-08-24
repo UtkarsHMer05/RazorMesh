@@ -86,10 +86,14 @@ class ProviderStateReducer:
         now = now or datetime.now(UTC)
         attempt = self._find_by_order(event.razorpay_order_id)
 
+        if event.kind == "payment.authorized":
+            # Informative only in EVERY attempt state (M27/D-031): authorized
+            # snapshots lag and may arrive after a failure or reconciliation
+            # (live M38 evidence: authorized for the retry payment arrived
+            # while the attempt was FAILED). Never settles, never errors.
+            return attempt
         if attempt.state == AttemptState.SUCCEEDED.value:
             return attempt  # duplicate evidence: exactly-once already satisfied
-        if attempt.state == AttemptState.EXECUTING.value and event.kind == "payment.authorized":
-            return attempt  # informative only (M27)
 
         if event.kind in _CAPTURED_EVIDENCE:
             return self._apply_capture_evidence(attempt, event, now)

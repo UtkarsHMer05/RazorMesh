@@ -90,6 +90,8 @@ class ChargeResult:
 class PaymentProvider(Protocol):
     """The boundary RazorMesh trusts ONLY the executor to cross."""
 
+    name: str
+
     def charge(self, command: ChargeCommand) -> ChargeResult: ...
 
 
@@ -181,6 +183,7 @@ class TrustedPaymentExecutor:
                 amount_minor=claims.amount_minor,
                 currency=claims.currency,
                 state=AttemptState.CREATED.value,
+                provider_name=self._provider.name if self._provider is not None else "unknown",
                 created_at=now,
                 updated_at=now,
             )

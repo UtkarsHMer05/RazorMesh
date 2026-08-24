@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 
 from razormesh_api.persistence.models import ProviderEvent
 from razormesh_api.persistence.repositories import Repositories
+from razormesh_api.providers.razorpay import RazorpayError
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,16 @@ def ingest_verified_event(
 
     try:
         process()
+    except RazorpayError as exc:
+        if exc.code == "RAZORPAY_ORDER_CONTEXT_MISMATCH":
+            # Expected operational state, not a processing failure: a verified
+            # event for an order this database has no execution context for
+            # (e.g. retries for payments predating a state reset). Recorded
+            # for operators; zero business mutation (M31 documented behavior).
+            _mark(repos, event_id, "UNMATCHED", str(exc)[:500])
+            return IngestResult(duplicate=False, processed=False, reason="UNMATCHED_CONTEXT")
+        _mark(repos, event_id, "ERROR", str(exc)[:500])
+        return IngestResult(duplicate=False, processed=False, reason="PROCESSING_ERROR")
     except Exception as exc:  # noqa: BLE001 - recorded for operators
         _mark(repos, event_id, "ERROR", str(exc)[:500])
         return IngestResult(duplicate=False, processed=False, reason="PROCESSING_ERROR")

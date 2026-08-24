@@ -528,3 +528,113 @@ durable dedup) remain implemented and covered by signed-fixture tests
 changes evidence timing, not product scope or security behavior; it resolves
 the conflict between the original M36 wording and the live Dashboard/docs
 reality, per the human owner's explicit instruction.
+
+---
+
+## D-033 — M38 spend-commit defect remediation, test/dev DB separation, unmatched-context classification
+
+Date: 2026-08-24
+Milestones: Phase-2 M38
+Status: Accepted
+Affected docs: `PHASE2_STATUS.md`, `MEMORY.md`, `TESTING.md`, `RESEARCH.md` (R-018),
+`docs/PHASE2_M38_EVIDENCE.md`
+
+Context: payment #2 (order_TThUuhmUinebAX / pay_TThVaPlcLqu4XE, 239800 INR
+minor) succeeded end to end and three REAL signed webhooks were accepted
+(verified=true, PROCESSED). Two defects and one process failure were found:
+
+1. DEFECT A (code): `webhooks._reducer()` constructed the ProviderStateReducer
+   WITHOUT a SpendManager, so executor `_settle()` silently skipped the spend
+   block: the captured event settled the attempt SUCCEEDED while the
+   reservation stayed reserved (committed=0). The callback path's executor was
+   correctly wired but lost the settlement race to the webhook.
+2. DEFECT B (code): attempts recorded the `provider_name` column default
+   'mock' for real Razorpay executions (audit truthfulness).
+3. PROCESS FAILURE: ~12 test files build engines from `get_settings()`, which
+   reads the real root `.env`; the conftest switch to `razormesh_test` did not
+   cover them, so the post-payment gate run wiped the dev business tables and
+   destroyed payment #2's attempt/spend/audit evidence before capture (same
+   class of loss as payment #1).
+
+Decisions:
+
+1. Webhook reducer wiring now always includes SpendManager; regression
+   `test_webhook_route_wiring_commits_reservation` drives the REAL route +
+   REAL wiring and pins reserved→committed exactly once.
+2. `PaymentProvider` protocol gains `name`; attempts persist the real provider
+   name at creation; wiring test asserts it.
+3. Hard test/dev separation (permanent gate, TESTING.md §15): conftest pins
+   DATABASE_URL/REDIS_URL/PAYMENT_PROVIDER before any razormesh_api import
+   (env vars beat dotenv), pins the three Razorpay credential variables to
+   EMPTY (an absent var would let the .env values through), and a session-scoped
+   autouse guard fails the ENTIRE suite if `get_settings()` resolves the dev
+   DB, a non-mock provider, or any Razorpay credential. Verified: full suite
+   run left the dev DB byte-identical; fixture residue landed only in
+   `razormesh_test`.
+4. One-time guarded repair (`scripts/repair_m38_spend_commit.py`) was written
+   for the stranded reservation; it REFUSES to run now that its exact guarded
+   target row was wiped (exit 1, recorded). No manual SQL was or will be used
+   to reconstruct destroyed financial state — the destroyed evidence is
+   disclosed, not fabricated, and the exactly-once commit for payment #2 is
+   recorded as UNPROVEN. M38 PASS therefore requires one further real success
+   checkout (payment #3) against the fixed stack.
+5. Verified-but-unmatched webhook events are classified UNMATCHED_CONTEXT
+   (response) with inbox state UNMATCHED, restoring the M31-documented
+   behavior; generic PROCESSING_ERROR is reserved for true processing
+   failures. Regression-tested. This is classification-only: both paths were
+   already zero-mutation and returned controlled 200s.
+6. Read-only provider evidence fetches (`fetch_payment`, `fetch_event`) added
+   to the Razorpay client/provider with the M16 error taxonomy unchanged;
+   used by `scripts/rzp_m38_evidence.py`. GET /v1/events{,/{id}} 404 for this
+   account (R-018) — event reality is established by HMAC + correlation
+   instead.
+
+Security consequences: RULES §financial-correctness 8 ("verified success
+commits reservation") was violated in production for payment #2 by Defect A
+and is now enforced by route-level regression; P2-S20 strengthened (no
+credential can reach the suite even via dotenv); no invariant weakened; no
+destroyed evidence reconstructed or claimed.
+
+Validation/evidence: docs/PHASE2_M38_EVIDENCE.md (real event rows + payload
+hashes; provider-side paid/captured fetch; live signed probe
+UNMATCHED_CONTEXT; 329-test suite with dev DB byte-identical).
+
+---
+
+## D-034 — payment.authorized is informative-only in EVERY attempt state
+
+Date: 2026-08-25
+Milestones: Phase-2 M38 (close-out), M39
+Status: Accepted
+Affected docs: `PHASE2_STATUS.md`, `MEMORY.md`
+
+Context: D-031 subscribed payment.authorized as strictly informative-only,
+but the reducer implemented the no-op only for EXECUTING attempts (plus the
+generic SUCCEEDED short-circuit). Live M38 evidence (order_TTiVopXKuCg5ol,
+2026-08-24 19:11 UTC): the authorized event for the retry payment arrived
+while the attempt was FAILED (after payment.failed for the first payment)
+and fell through to the reducer's `ValueError("unsupported provider event
+kind")`, producing an inbox ERROR row.
+
+Decision: `apply_event` treats `payment.authorized` as informative-only in
+EVERY attempt state — the kind check precedes all state-specific branches.
+Rationale: authorized payloads are lagged snapshots (R-014); the documented
+failed→captured same-transaction flow (P2-S16) implies authorized snapshots
+for retry payments can arrive against FAILED (or PROVIDER_UNKNOWN/CREATED)
+attempts. An informative signal must never raise, settle, or reconcile.
+
+Security consequences: none adverse — the production error caused zero
+business mutation (inbox claimed the event, controlled 200 returned) and no
+settlement impact; the change removes spurious ERROR rows and aligns the
+implementation with D-031. Authorized still can never settle or fulfil in
+any state (regression-tested for EXECUTING, FAILED, and
+SUCCEEDED-after-reconcile).
+
+Validation/evidence: regression `test_authorized_is_informative_in_every_state`
+(FAILED + late-capture-reconciled SUCCEEDED cases); existing M27/M34 tests
+unchanged; full suite 330 passed; the live ERROR inbox row
+(`TTiY6VwFdJ22xL`) preserved as the append-only record of the occurrence.
+The same live sequence also constitutes the first production demonstration
+of the guarded FAILED→SUCCEEDED late-capture reconciliation (P2-S16/M26):
+release on failure, then exactly one capacity-checked commit, audited as
+RAZORPAY_RECONCILED_LATE_CAPTURE.

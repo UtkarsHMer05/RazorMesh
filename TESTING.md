@@ -301,15 +301,34 @@ checkouts). All high-volume/fault tests use mock/fakes so Razorpay is not spamme
 
 ## Test isolation from the real environment
 
-The backend test suite must NEVER read the real root `.env`:
+The backend test suite must NEVER read the real root `.env`, and must NEVER
+touch the dev database (`razormesh`):
 
-- the session `settings` fixture constructs `Settings(_env_file=None, ...)`;
-- tests therefore run with `PAYMENT_PROVIDER=mock` and NO Razorpay credentials
-  regardless of the developer's local selection (P2-S20 determinism);
+- `conftest.py` pins the environment BEFORE any `razormesh_api` import:
+  `DATABASE_URL` → the DEDICATED `razormesh_test` database (overridable via
+  `RAZORMESH_TEST_DATABASE_URL`), `PAYMENT_PROVIDER=mock`, and the three
+  Razorpay credential variables pinned to EMPTY strings. Env vars take
+  precedence over dotenv in pydantic-settings, so this also neutralizes the
+  root `.env` for every `get_settings()` call anywhere in the suite; an
+  absent variable would NOT — it would let the `.env` value through.
+- a session-scoped autouse guard fails the ENTIRE suite instantly if
+  `get_settings()` resolves the dev DB, a non-mock provider, or any Razorpay
+  credential (P2-S20);
+- the session `settings` fixture additionally constructs
+  `Settings(_env_file=None, ...)`;
+- integration fixtures wipe business tables ONLY in `razormesh_test`. Two
+  pre-isolation gate runs (payments #1 and #2, 2026-08-24) reached the dev DB
+  through `get_settings()` and destroyed real Test Mode payment evidence; the
+  pinning + guard make that class of loss impossible;
 - real-provider behavior is exercised exclusively through `httpx.MockTransport`
   seams and monkeypatched provider factories;
 - standalone real-interaction scripts (`scripts/rzp_auth_check.py`,
-  `scripts/rzp_first_order.py`) are NOT pytest tests and read `.env` on purpose.
+  `scripts/rzp_first_order.py`, `scripts/rzp_m38_evidence.py`,
+  `scripts/webhook_live_probe.py`) are NOT pytest tests and read `.env` on
+  purpose;
+- evidence capture after a REAL payment happens via direct DB queries /
+  read-only scripts BEFORE any pytest run, even though the suite is now
+  isolated (belt and braces).
 
 ## Format gate
 
@@ -327,3 +346,8 @@ rejection, P2-S02). Rules:
   any other value, or the same value elsewhere, still fails the scan;
 - every entry carries a justification comment in the script;
 - adding an entry requires updating this section in the same change.
+
+Current entries: callback-verification HMAC fixture, webhook-verification HMAC
+fixture, the P2-M38 route-wiring regression HMAC fixture
+(`wh-route-wiring-secret` in `tests/test_reducer.py`), the `rzp_live_`
+rejection literal, and the allowlist's own repeated `rzp_live_` literal.

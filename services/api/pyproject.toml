@@ -65,6 +65,10 @@ ignore = [
 # template (typing.Sequence/Union); env.py falls back to the ini URL with a
 # deliberately broad catch.
 "**/alembic/*" = ["E402", "I001", "UP007", "UP035", "BLE001"]
+# P2-M38: conftest.py MUST pin the test environment (DATABASE_URL etc.) before
+# any razormesh_api import so get_settings() can never resolve the dev .env;
+# env-pinning before imports is inherent (see the block comment in the file).
+"**/tests/conftest.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.13"

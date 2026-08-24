@@ -409,3 +409,26 @@ Impact: M38 success walkthrough uses `success@razorpay` (still documented);
 M40 failure walkthrough uses `failure@razorpay` or a sub-4-digit OTP.
 
 Confidence: High (current official pages fetched 2026-08-24).
+
+# R-018 — Razorpay Events API not available for this Test Mode account (empirical)
+
+Date checked: 2026-08-24 (Phase 2 M38 evidence reconciliation)
+Type: Empirical observation against the live Test Mode API (not a docs claim)
+
+Findings (read-only calls with real Test credentials):
+- `GET /v1/events/{event_id}` → HTTP 404 for each of the three real webhook
+  event ids delivered for order_TThUuhmUinebAX (TThVgbHU0l5E7y,
+  TThVhMzdj2zNfo, TThVilsyhg1VWm).
+- `GET /v1/events?count=100` → HTTP 404 as well.
+
+Interpretation: the Events API endpoints are not enabled/reachable for this
+account in Test Mode (Razorpay documents the Events API for some products /
+account configurations; no claim is made here about why). Consequence: the
+reality of accepted webhook events is established by other means — raw-body
+HMAC verification against the Dashboard secret (only Razorpay can sign),
+event-id ULID time-prefix identity with the provider order/payment entities,
+exact order/payment correlation, and Dashboard delivery logs (human-observed
+200s). The `fetch_event` client method is retained and MockTransport-tested
+for accounts where the endpoint is available.
+
+Confidence: High for the observed 404s; interpretation is best-effort.

@@ -62,6 +62,8 @@ def _redis() -> NonceRegistry:
 
 
 class FakeProvider:
+    name = "mock"
+
     def __init__(self) -> None:
         self.calls = 0
         self.script: list[ChargeResult | Exception] = []

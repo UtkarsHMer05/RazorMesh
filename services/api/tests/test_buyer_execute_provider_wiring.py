@@ -130,6 +130,9 @@ def test_execute_razorpay_mode_returns_launch_and_stays_executing(
         spend = session.execute(select(AuthorizationSpend)).scalars().one()
     assert attempt.razorpay_order_id == "order_WIRING0000000001"
     assert attempt.state == "EXECUTING"
+    # P2-M38: the durable attempt must name the REAL provider, not the
+    # column default 'mock' (audit truthfulness).
+    assert attempt.provider_name == "razorpay"
     assert spend.reserved_minor == attempt.amount_minor
     assert spend.committed_minor == 0
 

@@ -47,8 +47,8 @@
 | M35 | Public Webhook Tunnel Preparation | PASS | zrok installed via brew; scripts/webhook_tunnel.sh + docs/PHASE2_TUNNEL.md (Dashboard steps, OTP 754081, event list, secret handling); enable step requires human token -> combined gate with M36 |
 | M36 | HUMAN GATE — Webhook Dashboard | PASS | Dashboard webhook verified (Enabled, 4 events) + tunnel end-to-end; M01–M37 audit remediation (5 defects fixed, 323 tests green); live signed-delivery proof DEFERRED to M38 per human instruction + D-032/R-016 (current docs: test events are triggered by Test Mode transactions; no test-notification action exists) |
 | M37 | Real Success Checkout Readiness Gate | PASS | readiness checklist fully evidenced (order create, Checkout UI, callback verify, webhook verify/dedup, provider fetch, reducer, reservation, audit, Test Mode guard, Phase-1 regressions 323/323); one reliable start workflow `make phase2-up` proven live; auth diagnostic OK; R-017 test instruments verified |
-| M38 | HUMAN GATE — Real Test Success | NOT_STARTED | — |
-| M39 | Success Evidence Reconciliation | NOT_STARTED | — |
+| M38 | HUMAN GATE — Real Test Success | PASS | payment #3 end-to-end: ALLOW→ticket→order→failed→late-capture reconcile→SUCCEEDED/ELIGIBLE; 4 REAL signed webhooks verified=true (7 total real rows); reserved→committed EXACTLY ONCE by live fixed webhook path (v4: ensure→reserve→release→commit); provider_name=razorpay; audit chain valid (7 events); provider-side fetch paid/captured matches; authorized-in-FAILED semantics defect found live, fixed+regression-tested (D-034); payment #2 losses disclosed (D-033) |
+| M39 | Success Evidence Reconciliation | PASS | docs/PHASE2_M39_EVIDENCE_RECONCILIATION.md: DB↔provider fetch↔webhook inbox↔audit chain↔Dashboard observations reconciled for payments #2/#3; honest limitations recorded (Events API 404 R-018; payment #2 rows destroyed; one ERROR inbox row disclosed) |
 | M40 | HUMAN GATE — Real Test Failure | NOT_STARTED | — |
 | M41 | Provider-Unknown / Timeout Reconciliation | NOT_STARTED | — |
 | M42 | Real-Provider Concurrency & Replay Regression | NOT_STARTED | — |
@@ -1263,3 +1263,171 @@ scripts/rzp_auth_check.py          → ok, credentials accepted (read-only), tes
 - M38 HUMAN GATE: one official Test Mode success checkout (R-017 instruments:
   `success@razorpay` UPI), then end-to-end verification incl. the deferred
   signed-delivery proof.
+
+---
+
+## M38 — HUMAN GATE — Real Test Success
+
+MILESTONE: M38
+STATUS: PASS (payment #3 end-to-end exactly-once proven; D-032 obligation met
+by payments #2 + #3 — 7 REAL signed deliveries verified=true)
+REAL RAZORPAY INTERACTION: TEST_CHECKOUT (human, payments #2/#3) + WEBHOOK
+(7 real signed deliveries accepted) + READ_ONLY (order/payment fetches)
+
+Full working evidence record: `docs/PHASE2_M38_EVIDENCE.md`; final
+reconciliation: `docs/PHASE2_M39_EVIDENCE_RECONCILIATION.md` (M39).
+
+### What payment #2 proved (durable, captured BEFORE any test run)
+
+- Human success checkout ~18:10 UTC (Test Mode, success@razorpay):
+  attempt `exa_01M0TFCS608MSJ59GHHVJ5NP8E`, order `order_TThUuhmUinebAX`,
+  payment `pay_TThVaPlcLqu4XE`, 239800 INR minor.
+- THREE real signed webhook deliveries accepted (first ever — D-032
+  obligation content), all verified=true, PROCESSED, correlated to the
+  order/payment:
+  - `TThVgbHU0l5E7y` payment.authorized 18:10:03.115688+00
+  - `TThVhMzdj2zNfo` payment.captured  18:10:03.274933+00
+  - `TThVilsyhg1VWm` order.paid        18:10:04.994904+00
+  (payload_sha256 recorded in the evidence doc; event ids do not match the
+  `evt_ok_*` fixture pattern and share the ULID time-prefix of the provider
+  entities created at transaction time.)
+- Human-observed: three webhook POSTs → HTTP 200 immediately after
+  `/buyer/execute`; `/buyer/callback` → 200.
+- Provider-side READ-ONLY fetch (new typed `fetch_payment`/`fetch_event`):
+  order status=`paid`, payment status=`captured`, both 239800 INR; receipt
+  `r_exa_01M0TFCS608MSJ59GHHVJ5NP8E` ties the provider order to the attempt.
+  Events API 404 for this account (R-018) — event reality rests on HMAC +
+  correlation + Dashboard delivery logs.
+- Older payment-#1 retry deliveries still 403 SIGNATURE_INVALID (signed with
+  the pre-correction Dashboard secret): pre-verification rejection, zero
+  mutation, as designed.
+
+### Defects found and fixed this milestone (D-033)
+
+1. CRITICAL — webhook reducer built WITHOUT SpendManager: the captured event
+   settled the attempt SUCCEEDED but skipped reserved→committed
+   (reservation stranded at 239800/0). Fixed: `_reducer()` wires
+   SpendManager; regression `test_webhook_route_wiring_commits_reservation`
+   drives the REAL route + wiring and pins committed exactly once.
+2. Audit truthfulness — attempts recorded provider_name 'mock' (column
+   default) for real Razorpay runs. Fixed: `PaymentProvider.name` protocol
+   member; wiring test asserts 'razorpay'.
+3. CRITICAL (process) — ~12 test files reach the dev DB through
+   `get_settings()` (reads root `.env`); the post-payment gate run
+   (18:26–27 UTC) wiped the dev business tables and destroyed payment #2's
+   attempt/spend/audit rows BEFORE capture — same class of loss as payment
+   #1. Fixed permanently: conftest env pinning (env vars beat dotenv;
+   credentials pinned EMPTY), dedicated `razormesh_test` DB, session-scoped
+   autouse isolation guard (TESTING.md §15). Verified: full 329-test suite
+   left the dev DB byte-identical; fixture residue only in razormesh_test.
+4. Classification — verified-but-unmatched events surfaced as generic
+   PROCESSING_ERROR; restored M31-documented UNMATCHED_CONTEXT + inbox state
+   UNMATCHED (regression-tested; live-proven by signed probe).
+
+### Non-fabrication statement (payment #2 spend leg)
+
+The exactly-once reserved→committed transition for payment #2 is UNPROVEN:
+the commit never ran (Defect 1), and the stranded reservation row was
+destroyed by the pre-isolation test run before the guarded one-time repair
+(`scripts/repair_m38_spend_commit.py`) could be applied — the script now
+refuses (target row absent; exit 1, recorded). No financial state has been
+or will be reconstructed manually; the loss is disclosed, not patched over.
+
+### Gate run on fixed + isolated stack (2026-08-24)
+
+```text
+ruff format --check / ruff check       → clean / clean
+mypy strict (root + services/api)      → no issues in 52 source files (both)
+pytest (full)                          → 329 passed; dev DB byte-identical
+pnpm lint / typecheck / test           → clean / clean / 6 passed
+playwright                             → 2 passed
+make security-check                    → PASS (one new documented allowlist entry)
+scripts/webhook_live_probe.py (public) → 200 UNMATCHED_CONTEXT, zero mutation
+                                         (also proves live process reloaded fixes)
+scripts/rzp_m38_evidence.py            → order paid / payment captured (READ_ONLY)
+```
+
+### Payment #3 close-out (2026-08-24 19:08–19:11 UTC, evidence captured BEFORE any test run)
+
+Human success checkout (success@razorpay): intent
+`intent_01M0TJSMR51H1GVBDWFYKTDRDQ` → RazorGuard ALLOW → ticket
+`tk_01M0TJSRRF59BEPPK1HQTSCM47` (single-use: used_at == attempt creation) →
+attempt `exa_01M0TJST9KD53EBCP4WMWNRZ5X` → order `order_TTiVopXKuCg5ol`
+(479900 INR minor). Live sequence incl. documented Razorpay semantics
+(P2-S16/R-014): first payment `pay_TTiWRlfGgjviWU` FAILED (19:09:28,
+reservation released, audited) → retry payment `pay_TTiY0Ny3rAEN9H`
+authorized/captured (19:11:02) → guarded FAILED→SUCCEEDED reconciliation
+committed the reservation exactly once (spend version 4: ensure→reserve→
+release→commit; final reserved=0, committed=479900) →
+RAZORPAY_RECONCILED_LATE_CAPTURE audited → order.paid + verified browser
+callback (19:11:13) idempotent no-ops. Attempt: SUCCEEDED, ELIGIBLE,
+RESOLVED, provider_name=razorpay, callback_verified_at set. Audit chain
+verified live: valid=true, 7 events. Provider-side READ-ONLY fetch matches
+local state exactly (order paid; failed payment failed; retry payment
+captured; receipts bind order→attempt). The commit was performed by the
+FIXED live webhook path — no repair script.
+
+Fourth real delivery note: payment #3's authorized event arrived while the
+attempt was FAILED and exposed a D-031 semantics gap (authorized only
+no-op'd in EXECUTING). Zero mutation / no settlement impact; fixed to
+informative-only in EVERY state + regression
+`test_authorized_is_informative_in_every_state` (D-034). The ERROR inbox row
+is preserved as the append-only record.
+
+### Gate run at PASS
+
+```text
+ruff format --check / ruff check → clean / clean
+mypy strict (root + services/api)→ no issues in 52 source files (both)
+pytest (full)                    → 330 passed; dev business rows unchanged
+/audit/verify (live)             → valid=true, events_checked=7
+scripts/rzp_m38_evidence.py      → orders paid / payments failed+captured (READ_ONLY)
+```
+
+### Next
+- M39 success evidence reconciliation (closed immediately after; see below).
+
+---
+
+## M39 — Success Evidence Reconciliation
+
+MILESTONE: M39
+STATUS: PASS
+REAL RAZORPAY INTERACTION: READ_ONLY (order/payment fetches only)
+
+Deliverable: `docs/PHASE2_M39_EVIDENCE_RECONCILIATION.md` — safe-identifier
+reconciliation of DB ↔ read-only provider fetches ↔ webhook inbox ↔ audit
+chain ↔ human-observed Dashboard facts for payments #2 and #3.
+
+### Reconciliation highlights
+
+- Provider-side fetches match local durable state on every field for both
+  payments (statuses, amounts, order↔payment↔attempt binding via receipts).
+- 7 REAL signed deliveries in provider_events (verified=true; payload hashes
+  stored); event reality established via raw-body HMAC + ULID time-prefix
+  identity + correlation + Dashboard 200s (Events API 404 for this account —
+  R-018, documented as honest limitation).
+- Audit chain valid (7 events) covering the full payment #3 lifecycle incl.
+  failure release and guarded late-capture commit.
+- Exactly-once reservation semantics proven end-to-end for payment #3
+  (version history 4 steps, single commit); payment #2's destroyed rows and
+  skipped commit disclosed, not reconstructed (D-033).
+- Callback/webhook race resolved correctly in production (callback after
+  webhook settlement = idempotent no-op).
+
+### Validation
+
+```text
+scripts/rzp_m38_evidence.py → all fetches consistent (READ_ONLY)
+/audit/verify (live)        → valid=true, events_checked=7
+pytest (full)               → 330 passed (no code change this milestone
+                               beyond M38's authorized fix, already gated)
+```
+
+### Known limitations
+- Recorded in the reconciliation doc §8 (Events API, payment #2 rows, one
+  disclosed ERROR inbox row).
+
+### Next
+- M40 HUMAN GATE — Real Test Failure (failure@razorpay or sub-4-digit OTP;
+  expect no fulfilment, reservation released, audited).

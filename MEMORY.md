@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 2 — Razorpay Test Mode Integration (ACTIVE since P2-M05)  
-**Current milestone:** P2-M38 — IN_PROGRESS: payment #1 succeeded (CAPTURED/PAID via callback) but real webhooks 403 = Dashboard webhook secret ≠ root .env secret (PROVEN, see Gate); local business-table evidence of payment #1 wiped by post-payment pytest runs (disclosed)  
-**Phase-2 milestones passed:** P2-M01..P2-M37  
-**Last updated:** 2026-08-24  
-**Gate:** M38 pending on 2 items: (1) HUMAN must re-enter the root .env RAZORPAY_WEBHOOK_SECRET into the Dashboard Test Mode webhook (never into chat); (2) ≥1 REAL signed event must land 2xx + verified=true (D-032 obligation) — plus a repeat success payment to regenerate the local evidence chain. Proof of secret mismatch: self-signed probe with the .env secret verified 200 through the live zrok tunnel + live API process (body untransformed, runtime==file secret, no env override, 64-char clean value) while Razorpay-signed deliveries 403 SIGNATURE_INVALID. Zero mutation from 403s proven (provider_events 0 real rows; inbox writes only post-verification). New safe diagnostics: refined 403 codes (SIGNATURE_MISSING vs SIGNATURE_INVALID) + server log line with non-secret facts only (scripts/webhook_secret_check.py for hygiene). Suite 325/325; frontend gates green; hydration warning fixed (suppressHydrationWarning, browser-extension attribute).
+**Current milestone:** P2-M40 — NOT_STARTED (HUMAN GATE: real Test Mode FAILURE checkout)  
+**Phase-2 milestones passed:** P2-M01..P2-M39  
+**Last updated:** 2026-08-25  
+**Gate:** M40 needs ONE human failure checkout at http://localhost:3000/buyer — failure@razorpay UPI or sub-4-digit OTP (R-017). Expected: no fulfilment, attempt FAILED, reservation RELEASED (reserved=0, committed unchanged), PAYMENT_FAILED audited, payment.failed webhook verified=true PROCESSED. Agent captures evidence BEFORE any pytest run (belt and braces; suite is isolated from dev DB since M38/D-033). M38 closed on payment #3 (order_TTiVopXKuCg5ol / pay_TTiY0Ny3rAEN9H, 479900 INR): ALLOW→ticket→order→payment.failed(release)→late-capture reconcile→SUCCEEDED/ELIGIBLE; spend v4 ensure→reserve→release→commit exactly once; 4 REAL signed webhooks verified=true (7 real rows total); provider_name=razorpay; audit chain valid (7 events); provider-side fetch paid/captured/failed all match; commit performed by the live FIXED webhook path (no repair script). Also live-proven: P2-S16 guarded FAILED→SUCCEEDED reconciliation; authorized-in-FAILED semantics defect found→fixed→tested (D-034). Evidence: docs/PHASE2_M38_EVIDENCE.md + docs/PHASE2_M39_EVIDENCE_RECONCILIATION.md. Suite 330/330; dev DB business rows survive test runs (isolation guard autouse).
 
 ---
 
@@ -137,7 +137,11 @@ None recorded.
 
 # Active decisions
 
-See `DECISIONS.md`, currently D-001 through D-032 (D-032: M36 live signed-webhook delivery proof deferred to M38).
+See `DECISIONS.md`, currently D-001 through D-034 (D-032: M36 signed-webhook
+proof deferred to M38 — satisfied by 7 real deliveries; D-033: M38
+spend-commit defect remediation + hard test/dev DB separation +
+UNMATCHED_CONTEXT classification; D-034: payment.authorized informative-only
+in every attempt state).
 
 ---
 
@@ -150,19 +154,18 @@ See `DECISIONS.md`, currently D-001 through D-032 (D-032: M36 live signed-webhoo
 
 # Next action
 
-M38 close-out sequence: (1) human updates the Dashboard Test Mode webhook
-secret to EXACTLY the root .env RAZORPAY_WEBHOOK_SECRET (copy from .env
-directly; never into chat); (2) wait for Razorpay retries of payment #1 events
-and/or human performs ONE more success checkout at http://localhost:3000/buyer
-(success@razorpay, R-017) to regenerate the local evidence chain; (3) agent
-CAPTURES EVIDENCE FIRST (attempt/ticket/spend/audit/provider_events queries)
-BEFORE running any pytest — the suite wipes business tables in the dev DB
-(this is how payment #1's local evidence was lost); (4) require ≥1 REAL signed
-event 2xx + verified=true before M38 PASS; then M39 success evidence
-reconciliation (incl. read-only provider fetch of payment #1's order, which
-still exists Razorpay-side). If the tunnel share dies, re-run make phase2-up
-and UPDATE the Dashboard URL + .env RAZORPAY_WEBHOOK_PUBLIC_URL (share is not
-reserved).
+M40 (HUMAN GATE — Real Test Failure): (1) human performs ONE failure
+checkout at http://localhost:3000/buyer — failure@razorpay UPI or any card
+with an OTP of fewer than 4 digits (R-017). (2) Agent CAPTURES EVIDENCE
+FIRST (attempt/spend/audit/provider_events queries) BEFORE any pytest run.
+(3) Require: attempt FAILED (NOT_ELIGIBLE), reservation RELEASED
+(reserved=0, committed unchanged), PAYMENT_FAILED audited, payment.failed
+webhook verified=true PROCESSED, provider-side fetch shows the failed
+payment; no fulfilment anywhere. Then M40 PASS → M41 (provider-unknown /
+timeout reconciliation via local fault injection). Tunnel/share: if the zrok
+share dies, re-run make phase2-up and UPDATE the Dashboard URL + .env
+RAZORPAY_WEBHOOK_PUBLIC_URL (share is not reserved). Payment-#1 retry 403s
+(old secret) may still tail off; zero-mutation by design.
 
 ---
 

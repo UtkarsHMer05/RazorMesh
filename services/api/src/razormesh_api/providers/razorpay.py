@@ -104,6 +104,72 @@ def _validate_order_payload(payload: Any, *, operation: str) -> RazorpayOrder:
     )
 
 
+@dataclass(frozen=True)
+class RazorpayPaymentEntity:
+    """Minimal validated projection of a Razorpay payment entity (read-only)."""
+
+    payment_id: str
+    status: str
+    amount_minor: int
+    currency: str
+    order_id: str | None = None
+
+
+@dataclass(frozen=True)
+class RazorpayEventEntity:
+    """Minimal validated projection of a Razorpay event entity (read-only)."""
+
+    event_id: str
+    event_type: str
+
+
+def _validate_payment_payload(payload: Any, *, operation: str) -> RazorpayPaymentEntity:
+    if not isinstance(payload, dict):
+        raise RazorpayUnknownOutcomeError("malformed provider response", operation=operation)
+    payment_id = payload.get("id")
+    amount = payload.get("amount")
+    currency = payload.get("currency")
+    status = payload.get("status")
+    if not isinstance(payment_id, str) or not payment_id:
+        raise RazorpayUnknownOutcomeError(
+            "provider response missing payment id", operation=operation
+        )
+    if not isinstance(amount, int) or amount <= 0:
+        raise RazorpayUnknownOutcomeError(
+            "provider response has invalid amount", operation=operation
+        )
+    if not isinstance(currency, str) or len(currency) != 3:
+        raise RazorpayUnknownOutcomeError(
+            "provider response has invalid currency", operation=operation
+        )
+    if not isinstance(status, str):
+        raise RazorpayUnknownOutcomeError(
+            "provider response has invalid status", operation=operation
+        )
+    order_id = payload.get("order_id")
+    return RazorpayPaymentEntity(
+        payment_id=payment_id,
+        status=status,
+        amount_minor=amount,
+        currency=currency,
+        order_id=order_id if isinstance(order_id, str) and order_id else None,
+    )
+
+
+def _validate_event_payload(payload: Any, *, operation: str) -> RazorpayEventEntity:
+    if not isinstance(payload, dict):
+        raise RazorpayUnknownOutcomeError("malformed provider response", operation=operation)
+    event_id = payload.get("id")
+    event_type = payload.get("event")
+    if not isinstance(event_id, str) or not event_id:
+        raise RazorpayUnknownOutcomeError("provider response missing event id", operation=operation)
+    if not isinstance(event_type, str) or not event_type:
+        raise RazorpayUnknownOutcomeError(
+            "provider response missing event type", operation=operation
+        )
+    return RazorpayEventEntity(event_id=event_id, event_type=event_type)
+
+
 class RazorpayClient:
     """Single project-standard HTTP client for Razorpay (D-030).
 
@@ -147,10 +213,27 @@ class RazorpayClient:
     def fetch_order(self, order_id: str) -> RazorpayOrder:
         return self._request("GET", f"/orders/{order_id}")
 
+    def fetch_payment(self, payment_id: str) -> RazorpayPaymentEntity:
+        """READ-ONLY reconciliation/evidence fetch (GET /payments/{id})."""
+        payload = self._request_payload("GET", f"/payments/{payment_id}")
+        return _validate_payment_payload(payload, operation="PAYMENT_FETCH_INVALID")
+
+    def fetch_event(self, event_id: str) -> RazorpayEventEntity:
+        """READ-ONLY reconciliation/evidence fetch (GET /events/{id})."""
+        payload = self._request_payload("GET", f"/events/{event_id}")
+        return _validate_event_payload(payload, operation="EVENT_FETCH_INVALID")
+
     # ------------------------------------------------------------------
     def _request(
         self, method: str, path: str, *, json_body: dict[str, Any] | None = None
     ) -> RazorpayOrder:
+        payload = self._request_payload(method, path, json_body=json_body)
+        operation = "ORDER_FETCH_INVALID" if method == "GET" else "ORDER_CREATE_UNKNOWN"
+        return _validate_order_payload(payload, operation=operation)
+
+    def _request_payload(
+        self, method: str, path: str, *, json_body: dict[str, Any] | None = None
+    ) -> Any:
         try:
             response = self._client.request(method, path, json=json_body)
         except httpx.TimeoutException as exc:
@@ -176,7 +259,7 @@ class RazorpayClient:
             raise RazorpayRejectionError("provider rate limit refused processing (HTTP 429)")
 
         if response.status_code in (400, 404, 422):
-            # 404 on fetch is definitive (order does not exist); on create it is
+            # 404 on fetch is definitive (entity does not exist); on create it is
             # also definitive validation rejection. Never retried.
             raise RazorpayRejectionError(f"provider rejected request ({response.status_code})")
 
@@ -192,9 +275,7 @@ class RazorpayClient:
             payload: Any = response.json()
         except ValueError as exc:
             raise RazorpayUnknownOutcomeError("malformed JSON in provider response") from exc
-
-        operation = "ORDER_FETCH_INVALID" if method == "GET" else "ORDER_CREATE_UNKNOWN"
-        return _validate_order_payload(payload, operation=operation)
+        return payload
 
 
 class RazorpayPaymentProvider:
@@ -206,6 +287,8 @@ class RazorpayPaymentProvider:
     therefore exposes the order lifecycle instead of a synchronous charge();
     the trusted executor keeps sole authority over attempt/reservation state.
     """
+
+    name: str = "razorpay"
 
     def __init__(self, client: RazorpayClient) -> None:
         self._client = client
@@ -246,6 +329,14 @@ class RazorpayPaymentProvider:
 
     def fetch_order(self, order_id: str) -> RazorpayOrder:
         return self._client.fetch_order(order_id)
+
+    def fetch_payment(self, payment_id: str) -> RazorpayPaymentEntity:
+        """READ-ONLY reconciliation/evidence fetch; no business mutation."""
+        return self._client.fetch_payment(payment_id)
+
+    def fetch_event(self, event_id: str) -> RazorpayEventEntity:
+        """READ-ONLY reconciliation/evidence fetch; no business mutation."""
+        return self._client.fetch_event(event_id)
 
 
 def build_payment_provider(
