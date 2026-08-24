@@ -143,3 +143,41 @@ describe("P2-M40: buyer UI re-syncs payment truth from the server", () => {
     expect(screen.queryByTestId("refresh-status")).toBeNull();
   });
 });
+
+describe("P2-M45: trust-state polish", () => {
+  beforeEach(() => {
+    statusResponse = { state: "EXECUTING" };
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("PROVIDER_UNKNOWN offers no payment action — refresh only", async () => {
+    await reachCheckoutPhase(mockFetch());
+    statusResponse = {
+      state: "PROVIDER_UNKNOWN",
+      attempt_id: "exa_ui_sync_1",
+      error_code: "RAZORPAY_ORDER_CREATE_UNKNOWN",
+    };
+    fireEvent.click(screen.getByTestId("refresh-status"));
+    await waitFor(() =>
+      expect(screen.getByTestId("pay-state").textContent).toBe("PROVIDER_UNKNOWN"),
+    );
+    expect(screen.getByTestId("unknown-note")).toBeInTheDocument();
+    // no payment action of any kind while the outcome is unresolved
+    expect(screen.queryByTestId("retry-pay")).toBeNull();
+    expect(screen.getByTestId("refresh-status")).toBeInTheDocument();
+  });
+
+  it("renders the authorization binding explanation at decision time", async () => {
+    await reachCheckoutPhase(mockFetch());
+    expect(screen.getByTestId("authorization-binding").textContent).toContain(
+      "bound into the signed ticket",
+    );
+    expect(screen.getByTestId("test-mode-banner").textContent).toContain(
+      "no real money",
+    );
+  });
+});

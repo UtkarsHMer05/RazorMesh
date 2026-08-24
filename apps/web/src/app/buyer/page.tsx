@@ -355,6 +355,11 @@ export default function BuyerPage() {
               {decision.reason_codes.length > 0 && <> — {decision.reason_codes.join(", ")}</>}
             </p>
             <p>Total (server-recomputed): {fmtINR(decision.total_minor)}</p>
+            <p data-testid="authorization-binding" className="page-sub">
+              The authorized amount, currency, and checkout contents are bound into the signed
+              ticket at decision time. This page cannot change price, order, or payee — any drift
+              invalidates the ticket before execution.
+            </p>
           </>
         ) : (
           <button onClick={propose} disabled={!selected || busy}>
@@ -371,7 +376,7 @@ export default function BuyerPage() {
         </p>
         {execution ? (
           <>
-            <p data-testid="execution-state">
+            <p data-testid="execution-state" aria-live="polite">
               Payment state: <strong data-testid="pay-state">{payPhase === "captured" ? "CAPTURED/PAID" : payPhase === "verifying" ? "VERIFYING" : payPhase === "failed" ? "FAILED" : payPhase === "provider_unknown" ? "PROVIDER_UNKNOWN" : execution.state}</strong>{" "}
               (attempt <code>{execution.attempt_id}</code>)
             </p>
@@ -382,10 +387,13 @@ export default function BuyerPage() {
                 {execution.launch.currency} — server-issued values only.
               </p>
             )}
-            {payPhase !== "captured" && payPhase !== "failed" && (
+            {/* Re-open applies to the SAME server-issued order and only while
+                the outcome is genuinely unattempted (M45: PROVIDER_UNKNOWN
+                offers no payment action of any kind — refresh only). */}
+            {(payPhase === "idle" || payPhase === "awaiting_checkout") && (
               <button
                 data-testid="retry-pay"
-                disabled={busy || payPhase === "verifying"}
+                disabled={busy}
                 onClick={() => {
                   const launch = lastLaunchRef.current;
                   if (launch) void openRazorpayCheckout(launch);

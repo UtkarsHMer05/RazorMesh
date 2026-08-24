@@ -54,7 +54,7 @@
 | M42 | Real-Provider Concurrency & Replay Regression | PASS | 20-worker same-ticket race on razorpay path: ONE attempt, ONE order-create call (transport-counted), reservation exactly once; losers refuse via nonce coordination; 20 duplicate capture deliveries -> inbox claim once, committed EXACTLY once; mixed distinct events under concurrency collapse to one commit; callback racing webhook cannot double-commit; post-settlement replay re-pays nothing; suite 347/347 |
 | M43 | Security Lab Phase-2 Expansion | PASS | 6 new labeled SYNTHETIC families: FORGED_CALLBACK (rejected zero-mutation), WRONG_ORDER_CONTEXT (server-stored binding holds), DUPLICATE_CALLBACK/DUPLICATE_WEBHOOK (single effect), OUT_OF_ORDER_WEBHOOK + FAILED_THEN_CAPTURED (reconcile exactly-once); registry 22/22 pass via /security-lab/run; benchmark now 20 pairs P=R=F1=1.0; synthetic ids unique per execution; Razorpay never contacted |
 | M44 | Audit & Evidence Ledger Upgrade | PASS | 3 new hash-chained events: RAZORPAY_CALLBACK_VERIFIED (exactly-once; duplicates/forgery grow nothing), RAZORPAY_WEBHOOK_INGESTED (winner-only + best-effort attempt/intent correlation), RAZORPAY_RECONCILIATION_RUN (ops pass w/ before/after+reconcile_state+reservation note); payloads carry safe identifiers only (secret-scan asserted); chain verify() green after mixed Phase-1/2 evidence; suite 352/352 |
-| M45 | Buyer UI Trust-State Polish | NOT_STARTED | — |
+| M45 | Buyer UI Trust-State Polish | PASS | TEST MODE banner + no-real-money messaging; VERIFYING/CAPTURED-PAID/FAILED/PROVIDER_UNKNOWN states with aria-live; PROVIDER_UNKNOWN now offers NO payment action (same-order re-open removed on unknown; refresh only); authorization-binding explanation rendered at decision time; prefers-reduced-motion + <=640px responsive guards added; vitest 11/11 incl. 2 new M45 regressions; tsc/eslint/build/Playwright green |
 | M46 | Automated E2E w/ External Checkout Boundary | NOT_STARTED | — |
 | M47 | Phase-2 Performance & Network Baseline | NOT_STARTED | — |
 | M48 | Full Phase-2 Security & Dependency Gate | NOT_STARTED | — |
@@ -1703,3 +1703,42 @@ make security-check                              -> PASS
 
 ### Next
 - M45 — Buyer UI Trust-State Polish.
+
+
+## M45 — Buyer UI Trust-State Polish
+
+MILESTONE: M45
+STATUS: PASS
+
+Requirements: master prompt M45 — TEST MODE labeling, no-real-money message,
+VERIFYING/CAPTURED-PAID/FAILED/PROVIDER_UNKNOWN states; unknown must not offer
+a dangerous fresh Pay action; keep authorization diff/reason explanations;
+DESIGN/a11y/responsive/reduced-motion conformance.
+Security invariants: P2-S04/S06 (browser never authoritative), UI §1-3.
+
+### Implementation (apps/web)
+- page.tsx:
+  - PROVIDER_UNKNOWN no longer offers same-order re-open — refresh-from-server
+    is the ONLY action while outcome is unresolved (no payment action of any
+    kind on unknown);
+  - decision step renders an `authorization-binding` explanation: amount,
+    currency and checkout contents are bound into the signed ticket at
+    decision time; the page cannot alter price/order/payee;
+  - execution-state line is an aria-live=polite region (screen readers hear
+    VERIFYING -> terminal transitions);
+  - reason codes continue to render beside the decision banner.
+- globals.css: `prefers-reduced-motion: reduce` kill-switch for
+  animations/transitions/scroll-behavior; <=640px responsive card/title floor
+  per DESIGN.md motion/a11y/responsive requirements.
+
+### Evidence
+- vitest 11/11 (new: unknown hides retry-pay + keeps refresh + unknown-note;
+  authorization-binding + TEST MODE banner assertions).
+- pnpm typecheck / lint / build clean; Playwright 2/2.
+- Backend buyer/callback suites unaffected (23 passed spot-run).
+
+### Real Razorpay interaction
+- NONE.
+
+### Next
+- M46 — Automated E2E with External Checkout Boundary.

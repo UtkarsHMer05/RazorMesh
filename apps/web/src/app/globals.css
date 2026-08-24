@@ -212,3 +212,27 @@ th {
   outline: 2px solid var(--rm-focus);
   outline-offset: 2px;
 }
+
+/* P2-M45: motion and accessibility guards (DESIGN.md §motion/a11y). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Responsive floor for the trust flow on narrow viewports. */
+@media (max-width: 640px) {
+  .card {
+    padding: 0.75rem;
+    margin-block: 0.75rem;
+  }
+
+  .page-title {
+    font-size: 1.35rem;
+  }
+}

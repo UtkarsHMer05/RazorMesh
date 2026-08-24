@@ -155,10 +155,12 @@ GET /buyer/status — browser is never a source of payment truth).
 
 # Next action
 
-M45 (Buyer UI Trust-State Polish): TEST MODE labeling, no-real-money message,
-VERIFYING/CAPTURED-PAID/FAILED/PROVIDER_UNKNOWN states, unknown must not offer
-fresh Pay, keep authorization diff/reason explanations; DESIGN/a11y/responsive/
-reduced-motion conformance. M44 done: CALLBACK_VERIFIED (exactly-once) +
+M46 (Automated E2E w/ External Checkout Boundary): stub Checkout script for
+browser tests + provider fakes for failure permutations; preserve real M38/M40
+evidence; test launch payload, success verification UI, failure UI, unknown
+state, absence of secrets in rendered/network data. M45 done: unknown offers NO
+payment action (refresh only), authorization-binding explanation, aria-live,
+reduced-motion + responsive CSS. M44 done: CALLBACK_VERIFIED (exactly-once) +
 WEBHOOK_INGESTED (winner-only, attempt-correlated) + RECONCILIATION_RUN ledger
 events; test_ledger_phase2.py 5 tests. Done earlier: M41 (D-036 discovery+claim+RESOLVED +
 ops surface), M42 (concurrency single-effect proofs), M43 (lab 22/22 incl. 6
