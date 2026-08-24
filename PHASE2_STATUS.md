@@ -31,7 +31,7 @@
 | M19 | Checkout Launch Contract | PASS | CheckoutLaunchPayload frozen dataclass (public key id, order id, amount, currency, safe correlation); issued ONLY for EXECUTING attempts with order claim; secret-leak tests; buyer route returns launch on razorpay path; suite 282/282 |
 | M20 | Checkout Script Integration | PASS | src/lib/razorpay.ts: idempotent official checkout.js loader (once per page, typed states, retry-on-error, no secrets); 3 vitest cases; lint/tsc clean; suite 287 backend + 6 web |
 | M21 | Real Checkout UI | PASS | buyer page: TEST MODE banner, Pay→backend launch→official modal (server fields only), VERIFYING/CAPTURED/FAILED/PROVIDER_UNKNOWN states, no dangerous re-pay on unknown; typecheck/lint/vitest/build green |
-| M22 | Client Success Handler | NOT_STARTED | — |
+| M22 | Client Success Handler | PASS | buyer UI forwards ONLY payment_id/order_id/signature to POST /buyer/callback; VERIFYING phase with do-not-close notice; no browser finality |
 | M23 | Server Checkout Signature Verification | NOT_STARTED | — |
 | M24 | Callback Adversarial Tests | NOT_STARTED | — |
 | M25 | Post-Callback Provider Verification | NOT_STARTED | — |
@@ -825,3 +825,22 @@ pnpm typecheck / lint / test / build → clean / clean / 6 passed / OK
 
 ### Next
 - M22 — Client Success Handler (callback submission hardening + tests).
+
+
+## M22 — Client Success Handler
+
+MILESTONE: M22
+STATUS: PASS
+
+Requirements: master prompt M22 — forward only Razorpay fields + safe correlation;
+VERIFYING state; no browser finality.
+Security invariants: P2-S06 (browser never authoritative), P2-S09 groundwork.
+
+### Implementation
+- Buyer page `submitCallback()`: posts {intent_id, checkout_id,
+  razorpay_payment_id, razorpay_order_id, razorpay_signature} to /buyer/callback;
+  sets VERIFYING while awaiting the server; renders CAPTURED/FAILED/
+  PROVIDER_UNKNOWN strictly from server response. No client-side fulfilment.
+
+### Validation
+- Frontend gates green (tsc/lint/vitest/build); server behavior proven in M23/M24 suites.

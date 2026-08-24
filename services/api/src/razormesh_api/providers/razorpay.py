@@ -523,3 +523,24 @@ def build_launch_payload(
         intent_id=attempt_intent_id,
         checkout_id=attempt_checkout_id,
     )
+
+
+# ---------------------------------------------------------------------------
+# P2-M23: mandatory server-side checkout signature verification
+# Official formula: expected = HMAC_SHA256(order_id|payment_id, key_secret) hex
+# CRITICAL: uses the SERVER-stored order id, never the browser's value (P2-S08).
+# ---------------------------------------------------------------------------
+
+
+def verify_checkout_signature(
+    *, order_id: str, payment_id: str, signature_hex: str, key_secret: str
+) -> bool:
+    import hashlib
+    import hmac as _hmac
+
+    expected = _hmac.new(
+        key_secret.encode("utf-8"),
+        f"{order_id}|{payment_id}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return _hmac.compare_digest(expected, signature_hex.lower())

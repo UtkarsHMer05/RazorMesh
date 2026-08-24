@@ -31,6 +31,7 @@ from razormesh_api.nonce import (
     NonceAlreadyClaimed,
     NonceRegistry,
 )
+from razormesh_api.persistence.models import ExecutionAttempt as ExecutionAttemptForCallback
 from razormesh_api.persistence.models import IntentContract as RowIntent
 from razormesh_api.persistence.repositories import Repositories
 from razormesh_api.revalidation import Revalidator
@@ -104,6 +105,14 @@ class LaunchPayload(BaseModel):
     checkout_id: str
 
 
+class CallbackIn(BaseModel):
+    intent_id: str = Field(min_length=6, max_length=64)
+    checkout_id: str = Field(min_length=6, max_length=64)
+    razorpay_payment_id: str = Field(min_length=6, max_length=64)
+    razorpay_order_id: str = Field(min_length=6, max_length=64)
+    razorpay_signature: str = Field(min_length=32, max_length=256)
+
+
 class ExecutionBody(BaseModel):
     state: str
     attempt_id: str
@@ -174,6 +183,7 @@ def execute(
     body: ExecuteIn,
     repos: Annotated[Repositories, Depends(_repos)],
     keys: Annotated[DevSigningKeys, Depends(_keys)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> ExecutionBody:
     # Rebuild the CURRENT binding exclusively from durable rows.
     try:
@@ -259,7 +269,7 @@ def execute(
             attempt_intent_id=attempt.intent_id,
             attempt_checkout_id=attempt.checkout_id,
             attempt_razorpay_order_id=attempt.razorpay_order_id,
-            settings=get_settings(),
+            settings=settings,
         )
         result_body.launch = LaunchPayload(**launch.__dict__)
     return result_body
@@ -294,3 +304,63 @@ def _nonce_registry() -> NonceRegistry:
 
 # imported late to avoid circulars in route typing
 from razormesh_api.persistence.models import Checkout as RowCheckoutForSelect  # noqa: E402
+
+
+@router.post("/buyer/callback")
+def checkout_callback(
+    payload_in: CallbackIn,
+    repos: Annotated[Repositories, Depends(_repos)],
+    keys: Annotated[DevSigningKeys, Depends(_keys)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> ExecutionBody:
+    """Verify the browser callback against the SERVER-stored order (P2-S07/S08).
+
+    Zero business mutation occurs before signature verification succeeds. Even a
+    valid signature alone is not fulfilment authority: captured/paid evidence is
+    confirmed via provider fetch (M25) before any settlement.
+    """
+    from razormesh_api.providers.razorpay import verify_checkout_signature
+
+    with repos.transaction() as session:
+        attempt = (
+            session.query(ExecutionAttemptForCallback)
+            .filter(
+                ExecutionAttemptForCallback.intent_id == payload_in.intent_id,
+                ExecutionAttemptForCallback.checkout_id == payload_in.checkout_id,
+            )
+            .order_by(ExecutionAttemptForCallback.created_at.desc())
+            .first()
+        )
+        stored_order = attempt.razorpay_order_id if attempt else None
+
+    if attempt is None or stored_order is None:
+        raise HTTPException(status_code=404, detail={"code": "RAZORPAY_ORDER_CONTEXT_MISMATCH"})
+
+    # Browser-provided order id is advisory only; verification uses the stored id.
+    if payload_in.razorpay_order_id != stored_order:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "RAZORPAY_PAYMENT_CONTEXT_MISMATCH"},
+        )
+
+    if not verify_checkout_signature(
+        order_id=stored_order,
+        payment_id=payload_in.razorpay_payment_id,
+        signature_hex=payload_in.razorpay_signature,
+        key_secret=settings.razorpay_key_secret.get_secret_value(),
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "RAZORPAY_PAYMENT_SIGNATURE_INVALID"},
+        )
+
+    now = datetime.now(UTC)
+    with repos.transaction() as session:
+        row = session.get(
+            ExecutionAttemptForCallback, attempt.execution_attempt_id, with_for_update=True
+        )
+        if row is not None:
+            row.callback_verified_at = now
+            row.updated_at = now
+
+    return ExecutionBody(state=attempt.state, attempt_id=attempt.execution_attempt_id)
