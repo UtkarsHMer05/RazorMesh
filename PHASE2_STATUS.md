@@ -13,8 +13,8 @@
 | M01 | Repository & Governance Integrity Re-read | PASS | hygiene sweep clean; scaffold created; hardening commit cef5a6f absorbed; .env ignored w/ credentials PRESENT |
 | M02 | Phase-1 Full Quality Revalidation | PASS | ruff+mypy strict clean; pytest 225/225 (cov 96% TOTAL under current flags); eslint/tsc/vitest3/build OK; Playwright 2/2; security-check PASS (pip+pnpm audits clean); benchmark smoke 14 pairs P=R=F1=1.0 |
 | M03 | Phase-1 Security Invariant Revalidation | PASS | focused runs: 45 core security + 14 buyer/audit/lifecycle + 33 targeted (race/replay/forged/tamper/superseded/stale/unknown) all PASS; replay = idempotent collapse, never 500 |
-| M04 | Phase-1 Clean-Room Acceptance Re-run | NOT_STARTED | — |
-| M05 | Freeze Phase-2 Baseline | NOT_STARTED | — |
+| M04 | Phase-1 Clean-Room Acceptance Re-run | PASS | fresh volume→3 migrations→50 products→live API: acceptance 10/10 PASS, lab 16/16 families, benchmark 14 pairs, tamper non-mutating |
+| M05 | Freeze Phase-2 Baseline | PASS | docs/PHASE2_BASELINE.md: HEAD 5186cca, pytest 225/225 cov 96%, migration head d8b412f091c3, versions recorded; zero Razorpay calls so far (declared) |
 | M06 | Live Razorpay Documentation Research | NOT_STARTED | — |
 | M07 | Provider Client & Dependency Decision | NOT_STARTED | — |
 | M08 | Root `.env` / Typed Config Reconciliation | NOT_STARTED | — |
@@ -219,3 +219,55 @@ pytest tests -k "race or replay or forged or tamper or superseded or stale or un
 
 ### Next
 - M04 — Phase-1 Clean-Room Acceptance Re-run.
+
+## M04 — Phase-1 Clean-Room Acceptance Re-run
+
+MILESTONE: M04
+STATUS: PASS
+
+Requirements: master prompt M04 (disposable-state reproduction; never touch host :5432).
+Security invariants: full Phase-1 set re-demonstrated live.
+
+### Commands + results
+```text
+docker compose down -v && up -d      → razormesh-postgres/redis recreated healthy (15432/16379 only)
+make migrate                          → 3 revisions: b31a01dd94f2 → c5f21a9d3e10 → d8b412f091c3
+make seed                             → 50 synthetic products
+uvicorn (127.0.0.1:8000) + /ready     → ok, postgres+redis ok, mock provider true
+python scripts/acceptance.py          → 10/10 PASS
+```
+
+### Live evidence highlights
+- Normal purchase ALLOW→SUCCEEDED (total 64890 minor); replay collapses to same attempt.
+- Forged signature 403 SIGNATURE_INVALID pre-provider.
+- 20-worker race: distinct_attempts=1, durable=1, succeeded=1.
+- Security Lab 16/16 families incl. CROSS_PRINCIPAL/AGENT/MERCHANT, AUTHORIZATION_SUPERSESSION,
+  SUBSCRIPTION_INSERTION, UNTRUSTED_INSTRUCTION, SAFE_LOOKALIKE.
+- Audit chain valid before AND after non-mutating tamper simulation (76 events unchanged).
+- Benchmark artifact: 14 pairs TP14 FP0 TN14 FN0 F1=1.0.
+
+### Real Razorpay interaction
+- NONE.
+
+### Next
+- M05 — Freeze Phase-2 Baseline.
+
+## M05 — Freeze Phase-2 Baseline
+
+MILESTONE: M05
+STATUS: PASS
+
+Requirements: master prompt M05 (baseline document; MEMORY declares Phase 2 active).
+
+### Implementation
+- Created `docs/PHASE2_BASELINE.md` freezing: HEAD `5186cca`, pytest 225/225
+  (TOTAL cov 96% under current flags), migration head `d8b412f091c3`, runtime versions,
+  Phase-1 performance reference (`docs/PHASE1_PERFORMANCE.json`), known limitations,
+  and the explicit statement that NO Razorpay network call of any kind has been made yet.
+- `MEMORY.md` now declares Phase 2 active (per master prompt: allowed once M01–M04 pass).
+
+### Real Razorpay interaction
+- NONE (explicitly asserted in the baseline doc).
+
+### Next
+- M06 — Live Razorpay Documentation Research.

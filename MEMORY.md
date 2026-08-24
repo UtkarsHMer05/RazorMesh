@@ -29,11 +29,11 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 # Current snapshot
 
 **Project:** RazorMesh Trust  
-**Active phase:** Phase 1 COMPLETE — Phase 2 bootstrap (declared active at M05 per plan)  
-**Current milestone:** P2-M02 — Phase-1 Full Quality Revalidation (next)  
-**Phase-2 milestones passed:** P2-M01  
+**Active phase:** Phase 2 — Razorpay Test Mode Integration (ACTIVE since P2-M05)  
+**Current milestone:** P2-M06 — Live Razorpay Documentation Research (next)  
+**Phase-2 milestones passed:** P2-M01..P2-M05  
 **Last updated:** 2026-08-24  
-**Gate:** M01 hygiene/scaffold PASS; human authorized Phase 2 + provided Test credentials (in gitignored .env, never printed); baseline = user hardening commit cef5a6f (225 tests, D-027/028/029, 16 scenarios, 14 pairs)
+**Gate:** Phase-1 fully revalidated (225/225, 10/10 clean-room, security suites green); baseline frozen in docs/PHASE2_BASELINE.md; ZERO Razorpay calls so far
 
 ---
 
