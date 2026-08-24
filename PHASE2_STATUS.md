@@ -12,7 +12,7 @@
 |---|---|---|---|
 | M01 | Repository & Governance Integrity Re-read | PASS | hygiene sweep clean; scaffold created; hardening commit cef5a6f absorbed; .env ignored w/ credentials PRESENT |
 | M02 | Phase-1 Full Quality Revalidation | PASS | ruff+mypy strict clean; pytest 225/225 (cov 96% TOTAL under current flags); eslint/tsc/vitest3/build OK; Playwright 2/2; security-check PASS (pip+pnpm audits clean); benchmark smoke 14 pairs P=R=F1=1.0 |
-| M03 | Phase-1 Security Invariant Revalidation | NOT_STARTED | — |
+| M03 | Phase-1 Security Invariant Revalidation | PASS | focused runs: 45 core security + 14 buyer/audit/lifecycle + 33 targeted (race/replay/forged/tamper/superseded/stale/unknown) all PASS; replay = idempotent collapse, never 500 |
 | M04 | Phase-1 Clean-Room Acceptance Re-run | NOT_STARTED | — |
 | M05 | Freeze Phase-2 Baseline | NOT_STARTED | — |
 | M06 | Live Razorpay Documentation Research | NOT_STARTED | — |
@@ -174,3 +174,48 @@ make benchmark                          → 14 pairs P=R=F1=1.0
 
 ### Next
 - M03 — Phase-1 Security Invariant Revalidation (focused security run).
+
+## M03 — Phase-1 Security Invariant Revalidation
+
+MILESTONE: M03
+STATUS: PASS
+
+Requirements: master prompt M03 list (forged signature, wrong principal/agent/merchant,
+BLOCK/CHALLENGE bypass, replay, 20-worker race, aggregate race, stale checkout,
+superseded authorization, provider-unknown mock path, audit tamper).
+Security invariants: S2/S4/S8/S9/S11/S12/S15/S16/S21/S24/S26/S28 re-proven.
+
+### Validation commands + results
+```text
+pytest tests/{tickets,nonce,spend,revalidation,executor,state_machine,ledger}.py -v
+    → 45 passed
+pytest tests/{buyer_api,audit_dashboard,stateful_lifecycle}.py -v
+    → 14 passed
+pytest tests -k "race or replay or forged or tamper or superseded or stale or unknown" -v
+    → 33 selected, 33 passed
+```
+
+### Findings
+- Forged ticket → SIGNATURE_INVALID before any durable effect (test_tickets).
+- Wrong principal/agent/merchant bindings rejected in ordered fail-closed verify.
+- BLOCKED/CHALLENGED never executable via exhaustive state-machine matrix.
+- Replay: hardened executor collapses replays to the SAME durable attempt
+  (`test_replay_does_not_leak_a_second_reservation`: two executes → 1 attempt,
+  committed once, reserved 0). Controlled outcome — never HTTP 500. The hardening
+  commit's ticket-ID-derived idempotency supersedes the earlier 409 approach
+  (D-027); both prove no second effect.
+- 20-worker same-ticket nonce race: exactly one winner (test_nonce).
+- Aggregate-spend race cannot exceed authorization (test_spend + Hypothesis sequences).
+- Stale checkout + superseded generation rejected at executor boundary (test_revalidation).
+- PROVIDER_UNKNOWN retains reservation; reconciliation applies authoritative outcome;
+  no fresh financial operation (test_executor).
+- Audit tamper detection + non-mutating public demo (test_ledger/test_audit_dashboard, D-029).
+
+### Real Razorpay interaction
+- NONE.
+
+### Known limitations
+- None new.
+
+### Next
+- M04 — Phase-1 Clean-Room Acceptance Re-run.
