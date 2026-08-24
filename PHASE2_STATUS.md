@@ -33,7 +33,7 @@
 | M21 | Real Checkout UI | PASS | buyer page: TEST MODE banner, Pay→backend launch→official modal (server fields only), VERIFYING/CAPTURED/FAILED/PROVIDER_UNKNOWN states, no dangerous re-pay on unknown; typecheck/lint/vitest/build green |
 | M22 | Client Success Handler | PASS | buyer UI forwards ONLY payment_id/order_id/signature to POST /buyer/callback; VERIFYING phase with do-not-close notice; no browser finality |
 | M23 | Server Checkout Signature Verification | PASS | verify_checkout_signature(): HMAC-SHA256(SERVER-stored order|payment_id, key_secret), constant-time compare; POST /buyer/callback verifies BEFORE any mutation; 403 codes SIGNATURE_INVALID/CONTEXT_MISMATCH; DI settings fix |
-| M24 | Callback Adversarial Tests | NOT_STARTED | — |
+| M24 | Callback Adversarial Tests | PASS | 5 adversarial cases: valid signature marks verified; forged → 403 no mutation; swapped browser order → CONTEXT_MISMATCH; duplicate verified callback idempotent; wrong-secret signature rejected; suite 292/292 |
 | M25 | Post-Callback Provider Verification | NOT_STARTED | — |
 | M26 | Provider State Reducer | NOT_STARTED | — |
 | M27 | payment.authorized Handling | NOT_STARTED | — |
@@ -865,3 +865,23 @@ Security invariants: P2-S07, P2-S08, P2-S09.
   success → records callback_verified_at only (settlement waits for captured
   evidence per M25). Route now consumes Settings via FastAPI dependency override
   (fixes an lru_cache bypass that would have leaked real-env values into tests).
+
+
+## M24 — Callback Adversarial Tests
+
+MILESTONE: M24
+STATUS: PASS
+
+Requirements: master prompt M24.
+Security invariants: P2-S07..S09, S14 (duplicate delivery), superseded/stale paths
+remain covered by the executor's durable revalidation which precedes any order.
+
+### Evidence
+`pytest tests/test_callback_verification.py -v` → 5 passed:
+1. valid signature → callback_verified_at set; attempt stays EXECUTING;
+2. forged signature → 403 SIGNATURE_INVALID, durable snapshot byte-identical;
+3. browser swaps order id → 403 CONTEXT_MISMATCH (verification still bound to stored id);
+4. duplicate verified callbacks → identical outcome, single effect;
+5. attacker-signed with wrong secret → 403, no mutation.
+
+Full suite: 292 passed. ruff/mypy strict clean.
