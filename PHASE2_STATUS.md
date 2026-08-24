@@ -51,7 +51,7 @@
 | M39 | Success Evidence Reconciliation | PASS | docs/PHASE2_M39_EVIDENCE_RECONCILIATION.md: DB↔provider fetch↔webhook inbox↔audit chain↔Dashboard observations reconciled for payments #2/#3; honest limitations recorded (Events API 404 R-018; payment #2 rows destroyed; one ERROR inbox row disclosed) |
 | M40 | HUMAN GATE — Real Test Failure | PASS | failure checkout end-to-end: payment.failed webhook verified=true PROCESSED; attempt FAILED/NOT_ELIGIBLE; reservation released exactly once (v3: ensure→reserve→release; reserved=0, committed=0); PAYMENT_FAILED audited (chain valid, 13 events); provider fetch order=attempted/payment=failed; stale-UI verdict = propagation gap, NOT reconciliation defect → read-only /buyer/status + ondismiss re-sync + 5 new regressions; suite 333/333; dev DB byte-identical |
 | M41 | Provider-Unknown / Timeout Reconciliation | PASS | local fault injection (dropped response): UNKNOWN+REQUIRED+reservation held, re-entry calls==1; D-036 receipt DISCOVERY claims correlation only after authority validation (duplicate receipt conflicts loudly); fetch-paid settles exactly-once via reducer + RESOLVED; post-claim webhooks correlate; resolve_unknown now marks RESOLVED (gap fixed); ops surface GET/POST /ops/reconciliation/*; test_reconciliation.py 10 tests; suite 343/343 |
-| M42 | Real-Provider Concurrency & Replay Regression | NOT_STARTED | — |
+| M42 | Real-Provider Concurrency & Replay Regression | PASS | 20-worker same-ticket race on razorpay path: ONE attempt, ONE order-create call (transport-counted), reservation exactly once; losers refuse via nonce coordination; 20 duplicate capture deliveries -> inbox claim once, committed EXACTLY once; mixed distinct events under concurrency collapse to one commit; callback racing webhook cannot double-commit; post-settlement replay re-pays nothing; suite 347/347 |
 | M43 | Security Lab Phase-2 Expansion | NOT_STARTED | — |
 | M44 | Audit & Evidence Ledger Upgrade | NOT_STARTED | — |
 | M45 | Buyer UI Trust-State Polish | NOT_STARTED | — |
@@ -1566,3 +1566,45 @@ make security-check                                   -> PASS
 
 ### Next
 - M42 — Real-Provider Concurrency & Replay Regression.
+
+
+## M42 — Real-Provider Concurrency & Replay Regression
+
+MILESTONE: M42
+STATUS: PASS
+
+Requirements: master prompt M42 — replay/spend/event races against the NEW
+provider architecture; high volume ONLY via mock/fake transports (Razorpay
+never contacted); 20 concurrent same-ticket attempts cause at most one
+business/provider effect; webhook/callback duplicates cannot double-commit.
+Security invariants: P2-S12/S13/S14/S15/S18/S19.
+
+### Evidence (tests/test_concurrency_phase2.py)
+1. 20-worker same-ticket execute on the Razorpay path: exactly ONE settled
+   worker (others refused by nonce coordination), ONE provider order create
+   (transport call count == 1), ONE reservation, ONE attempt row; sequential
+   re-entry afterwards returns the same attempt with zero new calls.
+2. 20 concurrent duplicate payment.captured deliveries (same event id):
+   inbox PK claim wins once (>=19 DUPLICATE classifications), settlement runs
+   once, reserved->committed EXACTLY once, fulfilment ELIGIBLE.
+3. 20 concurrent DISTINCT verified events (captured/order.paid/authorized):
+   all processed or benign PROCESSING_ERROR for settlement losers, but money
+   moves exactly once; final state SUCCEEDED.
+4. Callback path (confirm_captured) racing 20 webhook paths: exactly one
+   commit survives across paths; IllegalAttemptTransition losers are
+   controlled no-ops. Post-settlement ticket replay: same ticket returns the
+   SAME settled attempt, zero new provider calls, no second commit.
+
+### Validation commands + results
+```text
+ruff check .                                     -> clean
+mypy -p razormesh_api (root AND services/api)    -> Success, 54 files
+pytest (full)                                    -> 347 passed
+make security-check                              -> PASS
+```
+
+### Real Razorpay interaction
+- NONE (fake httpx transports at volume).
+
+### Next
+- M43 — Security Lab Phase-2 Expansion.

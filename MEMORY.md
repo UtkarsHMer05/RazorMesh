@@ -155,12 +155,13 @@ GET /buyer/status — browser is never a source of payment truth).
 
 # Next action
 
-M42 (Real-Provider Concurrency & Replay Regression): re-run replay/spend/event
-races against the NEW provider architecture; high volume via mock/fake only so
-Razorpay is not spammed; prove 20 concurrent same-ticket attempts cause at most
-one business/provider effect and webhook/callback duplicates cannot double-commit.
-M41 done (D-036): receipt discovery + guarded claim + RESOLVED marking + ops
-surface /ops/reconciliation/*; test_reconciliation.py 10 tests; 343 total. Tunnel/share: if the zrok
+M43 (Security Lab Phase-2 Expansion): add clearly labeled DEFENSIVE scenarios —
+forged callback, wrong order context, duplicate callback/webhook, out-of-order
+webhook, failed->captured fixture, stale checkout, replay, provider unknown;
+distinguish synthetic simulations from real M38/M40 evidence. M41 done (D-036:
+receipt discovery + guarded claim + RESOLVED + ops surface); M42 done (20-worker
+same-ticket single-effect, webhook storm exactly-once, callback/webhook race,
+post-settlement replay inert; test_concurrency_phase2.py). Suite 347. Tunnel/share: if the zrok
 share dies, re-run make phase2-up and UPDATE the Dashboard URL + .env
 RAZORPAY_WEBHOOK_PUBLIC_URL (share is not reserved). Payment-#1 retry 403s
 (old secret) may still tail off; zero-mutation by design. M45 candidate
