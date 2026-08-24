@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M48 — Deep Test and Security Gate (next)  
-**Milestones passed:** M01–M47  
-**Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 48 files clean, pytest 211/211; benchmark artifact docs/PHASE1_BENCHMARK.json
+**Current milestone:** M49 — Performance/Resource Baseline (next)  
+**Milestones passed:** M01–M48  
+**Last updated:** 2026-08-24  
+**Gate:** ruff clean, mypy 48 files clean, pytest 213/213, secret scan 0, pip-audit clean, pnpm audit clean, vitest 3/3, Playwright E2E 2/2
 
 ---
 
@@ -116,6 +116,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Buyer API/UI: POST /buyer/* flow live-E2E verified; replay collapses idempotently (M45)
 - Security Lab: /security-lab/run executes suite server-side with evidence tail (M46)
 - Audit dashboard: timeline/verify/state/tamper-test endpoints + UI live (M47)
+- Deep gate: stateful lifecycle props; Makefile entry points repaired; security_check.py real; pip-audit 2.10.1 added; React hooks lint fixed; 213 tests (M48)
 
 ---
 
@@ -146,7 +147,7 @@ None yet; do not invent.
 
 # Next action
 
-M48 — Deep Gate: full quality/security suite incl. stateful tests, concurrency, dep audit.
+M49 — Performance/Resource Baseline: measure RazorGuard/ticket/execution/API/benchmark latency locally with hardware context; no production claims.
 
 ---
 

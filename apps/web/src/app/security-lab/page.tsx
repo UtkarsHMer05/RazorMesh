@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 type ScenarioInfo = {
   scenario_id: string;
@@ -39,19 +39,22 @@ export default function SecurityLabPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadScenarios = useCallback(async () => {
-    try {
-      const res = await fetch(`${API}/security-lab/scenarios`);
-      if (!res.ok) throw new Error(`scenarios ${res.status}`);
-      setScenarios((await res.json()).scenarios);
-    } catch (e) {
-      setError(`Scenario catalog unavailable — is the API running? (${String(e)})`);
-    }
-  }, []);
-
   useEffect(() => {
-    void loadScenarios();
-  }, [loadScenarios]);
+    let ignore = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/security-lab/scenarios`);
+        if (!res.ok) throw new Error(`scenarios ${res.status}`);
+        const body = await res.json();
+        if (!ignore) setScenarios(body.scenarios);
+      } catch (e) {
+        if (!ignore) setError(`Scenario catalog unavailable — is the API running? (${String(e)})`);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const runSuite = async () => {
     setBusy(true);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Product = {
   id: string;
@@ -37,19 +37,22 @@ export default function BuyerPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const loadProducts = useCallback(async () => {
-    try {
-      const res = await fetch(`${API}/catalog/products?limit=100`);
-      if (!res.ok) throw new Error(`catalog ${res.status}`);
-      setProducts((await res.json()).items);
-    } catch (e) {
-      setError(`Catalog unavailable — is the API running? (${String(e)})`);
-    }
-  }, []);
-
   useEffect(() => {
-    void loadProducts();
-  }, [loadProducts]);
+    let ignore = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/catalog/products?limit=100`);
+        if (!res.ok) throw new Error(`catalog ${res.status}`);
+        const body = await res.json();
+        if (!ignore) setProducts(body.items);
+      } catch (e) {
+        if (!ignore) setError(`Catalog unavailable — is the API running? (${String(e)})`);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const createAuthorization = async () => {
     setBusy(true);

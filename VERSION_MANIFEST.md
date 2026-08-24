@@ -48,6 +48,7 @@ Newest numeric version is not automatically the correct version.
 | Hypothesis | 6.165.10 | 2026-08-23 | PyPI | Property/stateful testing (decision D-017) |
 | Ruff | 0.16.4 | 2026-08-23 | PyPI | Lint + format |
 | mypy | 2.3.1 | 2026-08-23 | PyPI | Static type checking; strict-enough config for financial modules |
+| pip-audit | 2.10.1 | 2026-08-24 | PyPI JSON API (`https://pypi.org/pypi/pip-audit/json`) | PyPA official dependency auditor; requires-python >=3.10 OK; audits the locked uv venv against the PyPI Advisory database (M48 gate) |
 | uv | 0.12.5 | 2026-08-23 | astral.sh official installer | Python env/lock management |
 
 # Frontend manifest
@@ -87,6 +88,7 @@ Decision reference:
 
 | Date | Milestone | Component | Old | New | Reason |
 |---|---|---|---|---|---|
+| 2026-08-24 | M48 | pip-audit | — (dev group) | 2.10.1 | TESTING.md §10 dependency-audit gate; latest stable live-resolved from PyPI; advisory DB clean at gate time |
 | 2026-08-23 | M14 | ESLint | 10.9.0 | 9.39.5 | eslint-plugin-react@7.37.5 incompatible with ESLint 10; chose newest compatible stable per §11 policy; advisory re-check at M48 |
 | 2026-08-23 | M02 | Node.js | v20.20.2 (default) | v22.23.2 LTS default | v20 past EOL Apr 2026; human approved 22 LTS |
 | 2026-08-23 | M02 | uv | not installed | 0.12.5 | Governance prefers uv; human approved install |

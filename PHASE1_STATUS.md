@@ -55,7 +55,7 @@
 | M45 | Buyer Experience UI | PASS | 4-step buyer flow (fixture authz -> catalog -> propose/decision -> mock execution) on real backend endpoints POST /buyer/*; live E2E: ALLOW->SUCCEEDED; forged signature 403 SIGNATURE_INVALID; replay collapses to same attempt (1 effect); CORS now GET+POST; tsc+build+vitest clean |
 | M46 | Security Lab UI | PASS | GET /security-lab/scenarios + POST /security-lab/run (server executes all 7 real-pipeline scenarios, 7/7 as-designed) with hash-chained evidence tail; lab page renders scenario list + outcomes table + evidence; tsc+build clean; 2 tests PASS |
 | M47 | Audit Dashboard | PASS | GET /audit/timeline (chronological + hash heads + reason codes), /audit/verify, /audit/state/{intent} (spend/decisions/tickets/attempts), POST /audit/tamper-test (simulates trigger bypass -> DETECTED -> self-restores); dashboard page renders all views; 5 tests PASS; tsc+build clean |
-| M48 | Deep Test and Security Gate | NOT_STARTED | — |
+| M48 | Deep Test and Security Gate | PASS | pytest 213/213 incl. new Hypothesis stateful lifecycle; secret scan 0; pip-audit 2.10.1 clean; pnpm audit clean; eslint/tsc/vitest 3/3/build OK; Playwright E2E 2/2; Makefile entry points repaired; benchmark CLI writes artifact |
 | M49 | Performance/Resource Baseline | NOT_STARTED | — |
 | M50 | Clean-Room Phase-1 Acceptance | NOT_STARTED | — |
 
@@ -330,6 +330,14 @@ M03 — Project Charter.
 - Backend: `api/routes/audit.py` — GET /audit/timeline (chronological events with seq, hashes (16-hex heads), reason codes), GET /audit/verify (chain verdict), GET /audit/state/{intent_id} (intent status/generation + spend authorized/reserved/committed/available + decisions + tickets incl. nonce presence + execution attempts), POST /audit/tamper-test (simulates attacker bypassing the append-only trigger by rewriting the newest event's actor, runs verify -> DETECTED, then self-restores with correct sequence continuation).
 - Frontend: audit page renders timeline (newest-first with hash heads), verify banner, intent state inspector (spend/decisions/tickets/attempts) and tamper-test result.
 - Validation: ruff clean; mypy strict 48 files clean; pytest 211/211; tsc clean; next build OK.
+
+## M48 — Deep Test and Security Gate — PASS
+- New: `tests/test_stateful_lifecycle.py` — Hypothesis `RuleBasedStateMachine` over the authorization lifecycle (random legal+illegal transitions; invariants: terminal states never revive, execution only from AUTHORIZED) + property test that random reserve/commit/release sequences keep reserved>=0, committed>=0, reserved+committed<=authorized.
+- Repaired gate wiring discovered by the deep gate: root `scripts/` was empty while Makefile targets pointed at nonexistent files (M08 was validated via dry-run only). Now real: `make keys` → `python -m razormesh_api.keys`; `make seed` → `python -m razormesh_api.catalog`; `make benchmark` → `python -m razormesh_api.benchmark` (new CLI entry writing docs/PHASE1_BENCHMARK.json); `make dev-api` → `razormesh_api.api.main:app`; `make security-check` → new `scripts/security_check.py`.
+- New `scripts/security_check.py`: git-tracked-file secret scan (full private-key BLOCK detection incl. base64 body — bare PEM header strings in assertions are not findings; AWS/GitHub/Razorpay key shapes; credential assignments with .env.example placeholder exemption) + Python dep audit via pip-audit 2.10.1 against the locked uv venv + frontend `pnpm audit --prod`, classified per TESTING.md §10.
+- Frontend React hooks compliance: replaced synchronous effect-invoked loaders on buyer/security-lab/audit pages with the documented async-IIFE + cancellation-flag pattern (fixes eslint react-hooks/set-state-in-effect errors without suppression).
+- Ruff config: documented per-file-ignores for alembic template conventions (E402/I001/UP007/UP035/BLE001).
+- Deep-gate results: ruff clean; mypy strict 48 files clean; **pytest 213/213** (incl. stateful lifecycle, 20-worker nonce race C1, spend concurrency C2, duplicate-event idempotency C3, wrong-context tickets T8–T10, stale checkout T11, superseded generation T12, provider-unknown T15, audit tamper detection); secret scan 0 findings; pip-audit "No known vulnerabilities found" (only local razormesh-api itself skipped as non-PyPI); pnpm audit --prod clean; eslint clean; tsc clean; vitest 3/3; next build OK (6 routes); Playwright chromium E2E 2/2; make benchmark regenerated docs/PHASE1_BENCHMARK.json with identical metrics (TP6 FP0 TN6 FN0, P=R=F1=1.0).
 
 ---
 

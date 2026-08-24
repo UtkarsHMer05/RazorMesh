@@ -25,6 +25,7 @@ dev = [
     "hypothesis==6.165.10",
     "ruff==0.16.4",
     "mypy==2.3.1",
+    "pip-audit==2.10.1",
 ]
 
 [build-system]
@@ -58,6 +59,11 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S105", "S106", "S107"]  # hardcoded-test-string literals only in tests
 "scripts/*" = ["T201"]
+# Alembic conventions: env.py must insert the src path before importing the app
+# (late imports are inherent); migration files follow the upstream alembic
+# template (typing.Sequence/Union); env.py falls back to the ini URL with a
+# deliberately broad catch.
+"**/alembic/*" = ["E402", "I001", "UP007", "UP035", "BLE001"]
 
 [tool.mypy]
 python_version = "3.13"

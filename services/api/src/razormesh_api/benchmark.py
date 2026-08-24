@@ -159,3 +159,12 @@ class PairedBenchmark:
 def write_report(path: Path, report: BenchmarkReport) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(report.to_json() + "\n", encoding="utf-8")
+
+
+if __name__ == "__main__":
+    paired = PairedBenchmark()
+    final_report = paired.run()
+    out_path = Path("docs/PHASE1_BENCHMARK.json")
+    write_report(out_path, final_report)
+    print(final_report.to_json())
+    print(f"artifact written: {out_path}")

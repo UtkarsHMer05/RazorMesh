@@ -61,8 +61,21 @@ export default function AuditPage() {
   }, []);
 
   useEffect(() => {
-    void loadTimeline();
-  }, [loadTimeline]);
+    let ignore = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/audit/timeline?limit=50`);
+        if (!res.ok) throw new Error(`timeline ${res.status}`);
+        const body = await res.json();
+        if (!ignore) setEvents(body.events);
+      } catch (e) {
+        if (!ignore) setError(`Audit API unavailable — is the backend running? (${String(e)})`);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const verifyChain = async () => {
     setError(null);

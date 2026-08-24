@@ -21,7 +21,7 @@ setup: ## Install backend deps (uv sync), frontend deps (pnpm), generate dev key
 	@$(MAKE) --no-print-directory keys
 
 keys: ## Generate local Ed25519 dev signing keys (never committed)
-	python3 scripts/generate_dev_keys.py
+	$(UV) run --project $(API_DIR) python -m razormesh_api.keys
 
 format: ## Format backend (ruff) and frontend (prettier if present)
 	$(UV) run --project $(API_DIR) ruff format .
@@ -47,8 +47,8 @@ test-frontend: ## Frontend vitest suite
 security-check: ## Secret scan + dependency audit findings
 	python3 scripts/security_check.py
 
-benchmark: ## Run adversarial evaluation runner + paired benchmark (real metrics)
-	$(UV) run --project $(API_DIR) python -m benchmark.runner.main
+benchmark: ## Run paired safe/unsafe benchmark (real metrics -> docs/PHASE1_BENCHMARK.json)
+	$(UV) run --project $(API_DIR) python -m razormesh_api.benchmark
 
 infra-up: ## Start PostgreSQL + Redis via Docker Compose
 	docker compose up -d
@@ -60,13 +60,13 @@ infra-down: ## Stop Docker Compose services (data volume preserved)
 migrate: ## Apply database migrations (alembic upgrade head)
 	$(UV) run --project $(API_DIR) alembic upgrade head
 
-seed: ## Load synthetic merchant catalog + fixtures
-	$(UV) run --project $(API_DIR) python -m services.api.scripts.seed
+seed: ## Load synthetic merchant catalog (idempotent)
+	$(UV) run --project $(API_DIR) python -m razormesh_api.catalog
 
 dev: dev-api ## Convenience alias
 
 dev-api: ## Run FastAPI locally (127.0.0.1:8000)
-	$(UV) run --project $(API_DIR) uvicorn services.api.api.main:app --host 127.0.0.1 --port 8000 --reload
+	$(UV) run --project $(API_DIR) uvicorn razormesh_api.api.main:app --host 127.0.0.1 --port 8000 --reload
 
 dev-web: ## Run Next.js locally (localhost:3000)
 	@if [ -d "$(WEB_DIR)" ]; then cd $(WEB_DIR) && pnpm dev; else echo "frontend not scaffolded yet"; fi
