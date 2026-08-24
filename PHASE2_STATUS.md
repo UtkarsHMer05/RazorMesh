@@ -34,7 +34,7 @@
 | M22 | Client Success Handler | PASS | buyer UI forwards ONLY payment_id/order_id/signature to POST /buyer/callback; VERIFYING phase with do-not-close notice; no browser finality |
 | M23 | Server Checkout Signature Verification | PASS | verify_checkout_signature(): HMAC-SHA256(SERVER-stored order|payment_id, key_secret), constant-time compare; POST /buyer/callback verifies BEFORE any mutation; 403 codes SIGNATURE_INVALID/CONTEXT_MISMATCH; DI settings fix |
 | M24 | Callback Adversarial Tests | PASS | 5 adversarial cases: valid signature marks verified; forged → 403 no mutation; swapped browser order → CONTEXT_MISMATCH; duplicate verified callback idempotent; wrong-secret signature rejected; suite 292/292 |
-| M25 | Post-Callback Provider Verification | NOT_STARTED | — |
+| M25 | Post-Callback Provider Verification | PASS | valid signature ≠ fulfilment: callback fetches provider order; `paid` → confirm_captured() settles SUCCEEDED exactly-once (reserved→committed, razorpay_payment_id claim, fulfilment ELIGIBLE, RAZORPAY_PAYMENT_VERIFIED event); otherwise EXECUTING + NOT_CAPTURED; duplicate-after-settlement idempotent; suite 294/294 |
 | M26 | Provider State Reducer | NOT_STARTED | — |
 | M27 | payment.authorized Handling | NOT_STARTED | — |
 | M28 | payment.captured Handling | NOT_STARTED | — |
@@ -885,3 +885,36 @@ remain covered by the executor's durable revalidation which precedes any order.
 5. attacker-signed with wrong secret → 403, no mutation.
 
 Full suite: 292 passed. ruff/mypy strict clean.
+
+
+## M25 — Post-Callback Provider State Verification
+
+MILESTONE: M25
+STATUS: PASS
+
+Requirements: master prompt M25 — captured/paid evidence required before fulfilment.
+Security invariants: P2-S15, P2-S13, authorized-only ≠ fulfilment.
+
+### Implementation
+- `TrustedPaymentExecutor.confirm_captured()`: atomic EXECUTING→SUCCEEDED with
+  reservation commit, guarded payment-id claim (partial unique), ELIGIBLE synthetic
+  fulfilment, tamper-evident RAZORPAY_PAYMENT_VERIFIED ledger event.
+- Callback endpoint now: signature verified → record verification → FETCH provider
+  order → only `paid` settles; anything else returns EXECUTING +
+  RAZORPAY_PAYMENT_NOT_CAPTURED with zero settlement. Double-delivery after
+  settlement is an idempotent no-op returning the settled state.
+
+### Validation commands + results
+```text
+pytest tests/test_callback_verification.py -v → 7 passed (incl. paid→SUCCEEDED+
+  committed+ELIGIBLE; created→EXECUTING+NOT_CAPTURED+committed==0;
+  duplicate-after-settlement idempotent)
+pytest (full)                                 → 294 passed
+ruff / mypy strict                            → clean
+```
+
+### Real Razorpay interaction
+- NONE (MockTransport).
+
+### Next
+- M26 — Provider State Reducer.

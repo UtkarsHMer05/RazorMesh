@@ -30,10 +30,27 @@ SECRET = "test-hook-secret-value"
 
 
 class _PaidTransport(httpx.BaseTransport):
+    def __init__(self, status: str = "paid") -> None:
+        self.status = status
+
     def handle_request(self, request: httpx.Request) -> httpx.Response:
+        from razormesh_api.persistence.db import create_db_engine, create_session_factory
+        from razormesh_api.persistence.repositories import Repositories
+        from razormesh_api.settings import get_settings as gs
+
+        # report the REAL stored order id so context checks pass in-flight
+        repos = Repositories(create_session_factory(create_db_engine(gs().database_url)))
+        with repos.transaction() as s:
+            row = (
+                s.query(ExecutionAttempt)
+                .filter(ExecutionAttempt.razorpay_order_id.isnot(None))
+                .order_by(ExecutionAttempt.created_at.desc())
+                .first()
+            )
+            oid = row.razorpay_order_id if row else "order_cb1"
         return httpx.Response(
             200,
-            json={"id": "order_cb1", "status": "created", "amount": 100000, "currency": "INR"},
+            json={"id": oid, "status": self.status, "amount": 100000, "currency": "INR"},
         )
 
 
@@ -80,6 +97,21 @@ def cb_env(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
 @pytest.fixture()
 def cb_client(cb_env, monkeypatch):  # type: ignore[no-untyped-def]
     from razormesh_api import api as api_pkg
+    from razormesh_api.api.routes import buyer as buyer_route
+
+    transport = _PaidTransport(status="paid")
+
+    def fake_provider(settings: Settings):  # type: ignore[no-untyped-def]
+        client = RazorpayClient(
+            key_id="rzp_test_k",
+            key_secret=SECRET,
+            base_url=get_settings().razorpay_api_base_url,
+            timeout_seconds=5,
+            transport=transport,
+        )
+        return RazorpayPaymentProvider(client)
+
+    monkeypatch.setattr(buyer_route, "_razorpay_provider", fake_provider)
 
     settings = Settings(
         database_url=get_settings().database_url,
@@ -160,7 +192,7 @@ def test_valid_signature_marks_callback_verified(cb_env, cb_client) -> None:  # 
         )
     assert res.status_code == 200, res.text
     state, verified_at, _err = _snapshot(repos, attempt_id)
-    assert state == "EXECUTING"  # not terminal: captured evidence still pending (M25)
+    assert state == "SUCCEEDED"  # fixture provider reports `paid` evidence
     assert verified_at is not None
 
 
@@ -212,6 +244,7 @@ def test_swapped_browser_order_context_rejected(cb_env, cb_client) -> None:  # t
 
 
 def test_duplicate_verified_callback_is_idempotent(cb_env, cb_client) -> None:  # type: ignore[no-untyped-def]
+    """Second delivery after settlement must be a safe no-op returning same state."""
     repos, *_rest = cb_env
     attempt_id, order_id, intent_id = _run_trusted_flow(cb_env)
     payload = {
@@ -245,3 +278,78 @@ def test_wrong_secret_signature_rejected(cb_env, cb_client) -> None:
     )
     assert res.status_code == 403
     assert _snapshot(repos, attempt_id) == before
+
+
+def test_paid_evidence_settles_captured_and_eligible(cb_env, cb_client, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """M25: verified signature + provider `paid` evidence -> exactly-once settlement."""
+    from razormesh_api.persistence.models import AuthorizationSpend
+
+    repos, *_rest = cb_env
+    attempt_id, order_id, intent_id = _run_trusted_flow(cb_env)
+    checkout = _real_checkout(repos, attempt_id)
+
+    res = cb_client.post(
+        "/buyer/callback",
+        json={
+            "intent_id": intent_id,
+            "checkout_id": checkout,
+            "razorpay_payment_id": "pay_capture_1",
+            "razorpay_order_id": order_id,
+            "razorpay_signature": _signature(order_id, "pay_capture_1"),
+        },
+    )
+    assert res.status_code == 200, res.text
+    assert res.json()["state"] == "SUCCEEDED"
+
+    with repos.transaction() as s:
+        a = s.get(ExecutionAttempt, attempt_id)
+        sp = s.get(AuthorizationSpend, intent_id)
+        assert a is not None and sp is not None
+        assert a.state == "SUCCEEDED"
+        assert a.razorpay_payment_id == "pay_capture_1"
+        assert a.fulfilment_state == "ELIGIBLE"
+        assert sp.reserved_minor == 0
+        assert sp.committed_minor == a.amount_minor
+
+
+def test_uncaptured_order_stays_executing(cb_env, cb_client, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Authorized-only (order still `created`) is NOT fulfilment authority."""
+    from razormesh_api.persistence.models import AuthorizationSpend
+
+    repos, *_rest = cb_env
+    attempt_id, order_id, intent_id = _run_trusted_flow(cb_env)
+
+    # point provider seam at an unpaid snapshot
+    from razormesh_api.api.routes import buyer as buyer_route
+
+    def unpaid_provider(settings: Settings):  # type: ignore[no-untyped-def]
+        client = RazorpayClient(
+            key_id="rzp_test_k",
+            key_secret=SECRET,
+            base_url=get_settings().razorpay_api_base_url,
+            timeout_seconds=5,
+            transport=_PaidTransport(status="created"),
+        )
+        return RazorpayPaymentProvider(client)
+
+    monkeypatch.setattr(buyer_route, "_razorpay_provider", unpaid_provider)
+
+    res = cb_client.post(
+        "/buyer/callback",
+        json={
+            "intent_id": intent_id,
+            "checkout_id": _real_checkout(repos, attempt_id),
+            "razorpay_payment_id": "pay_pending_9",
+            "razorpay_order_id": order_id,
+            "razorpay_signature": _signature(order_id, "pay_pending_9"),
+        },
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["state"] == "EXECUTING"
+    assert "NOT_CAPTURED" in str(body.get("detail"))
+
+    with repos.transaction() as s:
+        sp = s.get(AuthorizationSpend, intent_id)
+        assert sp is not None
+        assert sp.committed_minor == 0  # nothing settled without capture evidence

@@ -14,6 +14,7 @@ the attempt stays PROVIDER_UNKNOWN and retries WITH THE SAME idempotency key
 return the same attempt — never a fresh financial operation.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -44,6 +45,13 @@ from razormesh_api.tickets import (
     TicketRejected,
     TicketVerifier,
 )
+
+
+def _apply_capture(row, provider_payment_id: str) -> None:  # type: ignore[no-untyped-def]
+    row.razorpay_payment_id = provider_payment_id
+    row.razorpay_payment_status = "captured"
+    row.fulfilment_state = "ELIGIBLE"
+    row.reconcile_state = "RESOLVED"
 
 
 class AttemptState(StrEnum):
@@ -115,7 +123,7 @@ class TrustedPaymentExecutor:
         repos: Repositories,
         keys: DevKeyPair,
         nonces: NonceRegistry,
-        provider: PaymentProvider,
+        provider: PaymentProvider | RazorpayPaymentProvider,
         spend: SpendManager | None = None,
     ) -> None:
         self._repos = repos
@@ -371,6 +379,47 @@ class TrustedPaymentExecutor:
             attempt.updated_at = now
         return release_reservation
 
+    @staticmethod
+    def _noop() -> None:
+        return None
+
+    def confirm_captured(
+        self,
+        attempt_id: str,
+        *,
+        provider_payment_id: str,
+        now: datetime,
+    ) -> ExecutionAttempt:
+        """Settle EXECUTING -> SUCCEEDED on verified CAPTURED evidence (P2-S15).
+
+        Exactly-once: a second call finds a non-EXECUTING attempt and raises
+        IllegalAttemptTransition; reservation converts reserved->committed once.
+        Fulfilment becomes ELIGIBLE (synthetic; no real fulfilment in Phase 2).
+        """
+        attempt = self._repos.attempts.get(ExecutionAttemptId(attempt_id))
+        if attempt is None:
+            raise ValueError(f"unknown attempt {attempt_id}")
+        settled = self._settle(
+            attempt_id,
+            AttemptState.SUCCEEDED,
+            now,
+            provider_reference=provider_payment_id,
+            apply_in_lock=lambda row: _apply_capture(row, provider_payment_id),
+        )
+        EvidenceLedger(self._repos).append(
+            event_type="RAZORPAY_PAYMENT_VERIFIED",
+            actor="trusted-payment-executor",
+            intent_id=settled.intent_id,
+            checkout_id=settled.checkout_id,
+            ticket_id=settled.ticket_id,
+            payload={
+                "execution_attempt_id": settled.execution_attempt_id,
+                "razorpay_payment_id": provider_payment_id,
+                "evidence": "order.paid/captured via provider fetch",
+            },
+        )
+        return settled
+
     def resolve_unknown(
         self,
         attempt_id: str,
@@ -490,6 +539,7 @@ class TrustedPaymentExecutor:
         provider_reference: str | None = None,
         error_code: str | None = None,
         reconcile_state: str | None = None,
+        apply_in_lock: Callable[[ExecutionAttempt], None] | None = None,
     ) -> ExecutionAttempt:
         """Atomically settle attempt state and its reservation in PostgreSQL."""
         with self._repos.transaction() as session:
@@ -517,6 +567,8 @@ class TrustedPaymentExecutor:
             attempt.error_code = error_code
             if reconcile_state is not None:
                 attempt.reconcile_state = reconcile_state
+            if apply_in_lock is not None:
+                apply_in_lock(attempt)
             attempt.updated_at = now
         settled = self._refresh_by_id(attempt_id)
         EvidenceLedger(self._repos).append(

@@ -21,9 +21,9 @@ from razormesh_api.checkout_service import (
 from razormesh_api.decider import DecisionEngine
 from razormesh_api.domain.authz_hash import intent_authorization_hash
 from razormesh_api.domain.checkout import CheckoutEnvelope
-from razormesh_api.domain.ids import IntentId, new_ulid
+from razormesh_api.domain.ids import ExecutionAttemptId, IntentId, new_ulid
 from razormesh_api.domain.state_machine import NotExecutableError
-from razormesh_api.executor import TrustedPaymentExecutor
+from razormesh_api.executor import IllegalAttemptTransition, TrustedPaymentExecutor
 from razormesh_api.keys import DevKeyPair, DevSigningKeys
 from razormesh_api.ledger import EvidenceLedger
 from razormesh_api.nonce import (
@@ -34,6 +34,7 @@ from razormesh_api.nonce import (
 from razormesh_api.persistence.models import ExecutionAttempt as ExecutionAttemptForCallback
 from razormesh_api.persistence.models import IntentContract as RowIntent
 from razormesh_api.persistence.repositories import Repositories
+from razormesh_api.providers.razorpay import RazorpayPaymentProvider
 from razormesh_api.revalidation import Revalidator
 from razormesh_api.rules.catalog_rules import CATALOG_RULES
 from razormesh_api.rules.money_rules import MONEY_RULES
@@ -363,4 +364,47 @@ def checkout_callback(
             row.callback_verified_at = now
             row.updated_at = now
 
-    return ExecutionBody(state=attempt.state, attempt_id=attempt.execution_attempt_id)
+    # ---- P2-M25: a valid signature alone is NOT fulfilment authority.
+    # Require captured/paid evidence from the provider before any settlement.
+    provider = _razorpay_provider(settings)
+    fetched = provider.fetch_order(stored_order)
+    if fetched.status == "paid":
+        executor = TrustedPaymentExecutor(
+            repos=repos,
+            keys=keys.ensure(),
+            nonces=_nonce_registry(),
+            provider=provider,
+            spend=SpendManager(repos),
+        )
+        try:
+            settled = executor.confirm_captured(
+                attempt.execution_attempt_id,
+                provider_payment_id=payload_in.razorpay_payment_id,
+                now=now,
+            )
+        except IllegalAttemptTransition:
+            # Duplicate delivery after settlement: idempotent no-op (P2-S13).
+            existing = repos.attempts.get(ExecutionAttemptId(attempt.execution_attempt_id))
+            if existing is None:  # pragma: no cover - row vanished mid-request
+                raise HTTPException(status_code=404, detail={"code": "ATTEMPT_GONE"}) from None
+            settled = existing
+        return ExecutionBody(state=settled.state, attempt_id=settled.execution_attempt_id)
+
+    return ExecutionBody(
+        state=attempt.state,
+        attempt_id=attempt.execution_attempt_id,
+        detail="RAZORPAY_PAYMENT_NOT_CAPTURED",
+    )
+
+
+def _razorpay_provider(settings: Settings) -> RazorpayPaymentProvider:
+    """Test seam: unit tests monkeypatch this to inject a MockTransport client."""
+    from razormesh_api.providers.razorpay import RazorpayClient, RazorpayPaymentProvider
+
+    client = RazorpayClient(
+        key_id=settings.razorpay_key_id,
+        key_secret=settings.razorpay_key_secret.get_secret_value(),
+        base_url=settings.razorpay_api_base_url,
+        timeout_seconds=settings.razorpay_request_timeout_seconds,
+    )
+    return RazorpayPaymentProvider(client)
