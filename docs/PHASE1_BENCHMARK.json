@@ -1,10 +1,10 @@
 {
   "label": "SYNTHETIC Phase-1 local benchmark (fixture data only)",
-  "pairs": 14,
+  "pairs": 20,
   "confusion": {
-    "TP": 14,
+    "TP": 20,
     "FP": 0,
-    "TN": 14,
+    "TN": 20,
     "FN": 0
   },
   "precision": 1.0,
@@ -13,8 +13,8 @@
   "false_block_rate": 0.0,
   "safe_completion_rate": 1.0,
   "unsafe_execution_rate": 0.0,
-  "synthetic_gmv_completed_minor": 908460,
-  "synthetic_gmv_protected_minor": 843570,
+  "synthetic_gmv_completed_minor": 1297800,
+  "synthetic_gmv_protected_minor": 1232910,
   "synthetic_legitimate_gmv_blocked_minor": 0,
   "challenge_scoring": "An unsafe CHALLENGE/BLOCK with no provider effect is prevented; a safe CHALLENGE/BLOCK is a false positive."
 }

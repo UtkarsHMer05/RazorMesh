@@ -31,6 +31,13 @@ class ScenarioFamily(StrEnum):
     UNTRUSTED_INSTRUCTION = "UNTRUSTED_INSTRUCTION"
     PROVIDER_UNKNOWN = "PROVIDER_UNKNOWN"
     EXPIRED_AUTHORIZATION = "EXPIRED_AUTHORIZATION"
+    # P2-M43: Phase-2 provider-evidence families (synthetic fixtures only).
+    FORGED_CALLBACK = "FORGED_CALLBACK"
+    WRONG_ORDER_CONTEXT = "WRONG_ORDER_CONTEXT"
+    DUPLICATE_CALLBACK = "DUPLICATE_CALLBACK"
+    DUPLICATE_WEBHOOK = "DUPLICATE_WEBHOOK"
+    OUT_OF_ORDER_WEBHOOK = "OUT_OF_ORDER_WEBHOOK"
+    FAILED_THEN_CAPTURED = "FAILED_THEN_CAPTURED"
 
 
 class ExpectedOutcome(StrEnum):
@@ -41,6 +48,9 @@ class ExpectedOutcome(StrEnum):
     SPLIT_PREVENTED = "SPLIT_PREVENTED"
     NO_FRESH_OP_AFTER_UNKNOWN = "NO_FRESH_OP_AFTER_UNKNOWN"
     AUTHORITY_UNCHANGED = "AUTHORITY_UNCHANGED"
+    CALLBACK_REJECTED = "CALLBACK_REJECTED"
+    CONTEXT_REJECTED = "CONTEXT_REJECTED"
+    RECONCILED_EXACTLY_ONCE = "RECONCILED_EXACTLY_ONCE"
 
 
 class ScenarioSpec(BaseModel):
@@ -212,6 +222,67 @@ SCENARIOS: tuple[ScenarioSpec, ...] = (
         expected_outcome=ExpectedOutcome.NO_FRESH_OP_AFTER_UNKNOWN,
         safe_or_unsafe="unsafe",
         mutation="timeout after provider effect then repeat request",
+    ),
+    ScenarioSpec(
+        scenario_id="forged-checkout-callback",
+        family=ScenarioFamily.FORGED_CALLBACK,
+        description="SYNTHETIC: attacker submits a checkout callback with a forged signature.",
+        expected_outcome=ExpectedOutcome.CALLBACK_REJECTED,
+        safe_or_unsafe="unsafe",
+        mutation="flip one byte of a valid callback signature",
+    ),
+    ScenarioSpec(
+        scenario_id="wrong-order-context-callback",
+        family=ScenarioFamily.WRONG_ORDER_CONTEXT,
+        description=(
+            "SYNTHETIC: valid signature over an ATTACKER order id, presented for another attempt."
+        ),
+        expected_outcome=ExpectedOutcome.CONTEXT_REJECTED,
+        safe_or_unsafe="unsafe",
+        mutation="sign with attacker order id, present against stored order",
+    ),
+    ScenarioSpec(
+        scenario_id="duplicate-callback-single-verification",
+        family=ScenarioFamily.DUPLICATE_CALLBACK,
+        description=(
+            "SYNTHETIC: the same verified callback delivered twice verifies once, mutates once."
+        ),
+        expected_outcome=ExpectedOutcome.SINGLE_EFFECT_ONLY,
+        safe_or_unsafe="unsafe",
+        mutation="replay identical verified callback payload",
+    ),
+    ScenarioSpec(
+        scenario_id="duplicate-webhook-single-commit",
+        family=ScenarioFamily.DUPLICATE_WEBHOOK,
+        description=(
+            "SYNTHETIC: same signed webhook event id delivered twice "
+            "claims inbox once, commits once."
+        ),
+        expected_outcome=ExpectedOutcome.SINGLE_EFFECT_ONLY,
+        safe_or_unsafe="unsafe",
+        mutation="redeliver identical signed webhook event",
+    ),
+    ScenarioSpec(
+        scenario_id="out-of-order-webhook-converges",
+        family=ScenarioFamily.OUT_OF_ORDER_WEBHOOK,
+        description=(
+            "SYNTHETIC: captured arrives before the lagged authorized "
+            "snapshot; converges exactly once."
+        ),
+        expected_outcome=ExpectedOutcome.RECONCILED_EXACTLY_ONCE,
+        safe_or_unsafe="unsafe",
+        mutation="deliver captured before authorized snapshot",
+    ),
+    ScenarioSpec(
+        scenario_id="failed-then-captured-reconciles",
+        family=ScenarioFamily.FAILED_THEN_CAPTURED,
+        description=(
+            "SYNTHETIC: failed settles FAILED, then a verified late capture "
+            "reconciles to SUCCEEDED exactly once (documented behavior)."
+        ),
+        expected_outcome=ExpectedOutcome.RECONCILED_EXACTLY_ONCE,
+        safe_or_unsafe="unsafe",
+        mutation="deliver failed then captured for the same order",
     ),
     ScenarioSpec(
         scenario_id="expired-authorization-reuse",

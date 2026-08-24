@@ -52,7 +52,7 @@
 | M40 | HUMAN GATE — Real Test Failure | PASS | failure checkout end-to-end: payment.failed webhook verified=true PROCESSED; attempt FAILED/NOT_ELIGIBLE; reservation released exactly once (v3: ensure→reserve→release; reserved=0, committed=0); PAYMENT_FAILED audited (chain valid, 13 events); provider fetch order=attempted/payment=failed; stale-UI verdict = propagation gap, NOT reconciliation defect → read-only /buyer/status + ondismiss re-sync + 5 new regressions; suite 333/333; dev DB byte-identical |
 | M41 | Provider-Unknown / Timeout Reconciliation | PASS | local fault injection (dropped response): UNKNOWN+REQUIRED+reservation held, re-entry calls==1; D-036 receipt DISCOVERY claims correlation only after authority validation (duplicate receipt conflicts loudly); fetch-paid settles exactly-once via reducer + RESOLVED; post-claim webhooks correlate; resolve_unknown now marks RESOLVED (gap fixed); ops surface GET/POST /ops/reconciliation/*; test_reconciliation.py 10 tests; suite 343/343 |
 | M42 | Real-Provider Concurrency & Replay Regression | PASS | 20-worker same-ticket race on razorpay path: ONE attempt, ONE order-create call (transport-counted), reservation exactly once; losers refuse via nonce coordination; 20 duplicate capture deliveries -> inbox claim once, committed EXACTLY once; mixed distinct events under concurrency collapse to one commit; callback racing webhook cannot double-commit; post-settlement replay re-pays nothing; suite 347/347 |
-| M43 | Security Lab Phase-2 Expansion | NOT_STARTED | — |
+| M43 | Security Lab Phase-2 Expansion | PASS | 6 new labeled SYNTHETIC families: FORGED_CALLBACK (rejected zero-mutation), WRONG_ORDER_CONTEXT (server-stored binding holds), DUPLICATE_CALLBACK/DUPLICATE_WEBHOOK (single effect), OUT_OF_ORDER_WEBHOOK + FAILED_THEN_CAPTURED (reconcile exactly-once); registry 22/22 pass via /security-lab/run; benchmark now 20 pairs P=R=F1=1.0; synthetic ids unique per execution; Razorpay never contacted |
 | M44 | Audit & Evidence Ledger Upgrade | NOT_STARTED | — |
 | M45 | Buyer UI Trust-State Polish | NOT_STARTED | — |
 | M46 | Automated E2E w/ External Checkout Boundary | NOT_STARTED | — |
@@ -1608,3 +1608,52 @@ make security-check                              -> PASS
 
 ### Next
 - M43 — Security Lab Phase-2 Expansion.
+
+
+## M43 — Security Lab Phase-2 Expansion
+
+MILESTONE: M43
+STATUS: PASS
+
+Requirements: master prompt M43 — clearly labeled DEFENSIVE scenarios for
+forged callback, wrong order context, duplicate callback/webhook,
+out-of-order webhook, failed->captured fixture, stale checkout, replay,
+provider unknown; synthetic simulations distinguished from real evidence;
+never attack arbitrary URLs/providers.
+Security invariants: P2-S07..S16 demonstrated at lab level.
+
+### Implementation
+- `scenarios.py`: families FORGED_CALLBACK, WRONG_ORDER_CONTEXT,
+  DUPLICATE_CALLBACK, DUPLICATE_WEBHOOK, OUT_OF_ORDER_WEBHOOK,
+  FAILED_THEN_CAPTURED (+ outcomes CALLBACK_REJECTED, CONTEXT_REJECTED,
+  RECONCILED_EXACTLY_ONCE) and six SYNTHETIC-labeled specs.
+- `evaluation.py`: handlers use ONLY local scripted transports + explicitly
+  synthetic secrets (`scenario-synthetic-*`, S105-suppressed as non-secret);
+  delivery flows through the REAL verify/ingest/reducer primitives.
+- `benchmark.py`: attack-succeeded mappings for the new families; paired
+  benchmark regenerated.
+- Lab honesty fix found during validation: ALL synthetic event/payment ids are
+  now unique PER EXECUTION (durable inbox PK + payment-claim unique index made
+  fixed fixtures poison later runs — exactly the durable-state discipline the
+  system enforces).
+
+### Evidence
+- `/security-lab/run`: total=22 passed=22 (16 Phase-1 + 6 Phase-2 families).
+- Benchmark: 20 pairs, TP=19 FN=0 TN=20 FP=0 -> precision=recall=F1=1.0.
+  (One transient FN during development exposed the fixture-uniqueness defect;
+  fixed rather than relabeled.)
+
+### Validation commands + results
+```text
+ruff check .                                     -> clean
+mypy -p razormesh_api (root AND services/api)    -> Success, 54 files
+pytest (full)                                    -> 347 passed
+make benchmark                                   -> 20 pairs P=R=F1=1.0
+make security-check                              -> PASS
+```
+
+### Real Razorpay interaction
+- NONE (synthetic fixtures only; real M38/M40 evidence remains separate).
+
+### Next
+- M44 — Audit & Evidence Ledger Upgrade.

@@ -155,13 +155,14 @@ GET /buyer/status — browser is never a source of payment truth).
 
 # Next action
 
-M43 (Security Lab Phase-2 Expansion): add clearly labeled DEFENSIVE scenarios —
-forged callback, wrong order context, duplicate callback/webhook, out-of-order
-webhook, failed->captured fixture, stale checkout, replay, provider unknown;
-distinguish synthetic simulations from real M38/M40 evidence. M41 done (D-036:
-receipt discovery + guarded claim + RESOLVED + ops surface); M42 done (20-worker
-same-ticket single-effect, webhook storm exactly-once, callback/webhook race,
-post-settlement replay inert; test_concurrency_phase2.py). Suite 347. Tunnel/share: if the zrok
+M44 (Audit & Evidence Ledger Upgrade): record safe Phase-2 evidence (intent/
+checkout hashes, decision, ticket, attempt, razorpay order/payment ids,
+callback verification, webhook ids/types/verifications, reconciliation,
+reservation state, final state) in the hash-chained ledger; no secrets; keep
+append-only tamper-evidence. Done so far: M41 (D-036 discovery+claim+RESOLVED +
+ops surface), M42 (concurrency single-effect proofs), M43 (lab 22/22 incl. 6
+new SYNTHETIC provider-evidence families; benchmark 20 pairs F1=1.0; lesson:
+synthetic event/payment ids must be unique per execution). Suite 347. Tunnel/share: if the zrok
 share dies, re-run make phase2-up and UPDATE the Dashboard URL + .env
 RAZORPAY_WEBHOOK_PUBLIC_URL (share is not reserved). Payment-#1 retry 403s
 (old secret) may still tail off; zero-mutation by design. M45 candidate

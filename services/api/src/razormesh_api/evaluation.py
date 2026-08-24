@@ -13,10 +13,13 @@ Expected labels are used exclusively for pass/fail scoring AFTER execution —
 they are never visible to any decision component.
 """
 
+import hashlib as _hl
+import hmac as _hmac
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
+import httpx as _httpx
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
@@ -38,6 +41,13 @@ from razormesh_api.persistence.models import Checkout as RowCheckout
 from razormesh_api.persistence.models import ExecutionAttempt, Product
 from razormesh_api.persistence.repositories import Repositories
 from razormesh_api.providers.mock import MockMode, MockPaymentProvider
+from razormesh_api.providers.razorpay import (
+    RazorpayClient,
+    RazorpayPaymentProvider,
+    verify_checkout_signature,
+)
+from razormesh_api.providers.razorpay import verify_webhook_signature as verify_webhook_sig
+from razormesh_api.reducer import EventKind, ProviderStateReducer, VerifiedProviderEvent
 from razormesh_api.revalidation import Revalidator
 from razormesh_api.rules.catalog_rules import CATALOG_RULES
 from razormesh_api.rules.money_rules import MONEY_RULES
@@ -50,6 +60,7 @@ from razormesh_api.scenarios import (
 )
 from razormesh_api.spend import SpendManager
 from razormesh_api.tickets import CurrentBinding, TicketRejected
+from razormesh_api.webhook_inbox import IngestResult, ingest_verified_event
 
 
 @dataclass(frozen=True)
@@ -191,6 +202,12 @@ class AdversarialRunner:
             ScenarioFamily.UNTRUSTED_INSTRUCTION: self._untrusted_instruction,
             ScenarioFamily.PROVIDER_UNKNOWN: self._provider_unknown,
             ScenarioFamily.EXPIRED_AUTHORIZATION: self._expired,
+            ScenarioFamily.FORGED_CALLBACK: self._forged_callback,
+            ScenarioFamily.WRONG_ORDER_CONTEXT: self._wrong_order_context,
+            ScenarioFamily.DUPLICATE_CALLBACK: self._duplicate_callback,
+            ScenarioFamily.DUPLICATE_WEBHOOK: self._duplicate_webhook,
+            ScenarioFamily.OUT_OF_ORDER_WEBHOOK: self._out_of_order_webhook,
+            ScenarioFamily.FAILED_THEN_CAPTURED: self._failed_then_captured,
         }[spec.family]
         result = handler(iid, product_id, proposal, authz, spec)
         if result.amount_minor == 0:
@@ -464,6 +481,328 @@ class AdversarialRunner:
         if second.execution_attempt_id == first.execution_attempt_id and provider.calls == 1:
             return self._finish(spec, "NO_FRESH_OP_AFTER_UNKNOWN", "same attempt reused; 1 call")
         return self._finish(spec, "FRESH_OP_CREATED", "retry created new work")
+
+
+    # ------------------------------------------------------------------
+    # P2-M43: Phase-2 provider-evidence families (SYNTHETIC fixtures only;
+    # local transports + synthetic secrets — Razorpay is never contacted and
+    # no real credential is used anywhere in the lab).
+    # ------------------------------------------------------------------
+    # NOT credentials: explicitly synthetic lab fixtures (S105 suppressed).
+    _SCN_KEY_SECRET = "scenario-synthetic-key-secret"  # noqa: S105
+    _SCN_WHSEC = "scenario-synthetic-webhook-secret"
+
+    def _rz_exec(self, iid: IntentId, authz: AuthorizationResult) -> ExecutionAttempt:
+        """Execute through a scripted Razorpay provider -> EXECUTING with order claim."""
+        assert authz.signed_ticket is not None and authz.binding is not None
+        amount = authz.binding.amount_minor
+        order_id = f"order_scn_{new_ulid().lower()}"
+
+        def ok_order(request: "_httpx.Request") -> "_httpx.Response":
+            return _httpx.Response(
+                201,
+                json={
+                    "id": order_id,
+                    "status": "created",
+                    "amount": amount,
+                    "currency": "INR",
+                },
+            )
+
+        client = RazorpayClient(
+            key_id="rzp_test_scenario",
+            key_secret=self._SCN_KEY_SECRET,
+            base_url="https://api.razorpay.com/v1",
+            timeout_seconds=5,
+            transport=_httpx.MockTransport(ok_order),
+        )
+        executor = TrustedPaymentExecutor(
+            repos=self.repositories,
+            keys=self._keys,
+            nonces=self._nonces(),
+            provider=RazorpayPaymentProvider(client),
+            spend=SpendManager(self.repositories),
+        )
+        return executor.execute(
+            signed_ticket=authz.signed_ticket,
+            binding=authz.binding,
+            intent_id=iid,
+            now_utc=_now(),
+        )
+
+    def _reducer_for_lab(self) -> ProviderStateReducer:
+        return ProviderStateReducer(
+            repos=self.repositories,
+            keys=self._keys,
+            nonces=self._nonces(),
+            provider=None,
+            spend=SpendManager(self.repositories),
+        )
+
+    def _forged_callback(
+        self,
+        iid: IntentId,
+        product_id: str,
+        proposal: Proposal,
+        authz: AuthorizationResult,
+        spec: ScenarioSpec,
+    ) -> ScenarioResult:
+        attempt = self._rz_exec(iid, authz)
+        payment_id = f"pay_scn_{new_ulid().lower()}"
+        order_id = str(attempt.razorpay_order_id)
+        valid = _hmac.new(
+            self._SCN_KEY_SECRET.encode(),
+            f"{order_id}|{payment_id}".encode(),
+            _hl.sha256,
+        ).hexdigest()
+        forged = ("0" if valid[0] != "0" else "1") + valid[1:]
+        accepted = verify_checkout_signature(
+            order_id=order_id, payment_id=payment_id, signature_hex=forged,
+            key_secret=self._SCN_KEY_SECRET,
+        )
+        fresh = self._attempt_row(str(attempt.execution_attempt_id))
+        unmutated = (
+            fresh is not None
+            and fresh.callback_verified_at is None
+            and fresh.state == AttemptState.EXECUTING.value
+        )
+        if not accepted and unmutated:
+            return self._finish(
+                spec, "CALLBACK_REJECTED", "forged signature rejected; zero mutation"
+            )
+        return self._finish(spec, "CALLBACK_ACCEPTED", f"accepted={accepted}")
+
+    def _wrong_order_context(
+        self,
+        iid: IntentId,
+        product_id: str,
+        proposal: Proposal,
+        authz: AuthorizationResult,
+        spec: ScenarioSpec,
+    ) -> ScenarioResult:
+        attempt = self._rz_exec(iid, authz)
+        attacker_order = f"order_attacker_{new_ulid().lower()}"
+        attacker_sig = _hmac.new(
+            self._SCN_KEY_SECRET.encode(),
+            f"{attacker_order}|pay_scn_ctx".encode(),
+            _hl.sha256,
+        ).hexdigest()
+        # Signature IS valid for the attacker's own order but presented against
+        # the stored order id: verification must bind to the SERVER-stored id.
+        accepted = verify_checkout_signature(
+            order_id=str(attempt.razorpay_order_id),
+            payment_id=f"pay_scn_{new_ulid().lower()}",
+            signature_hex=attacker_sig,
+            key_secret=self._SCN_KEY_SECRET,
+        )
+        fresh = self._attempt_row(str(attempt.execution_attempt_id))
+        if not accepted and fresh is not None and fresh.callback_verified_at is None:
+            return self._finish(spec, "CONTEXT_REJECTED", "server-stored order binding held")
+        return self._finish(spec, "CONTEXT_ACCEPTED", "context swap NOT rejected")
+
+    def _duplicate_callback(
+        self,
+        iid: IntentId,
+        product_id: str,
+        proposal: Proposal,
+        authz: AuthorizationResult,
+        spec: ScenarioSpec,
+    ) -> ScenarioResult:
+        attempt = self._rz_exec(iid, authz)
+        payment_id = f"pay_scn_{new_ulid().lower()}"
+        sig = _hmac.new(
+            self._SCN_KEY_SECRET.encode(),
+            f"{attempt.razorpay_order_id}|{payment_id}".encode(),
+            _hl.sha256,
+        ).hexdigest()
+        first = verify_checkout_signature(
+            order_id=str(attempt.razorpay_order_id), payment_id=payment_id,
+            signature_hex=sig, key_secret=self._SCN_KEY_SECRET,
+        )
+        second = verify_checkout_signature(
+            order_id=str(attempt.razorpay_order_id), payment_id=payment_id,
+            signature_hex=sig, key_secret=self._SCN_KEY_SECRET,
+        )
+        fresh = self._attempt_row(str(attempt.execution_attempt_id))
+        if first and second and fresh is not None:
+            return self._finish(
+                spec, "SINGLE_EFFECT_ONLY",
+                f"verification deterministic; state={fresh.state}; "
+                f"verified_at_set={fresh.callback_verified_at is not None}",
+            )
+        return self._finish(spec, "DOUBLE_VERIFICATION", f"first={first} second={second}")
+
+    @staticmethod
+    def _reduce_one(
+        reducer: ProviderStateReducer, kind: EventKind, order_id: str, payment_id: str
+    ) -> None:
+        reducer.apply_event(
+            VerifiedProviderEvent(
+                kind=kind, razorpay_order_id=order_id, razorpay_payment_id=payment_id
+            )
+        )
+
+    def _deliver_webhook(
+        self,
+        reducer: ProviderStateReducer,
+        event_id: str,
+        kind: EventKind,
+        order_id: str,
+        payment_id: str,
+    ) -> IngestResult | None:
+        body = (
+            '{"event":"' + kind + '","payload":{"payment":{"entity":'
+            '{"id":"' + payment_id + '","order_id":"' + order_id + '"}}}}'
+        ).encode()
+        sig = _hmac.new(self._SCN_WHSEC.encode(), body, _hl.sha256).hexdigest()
+        if not verify_webhook_sig(raw_body=body, signature=sig, webhook_secret=self._SCN_WHSEC):
+            return None
+        return ingest_verified_event(
+            self.repositories,
+            event_id=event_id,
+            event_type=kind,
+            payload_sha256=_hl.sha256(body).hexdigest(),
+            razorpay_order_id=order_id,
+            razorpay_payment_id=payment_id,
+            process=lambda: self._reduce_one(reducer, kind, order_id, payment_id),
+        )
+
+    def _duplicate_webhook(
+        self,
+        iid: IntentId,
+        product_id: str,
+        proposal: Proposal,
+        authz: AuthorizationResult,
+        spec: ScenarioSpec,
+    ) -> ScenarioResult:
+        attempt = self._rz_exec(iid, authz)
+        reducer = self._reducer_for_lab()
+        order_ref = str(attempt.razorpay_order_id)
+        # ONE event id delivered TWICE (the duplicate); unique per execution so
+        # prior lab runs cannot pre-claim it in the durable inbox.
+        dup_event_id = f"evt_scn_dup_{new_ulid().lower()}"
+        dup_payment_id = f"pay_scn_{new_ulid().lower()}"
+        first = self._deliver_webhook(
+            reducer,
+            dup_event_id,
+            "payment.captured",
+            order_ref,
+            dup_payment_id,
+        )
+        second = self._deliver_webhook(
+            reducer,
+            dup_event_id,
+            "payment.captured",
+            order_ref,
+            dup_payment_id,
+        )
+        row = self._spend_snapshot(str(iid))
+        committed_once = row is not None and row.committed_minor == attempt.amount_minor * 1
+        if (
+            first is not None and second is not None
+            and first.processed and second.duplicate and committed_once
+            and row.reserved_minor == 0
+        ):
+            detail = f"first processed={first.processed}; second={second.reason}"
+            return self._finish(spec, "SINGLE_EFFECT_ONLY", detail)
+        return self._finish(spec, "DOUBLE_COMMIT", f"first={first} second={second} spend={row}")
+
+    def _out_of_order_webhook(
+        self,
+        iid: IntentId,
+        product_id: str,
+        proposal: Proposal,
+        authz: AuthorizationResult,
+        spec: ScenarioSpec,
+    ) -> ScenarioResult:
+        attempt = self._rz_exec(iid, authz)
+        reducer = self._reducer_for_lab()
+        captured = self._deliver_webhook(
+            reducer,
+            f"evt_scn_cap_{new_ulid().lower()}",
+            "payment.captured",
+            str(attempt.razorpay_order_id),
+            f"pay_scn_{new_ulid().lower()}",
+        )
+        authorized = self._deliver_webhook(
+            reducer,
+            f"evt_scn_aut_{new_ulid().lower()}",
+            "payment.authorized",
+            str(attempt.razorpay_order_id),
+            f"pay_scn_{new_ulid().lower()}",
+        )
+        row = self._spend_snapshot(str(iid))
+        fresh = self._attempt_row(str(attempt.execution_attempt_id))
+        if (
+            captured and authorized and captured.processed and authorized.processed
+            and row is not None and row.committed_minor == attempt.amount_minor
+            and fresh is not None and fresh.state == AttemptState.SUCCEEDED.value
+        ):
+            return self._finish(
+                spec, "RECONCILED_EXACTLY_ONCE", "lagged snapshot regressed nothing"
+            )
+        return self._finish(
+            spec, "REGRESSED_OR_DOUBLE", f"cap={captured} aut={authorized} spend={row}"
+        )
+
+    def _failed_then_captured(
+        self,
+        iid: IntentId,
+        product_id: str,
+        proposal: Proposal,
+        authz: AuthorizationResult,
+        spec: ScenarioSpec,
+    ) -> ScenarioResult:
+        attempt = self._rz_exec(iid, authz)
+        reducer = self._reducer_for_lab()
+        failed = self._deliver_webhook(
+            reducer,
+            f"evt_scn_fail_{new_ulid().lower()}",
+            "payment.failed",
+            str(attempt.razorpay_order_id),
+            f"pay_scn_{new_ulid().lower()}",
+        )
+        mid = self._attempt_row(str(attempt.execution_attempt_id))
+        captured = self._deliver_webhook(
+            reducer,
+            f"evt_scn_f2c_{new_ulid().lower()}",
+            "payment.captured",
+            str(attempt.razorpay_order_id),
+            f"pay_scn_{new_ulid().lower()}",
+        )
+        row = self._spend_snapshot(str(iid))
+        final = self._attempt_row(str(attempt.execution_attempt_id))
+        if (
+            failed and captured and failed.processed and captured.processed
+            and mid is not None and mid.state == AttemptState.FAILED.value
+            and final is not None and final.state == AttemptState.SUCCEEDED.value
+            and final.fulfilment_state == "ELIGIBLE"
+            and row is not None and row.committed_minor == attempt.amount_minor
+            and row.reserved_minor == 0
+        ):
+            return self._finish(spec, "RECONCILED_EXACTLY_ONCE", "failed->captured reconciled once")
+        return self._finish(spec, "MULTIPLE_EFFECTS", f"fail={failed} cap={captured} final={final}")
+
+    # -- shared helpers for Phase-2 families -----------------------------
+    def _attempt_row(self, attempt_id: str):  # type: ignore[no-untyped-def]
+        with self.repositories.transaction() as s:
+            from razormesh_api.persistence.models import ExecutionAttempt as EA
+
+            row = s.get(EA, attempt_id)
+            if row is None:
+                return None
+            s.expunge(row)
+            return row
+
+    def _spend_snapshot(self, intent_id: str):  # type: ignore[no-untyped-def]
+        from razormesh_api.persistence.models import AuthorizationSpend as AS
+
+        with self.repositories.transaction() as s:
+            row = s.get(AS, intent_id)
+            if row is None:
+                return None
+            s.expunge(row)
+            return row
 
     def _expired(
         self,
