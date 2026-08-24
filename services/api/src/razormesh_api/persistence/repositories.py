@@ -209,6 +209,16 @@ class AuthorizationSpendRepository:
                 s.add(row)
                 s.flush()
                 return row
+            if existing.authorized_minor != authorized_minor:
+                consumed = existing.reserved_minor + existing.committed_minor
+                if consumed > authorized_minor:
+                    raise ValueError(
+                        "current authorization is below already reserved/committed spend"
+                    )
+                existing.authorized_minor = authorized_minor
+                existing.version += 1
+                existing.updated_at = datetime.now(UTC)
+                s.flush()
             return existing
 
     def get_for_update(self, intent_id: IntentId, session: Session) -> AuthorizationSpend | None:

@@ -31,6 +31,8 @@ def test_duplicate_ids_rejected_by_validator(tmp_path):  # type: ignore[no-untyp
         family=ScenarioFamily.SAFE_BASELINE,
         description="duplicate id probe",
         expected_outcome=ExpectedOutcome.ALLOW_EXECUTE_ONCE,
+        safe_or_unsafe="safe",
+        mutation="none",
     )
     ids = [s.scenario_id for s in (*SCENARIOS, dup)]
     assert len(set(ids)) != len(ids)
@@ -39,7 +41,7 @@ def test_duplicate_ids_rejected_by_validator(tmp_path):  # type: ignore[no-untyp
 @pytest.mark.parametrize(
     "kwargs, err",
     [
-        ({"family": ScenarioFamily.CONTEXT_SWAP}, "swap_principal_to"),
+        ({"family": ScenarioFamily.CROSS_PRINCIPAL}, "swap_principal_to"),
         ({"replay_count": 1, "family": ScenarioFamily.REPLAY}, "replay_count"),
         ({"family": ScenarioFamily.CHECKOUT_DRIFT}, "drift_field"),
         ({"family": ScenarioFamily.APPROVAL_SPLIT}, "split_parts"),
@@ -50,6 +52,8 @@ def test_family_specific_invariants_enforced(kwargs, err) -> None:  # type: igno
         scenario_id="probe-1",
         description="invariant probe scenario",
         expected_outcome=ExpectedOutcome.EXECUTION_REJECTED,
+        safe_or_unsafe="unsafe",
+        mutation="probe mutation",
     )
     with pytest.raises(ValidationError, match=err):
         ScenarioSpec(**base, **kwargs)

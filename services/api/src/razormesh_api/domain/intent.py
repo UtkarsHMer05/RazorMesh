@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import StrEnum
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -24,11 +24,17 @@ class BrandRestriction(BaseModel):
     """Structured brand constraint (free-text brand matching is Phase-3 model work)."""
 
     brands: frozenset[str] = Field(default_factory=frozenset)
-    mode: str = Field(default="allow_only")  # allow_only | forbid
+    mode: Literal["allow_only", "forbid"] = "allow_only"
+
+
+def _new_only() -> frozenset[Literal["new", "refurbished", "used"]]:
+    return frozenset({"new"})
 
 
 class ConditionRestriction(BaseModel):
-    allowed_conditions: frozenset[str] = Field(default_factory=lambda: frozenset({"new"}))
+    allowed_conditions: frozenset[Literal["new", "refurbished", "used"]] = Field(
+        default_factory=_new_only
+    )
 
 
 AwareDatetime = Annotated[datetime, Field(...)]

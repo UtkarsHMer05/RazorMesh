@@ -7,9 +7,11 @@ from sqlalchemy import create_engine
 
 from razormesh_api.catalog import seed_catalog
 from razormesh_api.checkout_service import (
+    CatalogCurrencyMismatch,
     CheckoutError,
     CheckoutService,
     ClientTotalMismatch,
+    IncompatibleRecurringTerms,
     ProposedItem,
     QuantityExceedsAuthorization,
     UnknownProduct,
@@ -24,6 +26,7 @@ from razormesh_api.persistence.db import create_session_factory
 from razormesh_api.persistence.models import (
     Checkout,
     ExecutionTicket,
+    Product,
 )
 from razormesh_api.persistence.models import (
     IntentContract as RowIntent,
@@ -70,6 +73,7 @@ def _intent_row(**overrides):  # type: ignore[no-untyped-def]
         aggregate_budget_minor=50_000_000,
         approval_threshold_minor=8_000_000,
         status="AUTHORIZED",
+        recurring_allowed=False,
     )
     defaults.update(overrides)
     with repos.transaction() as s:
@@ -80,7 +84,6 @@ def _intent_row(**overrides):  # type: ignore[no-untyped-def]
                 agent_id=f"agt_{new_ulid()}",
                 authorization_generation=1,
                 currency="INR",
-                recurring_allowed=False,
                 max_quantity=2,
                 issued_at=now,
                 authorized_at=now,
@@ -204,3 +207,58 @@ def test_proposal_requires_items(service) -> None:  # type: ignore[no-untyped-de
     iid = _intent_row()
     with pytest.raises(CheckoutError, match="at least one item"):
         svc.propose(intent_id=iid, items=[])
+
+
+def test_persisted_merchant_constraint_is_enforced_end_to_end(service) -> None:  # type: ignore[no-untyped-def]
+    svc, repos = service
+    product = _first_product(repos)
+    iid = _intent_row(allowed_merchant_ids=[f"mrc_{new_ulid()}"])
+    proposal = svc.propose(intent_id=iid, items=[ProposedItem(product.id)])
+    result = svc.authorize(intent_id=iid, proposal=proposal)
+    assert result.outcome.decision is Decision.BLOCK
+    assert "MERCHANT_NOT_ALLOWED" in result.outcome.reason_codes
+
+
+def test_catalog_currency_mismatch_is_rejected_without_fx(service) -> None:  # type: ignore[no-untyped-def]
+    svc, repos = service
+    product = _first_product(repos)
+    with repos.transaction() as session:
+        row = session.get(Product, product.id)
+        assert row is not None
+        row.currency = "USD"
+    iid = _intent_row()
+    with pytest.raises(CatalogCurrencyMismatch, match="no FX conversion"):
+        svc.propose(intent_id=iid, items=[ProposedItem(product.id)])
+
+
+def test_trusted_tax_fees_and_recurring_terms_enter_checkout(service) -> None:  # type: ignore[no-untyped-def]
+    svc, repos = service
+    product = _first_product(repos)
+    with repos.transaction() as session:
+        row = session.get(Product, product.id)
+        assert row is not None
+        row.tax_minor = 123
+        row.fees_minor = 45
+        row.recurring = True
+        row.recurring_frequency = "monthly"
+    iid = _intent_row()
+    proposal = svc.propose(intent_id=iid, items=[ProposedItem(product.id, quantity=2)])
+    assert proposal.envelope.tax.amount_minor == 246
+    assert proposal.envelope.fees.amount_minor == 90
+    assert proposal.envelope.has_recurring_terms()
+    result = svc.authorize(intent_id=iid, proposal=proposal)
+    assert result.outcome.decision is Decision.BLOCK
+    assert "RECURRING_NOT_ALLOWED" in result.outcome.reason_codes
+
+
+def test_recurring_catalog_product_without_frequency_fails_closed(service) -> None:  # type: ignore[no-untyped-def]
+    svc, repos = service
+    product = _first_product(repos)
+    with repos.transaction() as session:
+        row = session.get(Product, product.id)
+        assert row is not None
+        row.recurring = True
+        row.recurring_frequency = None
+    iid = _intent_row(recurring_allowed=True)
+    with pytest.raises(IncompatibleRecurringTerms, match="billing frequency"):
+        svc.propose(intent_id=iid, items=[ProposedItem(product.id)])

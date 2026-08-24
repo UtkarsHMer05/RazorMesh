@@ -240,3 +240,19 @@ From documented setup:
 Approved final phrase only after this:
 
 > Phase-1 local prototype complete.
+
+---
+
+# 13. Permanent execution-integrity regressions
+
+The final Phase-1 gate must also prove:
+
+- forged or malformed tickets create no reservation and no execution attempt;
+- a current durable non-`ALLOW` decision cannot execute even when ticket bytes are otherwise valid;
+- persisted merchant/product/category/brand/condition constraints survive row-to-domain reconstruction;
+- trusted tax, fee, currency and recurring terms enter the checkout authorization projection, while missing recurring frequency fails closed;
+- provider-unknown reconciliation persists its reference/outcome and atomically commits or releases the retained reservation;
+- a changed authorization amount synchronizes durable capacity while preserving committed/reserved spend and rejects a cap below already consumed capacity;
+- a pre-provider setup failure closes partial attempt state and releases both durable reservation and coordination nonce;
+- the public audit tamper simulation does not change the ledger's event count or validity;
+- the adversarial registry covers all required Phase-1 families and benchmark pipeline errors cannot be scored as prevented attacks.

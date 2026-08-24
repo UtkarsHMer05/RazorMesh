@@ -85,17 +85,19 @@ Decision
   ├─ CHALLENGE → audit, await new authorization generation
   └─ ALLOW
        ↓
-     reserve budget
-       ↓
-     re-read intent + checkout + reservation state
-       ↓
      issue signed ExecutionTicket
        ↓
-     create/claim durable ExecutionAttempt
+     executor verifies signature, expiry and caller binding
        ↓
-     atomic nonce claim
+     executor re-reads PostgreSQL intent + checkout + ALLOW decision
        ↓
-     PaymentExecutor performs final context verification
+     derive idempotency identity from signed ticket ID
+       ↓
+     atomic Redis nonce claim
+       ↓
+     atomically reserve durable budget capacity
+       ↓
+     create durable ExecutionAttempt and mark ticket used
        ↓
      MockPaymentProvider
        ↓
@@ -424,12 +426,12 @@ Frontend owns presentation only.
 
 ---
 
-# 11. Target repository structure
+# 11. Implemented Phase-1 repository structure
 
 The agent may refine this through an accepted decision, but must keep documentation synchronized.
 
 ```text
-razormesh-trust/
+RazorMesh/
 ├── AGENTS.md
 ├── RULES.md
 ├── PRD.md
@@ -448,35 +450,26 @@ razormesh-trust/
 │
 ├── apps/
 │   └── web/
-│       ├── buyer/
-│       ├── merchant/
-│       ├── security-lab/
-│       └── audit/
+│       ├── src/app/{buyer,merchant,security-lab,audit}/
+│       ├── e2e/
+│       └── playwright.config.ts
 │
 ├── services/
 │   └── api/
+│       ├── alembic/
 │       ├── src/razormesh_api/
 │       │   ├── api/
 │       │   ├── domain/
-│       │   ├── razor_guard/
-│       │   ├── execution/
+│       │   ├── rules/
 │       │   ├── providers/
-│       │   ├── audit/
 │       │   └── persistence/
-│       └── tests/
+│       ├── tests/
+│       ├── pyproject.toml
+│       └── uv.lock
 │
-├── benchmark/
-│   ├── scenarios/
-│   ├── generator/
-│   └── runner/
-│
-├── tests/
-│   ├── integration/
-│   ├── security/
-│   └── e2e/
-│
+├── docs/
 ├── scripts/
-├── infra/
+├── infra/keys/                 # generated local keys; ignored
 └── docker-compose.yml
 ```
 

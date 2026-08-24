@@ -42,6 +42,9 @@ def main() -> int:
     intent = client.post("/buyer/fixture-intent").json()
     intent_id = intent["intent_id"]
     products = client.get("/catalog/products?limit=100").json()["items"]
+    if not products:
+        print("[FAIL] synthetic catalog is empty; run `make seed` before acceptance")
+        return 1
     product = min(products, key=lambda p: p["price_minor"] + p["shipping_minor"])
     proposal = client.post(
         "/buyer/propose",
@@ -166,11 +169,11 @@ def main() -> int:
     families = {r["family"] for r in lab["results"]}
     check(
         "security-lab suite behaves as designed",
-        lab["passed"] == lab["total"] and lab["total"] >= 7,
+        lab["passed"] == lab["total"] and lab["total"] >= 16,
         f"{lab['passed']}/{lab['total']} scenarios; families={sorted(families)}",
     )
 
-    # 6. audit chain verifies; tamper test detects then self-restores
+    # 6. audit chain verifies; non-mutating tamper simulation is detected
     verify_before = client.get("/audit/verify").json()
     tamper = client.post("/audit/tamper-test").json()
     verify_after = client.get("/audit/verify").json()
@@ -178,7 +181,7 @@ def main() -> int:
         "audit chain verifies",
         verify_before["valid"] is True and verify_after["valid"] is True,
         f"before={verify_before['valid']} events={verify_before['events_checked']} "
-        f"after_restore={verify_after['valid']}",
+        f"after_simulation={verify_after['valid']}",
     )
     check(
         "tamper test detected",
@@ -191,7 +194,8 @@ def main() -> int:
     confusion_ok = (
         artifact["confusion"]["FN"] == 0
         and artifact["confusion"]["FP"] == 0
-        and artifact["pairs"] >= 6
+        and artifact["pairs"] >= 14
+        and artifact.get("unsafe_execution_rate") == 0.0
     )
     check(
         "benchmark metrics from real runner",

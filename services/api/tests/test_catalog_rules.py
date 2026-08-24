@@ -4,13 +4,14 @@ from datetime import UTC, datetime, timedelta
 
 from razormesh_api.domain.checkout import BoundedText, CheckoutEnvelope, LineItem
 from razormesh_api.domain.ids import IntentId, new_ulid
-from razormesh_api.domain.intent import BrandRestriction, IntentContract
+from razormesh_api.domain.intent import BrandRestriction, ConditionRestriction, IntentContract
 from razormesh_api.domain.money import Money
 from razormesh_api.domain.provenance import Provenanced
 from razormesh_api.rules.catalog_rules import (
     CATALOG_RULES,
     brand_restriction_rule,
     category_rule,
+    condition_restriction_rule,
     merchant_allowlist_rule,
     product_allowlist_rule,
     quantity_rule,
@@ -232,6 +233,20 @@ def test_quantity_rules_per_line_and_aggregate() -> None:
         quantity_rule.evaluate(_ctx(items=(_item(qty=3),), intent=loose)).outcome
         == RuleOutcome.PASS
     )
+
+    two_lines = _ctx(items=(_item(qty=2), _item(qty=2)), intent=loose)
+    assert quantity_rule.evaluate(two_lines).outcome == RuleOutcome.FAIL
+
+
+def test_condition_restriction_is_enforced() -> None:
+    item = _item()
+    refurbished = item.model_copy(update={"condition": "refurbished"})
+    intent = _intent(
+        condition_restriction=ConditionRestriction(allowed_conditions=frozenset({"new"}))
+    )
+    result = condition_restriction_rule.evaluate(_ctx(items=(refurbished,), intent=intent))
+    assert result.outcome == RuleOutcome.FAIL
+    assert "CONDITION_NOT_ALLOWED" in result.reason_codes
 
 
 def test_catalog_registry_deterministic_clean_pass() -> None:

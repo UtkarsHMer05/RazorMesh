@@ -115,6 +115,15 @@ Prevent a proposed transaction from producing a payment-like side effect unless:
 
 **SEC-030** Secrets/private keys are not committed or logged.
 
+## Provider-boundary enforcement details
+
+- Signature verification precedes every durable reservation or execution-attempt write.
+- Immediately before any provider call, the executor re-reads PostgreSQL and requires the current intent to be `AUTHORIZED` and unexpired, the intent and rebuilt checkout hashes to match the ticket, and the durable decision to be the ticket's matching `ALLOW` under the same policy version.
+- The durable idempotency identity is derived from the signed ticket ID; callers cannot select it.
+- Durable capacity is synchronized to the current intent's aggregate authorization without erasing held/committed spend; lowering authority below already consumed capacity fails closed. PostgreSQL enforces one execution attempt per ticket and `reserved + committed <= authorized` in addition to application row locks.
+- A failure before the provider boundary closes any created attempt, releases its reservation and releases the coordination nonce. A provider-unknown result keeps its reservation until an explicit terminal reconciliation updates spend and attempt state atomically.
+- The public tamper demonstration never mutates the evidence ledger. It verifies a hypothetical changed record in memory, while database protections continue to prohibit real historical updates/deletes.
+
 ---
 
 # 5. Defensive attack scenarios

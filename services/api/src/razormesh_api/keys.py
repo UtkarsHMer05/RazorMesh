@@ -133,7 +133,7 @@ class DevSigningKeys:
         return self.generate()
 
 
-def default_from_settings():  # type: ignore[no-untyped-def]
+def default_from_settings() -> DevSigningKeys:
     from razormesh_api.settings import get_settings
 
     s = get_settings()

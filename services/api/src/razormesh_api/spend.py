@@ -41,8 +41,11 @@ class SpendManager:
         self._repos = repos
 
     def ensure_authorization(self, intent_id: IntentId, authorized_minor: int) -> None:
-        """Create the durable capacity row if absent."""
-        self._repos.spend.ensure(intent_id, authorized_minor=authorized_minor)
+        """Create or synchronize durable capacity to the current authorization."""
+        try:
+            self._repos.spend.ensure(intent_id, authorized_minor=authorized_minor)
+        except ValueError as exc:
+            raise InvalidSpendState(str(exc)) from exc
 
     def reserve(self, intent_id: IntentId, amount_minor: int) -> None:
         """Atomically hold capacity for a proposed execution."""

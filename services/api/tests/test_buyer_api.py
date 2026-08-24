@@ -4,13 +4,15 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 
 from razormesh_api.catalog import seed_catalog
 from razormesh_api.persistence import models  # noqa: F401
 from razormesh_api.persistence.db import create_session_factory
 from razormesh_api.persistence.models import (
+    AuthorizationSpend,
     Checkout,
+    ExecutionAttempt,
 )
 from razormesh_api.persistence.repositories import Repositories
 from razormesh_api.settings import Settings
@@ -138,3 +140,56 @@ def test_proposal_persists_durable_checkout_row(buyer_client: TestClient) -> Non
         row = s.get(Checkout, body["checkout_id"])
     assert row is not None
     assert row.computed_total_minor == body["total_minor"]
+
+
+def test_forged_ticket_cannot_reserve_authorization_capacity(buyer_client: TestClient) -> None:
+    intent_id = _fixture_intent(buyer_client)
+    product_id = _cheapest_product_id(buyer_client)
+    proposal = buyer_client.post(
+        "/buyer/propose",
+        json={"intent_id": intent_id, "items": [{"product_id": product_id}]},
+    ).json()
+    forged = buyer_client.post(
+        "/buyer/execute",
+        json={
+            "intent_id": intent_id,
+            "checkout_id": proposal["checkout_id"],
+            "ticket_json": proposal["ticket_json"],
+            "signature_hex": "00" * 64,
+        },
+    )
+    assert forged.status_code == 403
+
+    engine = create_engine(_db_url(), future=True)
+    with create_session_factory(engine)() as session:
+        spend = session.get(AuthorizationSpend, intent_id)
+        attempts = session.execute(select(ExecutionAttempt)).scalars().all()
+    assert spend is not None
+    assert spend.reserved_minor == 0 and spend.committed_minor == 0
+    assert attempts == []
+
+
+def test_replay_does_not_leak_a_second_reservation(buyer_client: TestClient) -> None:
+    intent_id = _fixture_intent(buyer_client)
+    product_id = _cheapest_product_id(buyer_client)
+    proposal = buyer_client.post(
+        "/buyer/propose",
+        json={"intent_id": intent_id, "items": [{"product_id": product_id}]},
+    ).json()
+    request = {
+        "intent_id": intent_id,
+        "checkout_id": proposal["checkout_id"],
+        "ticket_json": proposal["ticket_json"],
+        "signature_hex": proposal["signature_hex"],
+    }
+    assert buyer_client.post("/buyer/execute", json=request).status_code == 200
+    assert buyer_client.post("/buyer/execute", json=request).status_code == 200
+
+    engine = create_engine(_db_url(), future=True)
+    with create_session_factory(engine)() as session:
+        spend = session.get(AuthorizationSpend, intent_id)
+        attempts = session.execute(select(ExecutionAttempt)).scalars().all()
+    assert spend is not None
+    assert spend.reserved_minor == 0
+    assert spend.committed_minor == proposal["total_minor"]
+    assert len(attempts) == 1

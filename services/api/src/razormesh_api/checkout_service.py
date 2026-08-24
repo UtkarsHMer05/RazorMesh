@@ -22,20 +22,19 @@ from razormesh_api.domain.authz_hash import (
     checkout_authorization_hash,
     intent_authorization_hash,
 )
-from razormesh_api.domain.checkout import BoundedText, CheckoutEnvelope, LineItem
+from razormesh_api.domain.checkout import (
+    BoundedText,
+    CheckoutEnvelope,
+    LineItem,
+    SubscriptionTerms,
+)
 from razormesh_api.domain.ids import (
-    AgentId,
     CheckoutId,
     DecisionId,
     ExecutionTicketId,
     IntentId,
     MerchantId,
-    PrincipalId,
     ProductId,
-)
-from razormesh_api.domain.intent import (
-    IntentContract,
-    IntentStatus,
 )
 from razormesh_api.domain.money import Money
 from razormesh_api.domain.provenance import Provenanced
@@ -55,13 +54,12 @@ from razormesh_api.persistence.models import (
     ExecutionTicket as RowTicket,
 )
 from razormesh_api.persistence.models import (
-    IntentContract as RowIntent,
-)
-from razormesh_api.persistence.models import (
     Product,
 )
 from razormesh_api.persistence.repositories import Repositories
+from razormesh_api.revalidation import domain_intent_from_row
 from razormesh_api.rules.engine import EvaluationContext, ProductFacts
+from razormesh_api.spend import SpendManager
 from razormesh_api.tickets import (
     CurrentBinding,
     ExecutionTicketClaims,
@@ -95,6 +93,14 @@ class ClientTotalMismatch(CheckoutError):
         )
 
 
+class CatalogCurrencyMismatch(CheckoutError):
+    pass
+
+
+class IncompatibleRecurringTerms(CheckoutError):
+    pass
+
+
 @dataclass(frozen=True)
 class ProposedItem:
     product_id: str
@@ -124,26 +130,6 @@ def _untrusted_name(text: str) -> Provenanced[BoundedText]:
         source_type="MERCHANT_FREE_TEXT",
         source_id="catalog",
         observed_at=datetime.now(UTC),
-    )
-
-
-def _domain_intent(row: RowIntent) -> IntentContract:
-    """Rebuild the domain contract from its durable projection."""
-    return IntentContract(
-        intent_id=IntentId(row.intent_id),
-        principal_id=PrincipalId(row.principal_id),
-        agent_id=AgentId(row.agent_id),
-        authorization_generation=row.authorization_generation,
-        status=IntentStatus(row.status),
-        currency=row.currency,
-        max_total=Money(row.max_total_minor),
-        aggregate_budget=Money(row.aggregate_budget_minor),
-        max_quantity=row.max_quantity,
-        recurring_allowed=row.recurring_allowed,
-        approval_threshold=Money(row.approval_threshold_minor),
-        issued_at=row.issued_at,
-        authorized_at=row.authorized_at,
-        expires_at=row.expires_at,
     )
 
 
@@ -198,12 +184,44 @@ class CheckoutService:
             raise MixedMerchants(f"proposal spans multiple merchants: {sorted(merchant_ids)}")
         merchant_id = merchant_ids.pop()
 
+        currencies = {product.currency for product in products.values()}
+        if currencies != {row_intent.currency}:
+            raise CatalogCurrencyMismatch(
+                f"catalog currencies {sorted(currencies)} do not match authorized "
+                f"currency {row_intent.currency}; Phase 1 performs no FX conversion"
+            )
+
+        recurring_frequencies = {
+            product.recurring_frequency for product in products.values() if product.recurring
+        }
+        if None in recurring_frequencies:
+            raise IncompatibleRecurringTerms(
+                "recurring catalog products require a trusted billing frequency"
+            )
+        if len(recurring_frequencies) > 1:
+            raise IncompatibleRecurringTerms(
+                f"checkout mixes recurring frequencies: {sorted(recurring_frequencies, key=str)}"
+            )
+        subscription_terms = (
+            SubscriptionTerms(
+                recurring=True,
+                frequency=cast(
+                    "Literal['monthly', 'quarterly', 'yearly'] | None",
+                    next(iter(recurring_frequencies)),
+                ),
+            )
+            if recurring_frequencies
+            else None
+        )
+
         line_items = tuple(
             LineItem(
                 product_id=ProductId(pid),
                 display_name=_untrusted_name(products[pid].title),
                 quantity=item.quantity,
-                unit_price=Money(products[pid].price_minor),  # TRUSTED price only
+                unit_price=Money(
+                    products[pid].price_minor, products[pid].currency
+                ),  # TRUSTED price only
                 condition=cast(
                     "Literal['new', 'refurbished', 'used'] | None",
                     products[pid].condition or "new",
@@ -211,25 +229,38 @@ class CheckoutService:
             )
             for pid, item in ((i.product_id, i) for i in items)
         )
-        shipping = Money(sum(products[i.product_id].shipping_minor for i in items))
+        shipping = Money(
+            sum(products[i.product_id].shipping_minor for i in items), row_intent.currency
+        )
+        tax = Money(
+            sum(products[i.product_id].tax_minor * i.quantity for i in items),
+            row_intent.currency,
+        )
+        fees = Money(
+            sum(products[i.product_id].fees_minor * i.quantity for i in items),
+            row_intent.currency,
+        )
         currency = row_intent.currency
         zero = Money.zero(currency)
         computed = zero
         for item in items:
             computed = computed.add(
-                Money(products[item.product_id].price_minor).multiply_positive_int(item.quantity)
+                Money(
+                    products[item.product_id].price_minor,
+                    products[item.product_id].currency,
+                ).multiply_positive_int(item.quantity)
             )
-        computed = computed.add(zero).add(shipping).add(zero)
+        computed = computed.add(tax).add(shipping).add(fees)
 
         env = CheckoutEnvelope(
             checkout_id=CheckoutId.generate(),
             revision=1,
             merchant_id=MerchantId(merchant_id),
             line_items=line_items,
-            tax=zero,
+            tax=tax,
             shipping=shipping,
-            fees=zero,
-            subscription_terms=None,
+            fees=fees,
+            subscription_terms=subscription_terms,
             provided_total=computed,
             observed_at=now,
         )
@@ -261,6 +292,11 @@ class CheckoutService:
                     provided_total_minor=computed.amount_minor,
                     computed_total_minor=computed.amount_minor,
                     currency=row_intent.currency,
+                    subscription_terms=(
+                        None
+                        if subscription_terms is None
+                        else subscription_terms.model_dump(mode="json")
+                    ),
                     observed_at=now,
                     created_at=now,
                 )
@@ -276,7 +312,7 @@ class CheckoutService:
 
         return Proposal(
             envelope=env,
-            intent_hash=intent_authorization_hash(_domain_intent(row_intent)),
+            intent_hash=intent_authorization_hash(domain_intent_from_row(row_intent)),
             checkout_hash=checkout_authorization_hash(env),
         )
 
@@ -288,7 +324,7 @@ class CheckoutService:
         row_intent = self._repos.intents.get(intent_id)
         if row_intent is None:
             raise CheckoutError(f"unknown intent {intent_id}")
-        contract = _domain_intent(row_intent)
+        contract = domain_intent_from_row(row_intent)
         env = proposal.envelope
 
         # Trusted product facts for catalog rules.
@@ -307,9 +343,7 @@ class CheckoutService:
         with self._repos.factory() as session:
             spend_row = (
                 session.execute(
-                    select(AuthorizationSpend).where(
-                        AuthorizationSpend.intent_id == str(intent_id)
-                    )
+                    select(AuthorizationSpend).where(AuthorizationSpend.intent_id == str(intent_id))
                 )
                 .scalars()
                 .first()
@@ -361,6 +395,9 @@ class CheckoutService:
             return AuthorizationResult(outcome, decision_id)
 
         # ALLOW only: mint the context-bound single-use ticket (M34).
+        SpendManager(self._repos).ensure_authorization(
+            contract.intent_id, authorized_minor=contract.aggregate_budget.amount_minor
+        )
         claims = ExecutionTicketClaims(
             ticket_id=ExecutionTicketId.generate(),
             decision_id=decision_id,

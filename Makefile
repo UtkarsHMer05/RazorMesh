@@ -23,10 +23,10 @@ setup: ## Install backend deps (uv sync), frontend deps (pnpm), generate dev key
 keys: ## Generate local Ed25519 dev signing keys (never committed)
 	$(UV) run --project $(API_DIR) python -m razormesh_api.keys
 
-format: ## Format backend (ruff) and frontend (prettier if present)
+format: ## Format backend and apply frontend lint fixes
 	$(UV) run --project $(API_DIR) ruff format .
 	$(UV) run --project $(API_DIR) ruff check --fix .
-	@if [ -f "$(WEB_DIR)/package.json" ]; then cd $(WEB_DIR) && (pnpm format || true); fi
+	@if [ -f "$(WEB_DIR)/package.json" ]; then cd $(WEB_DIR) && pnpm lint --fix; fi
 
 lint: ## Lint backend (ruff) and frontend (eslint)
 	$(UV) run --project $(API_DIR) ruff check .

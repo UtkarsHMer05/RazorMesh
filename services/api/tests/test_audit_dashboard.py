@@ -1,6 +1,5 @@
 """M47 acceptance: audit dashboard API — timeline, verify, state, tamper test."""
 
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -87,7 +86,7 @@ def test_state_endpoint_returns_spend_and_decisions(audit_client: TestClient) ->
     assert isinstance(body["decisions"], list)
 
 
-def test_tamper_test_detects_and_restores(audit_client: TestClient) -> None:
+def test_tamper_simulation_detects_without_mutating_ledger(audit_client: TestClient) -> None:
     iid = _make_intent(audit_client)
     audit_client.post(
         "/buyer/propose",
@@ -96,14 +95,15 @@ def test_tamper_test_detects_and_restores(audit_client: TestClient) -> None:
             "items": [{"product_id": _cheapest_product_id(audit_client)}],
         },
     )
+    before = audit_client.get("/audit/verify").json()
     res = audit_client.post("/audit/tamper-test")
     assert res.status_code == 200
     body = res.json()
     assert body["detected"] is True
 
-    # state restored: chain verifies again afterwards (fresh events appended later)
     after = audit_client.get("/audit/verify").json()
     assert after["valid"] is True
+    assert after["events_checked"] == before["events_checked"]
 
 
 def test_malformed_intent_id_rejected(audit_client: TestClient) -> None:

@@ -160,6 +160,36 @@ def _brand_view(ctx: EvaluationContext) -> RuleResult:
 brand_restriction_rule = _rule("catalog.brand_restriction", _brand_view)
 
 
+def _condition_view(ctx: EvaluationContext) -> RuleResult:
+    restriction = ctx.intent.condition_restriction
+    if restriction is None:
+        return _outcome("catalog.condition_restriction", ok=True, fail_code="", explanation="")
+    unknown = sorted(
+        item.product_id.value for item in ctx.checkout.line_items if item.condition is None
+    )
+    if unknown:
+        return _unknown(
+            "catalog.condition_restriction",
+            "CONDITION_UNKNOWN",
+            f"trusted condition unavailable for products: {unknown}",
+        )
+    violations = sorted(
+        f"{item.product_id.value}:{item.condition}"
+        for item in ctx.checkout.line_items
+        if item.condition not in restriction.allowed_conditions
+    )
+    return _outcome(
+        "catalog.condition_restriction",
+        ok=not violations,
+        fail_code="CONDITION_NOT_ALLOWED",
+        explanation=f"product conditions outside authorization: {violations}",
+        details={"violations": violations},
+    )
+
+
+condition_restriction_rule = _rule("catalog.condition_restriction", _condition_view)
+
+
 def _quantity_view(ctx: EvaluationContext) -> RuleResult:
     max_qty = ctx.intent.max_quantity
     over = [
@@ -168,7 +198,7 @@ def _quantity_view(ctx: EvaluationContext) -> RuleResult:
         if item.quantity > max_qty
     ]
     total_units = sum(item.quantity for item in ctx.checkout.line_items)
-    over_total = total_units > max_qty * len(ctx.checkout.line_items)
+    over_total = total_units > max_qty
     return _outcome(
         "catalog.quantity_limit",
         ok=not over and not over_total,
@@ -186,5 +216,6 @@ CATALOG_RULES = (
     product_allowlist_rule,
     category_rule,
     brand_restriction_rule,
+    condition_restriction_rule,
     quantity_rule,
 )

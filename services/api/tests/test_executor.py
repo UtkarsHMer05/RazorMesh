@@ -18,7 +18,12 @@ from razormesh_api.domain.ids import (
 from razormesh_api.domain.intent import IntentContract
 from razormesh_api.domain.money import Money
 from razormesh_api.domain.provenance import Provenanced
-from razormesh_api.executor import AttemptState, ChargeResult, ProviderOutcome
+from razormesh_api.executor import (
+    AttemptState,
+    ChargeResult,
+    IllegalAttemptTransition,
+    ProviderOutcome,
+)
 from razormesh_api.executor import TrustedPaymentExecutor as Executor
 from razormesh_api.keys import DevSigningKeys
 from razormesh_api.nonce import NonceAlreadyClaimed, NonceRegistry
@@ -174,7 +179,7 @@ def _persist_chain(
                 currency="INR",
                 max_total_minor=500000,
                 aggregate_budget_minor=5000000,
-                max_quantity=3,
+                max_quantity=contract.max_quantity,
                 recurring_allowed=False,
                 approval_threshold_minor=400000,
                 issued_at=NOW,
@@ -194,7 +199,9 @@ def _persist_chain(
                     {
                         "product_id": str(i.product_id),
                         "quantity": i.quantity,
-                        "unit_price": i.unit_price.amount_minor,
+                        "unit_price_minor": i.unit_price.amount_minor,
+                        "currency": i.unit_price.currency,
+                        "condition": i.condition,
                     }
                     for i in env.line_items
                 ],
@@ -268,12 +275,10 @@ def test_success_persists_succeeded_and_commits_spend(env_setup):  # type: ignor
     signed, binding, contract = _make_ticket(keys, repos)
     iid = contract.intent_id
     spend.ensure_authorization(iid, authorized_minor=5_000_000)
-    spend.reserve(iid, 100000)
     attempt = executor.execute(
         signed_ticket=signed,
         binding=binding,
         intent_id=iid,
-        idempotency_key=f"idx-{new_ulid()}",
         now_utc=NOW,
     )
     assert attempt.state == AttemptState.SUCCEEDED.value
@@ -287,13 +292,11 @@ def test_definitive_failure_fails_and_releases(env_setup):  # type: ignore[no-un
     signed, binding, contract = _make_ticket(keys, repos)
     iid = contract.intent_id
     spend.ensure_authorization(iid, authorized_minor=5_000_000)
-    spend.reserve(iid, 100000)
     provider.script = [ChargeResult(outcome=ProviderOutcome.FAILED, error_code="CARD_DECLINED")]
     attempt = executor.execute(
         signed_ticket=signed,
         binding=binding,
         intent_id=iid,
-        idempotency_key=f"idx-{new_ulid()}",
         now_utc=NOW,
     )
     assert attempt.state == AttemptState.FAILED.value
@@ -307,13 +310,11 @@ def test_provider_exception_yields_unknown_and_keeps_reservation(env_setup):  # 
     signed, binding, contract = _make_ticket(keys, repos)
     iid = contract.intent_id
     spend.ensure_authorization(iid, authorized_minor=5_000_000)
-    spend.reserve(iid, 100000)
     provider.script = [TimeoutError("socket died after send")]
     attempt = executor.execute(
         signed_ticket=signed,
         binding=binding,
         intent_id=iid,
-        idempotency_key=f"idx-{new_ulid()}",
         now_utc=NOW,
     )
     assert attempt.state == AttemptState.PROVIDER_UNKNOWN.value
@@ -327,19 +328,16 @@ def test_retry_same_idempotency_never_recharges(env_setup):  # type: ignore[no-u
     iid = contract.intent_id
     spend.ensure_authorization(iid, authorized_minor=5_000_000)
     provider.script = [TimeoutError("unknown")]
-    key = f"idx-{new_ulid()}"
     first = executor.execute(
         signed_ticket=signed,
         binding=binding,
         intent_id=iid,
-        idempotency_key=key,
         now_utc=NOW,
     )
     second = executor.execute(
         signed_ticket=signed,
         binding=binding,
         intent_id=iid,
-        idempotency_key=key,
         now_utc=NOW + timedelta(seconds=5),
     )
     assert second.execution_attempt_id == first.execution_attempt_id
@@ -357,7 +355,6 @@ def test_invalid_ticket_blocks_before_side_effects(env_setup):  # type: ignore[n
             signed_ticket=signed,
             binding=tampered,
             intent_id=iid,
-            idempotency_key=f"idx-{new_ulid()}",
             now_utc=NOW,
         )
     assert provider.calls == 0
@@ -373,3 +370,101 @@ def test_nonce_replay_rejected_by_registry(env_setup):  # type: ignore[no-untype
     with pytest.raises(NonceAlreadyClaimed):
         nonces.claim(nonce, "second-attempt")
     assert provider.calls == 0
+
+
+def test_blocked_authorization_rejected_at_executor_boundary(env_setup) -> None:  # type: ignore[no-untyped-def]
+    executor, provider, repos, spend, keys = env_setup
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+    with repos.transaction() as session:
+        row = session.get(RowIntent, str(contract.intent_id))
+        assert row is not None
+        row.status = "BLOCKED"
+
+    with pytest.raises(TicketRejected) as error:
+        executor.execute(
+            signed_ticket=signed,
+            binding=binding,
+            intent_id=contract.intent_id,
+            now_utc=NOW,
+        )
+    assert error.value.code == "STATUS_NOT_EXECUTABLE"
+    assert provider.calls == 0
+    snapshot = spend.snapshot(contract.intent_id)
+    assert snapshot is not None and snapshot.reserved_minor == 0
+
+
+def test_non_allow_durable_decision_rejected_at_executor_boundary(env_setup) -> None:  # type: ignore[no-untyped-def]
+    executor, provider, repos, spend, keys = env_setup
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+    with repos.transaction() as session:
+        decision = session.query(Decision).one()
+        decision.decision = "BLOCK"
+
+    with pytest.raises(TicketRejected) as error:
+        executor.execute(
+            signed_ticket=signed,
+            binding=binding,
+            intent_id=contract.intent_id,
+            now_utc=NOW,
+        )
+    assert error.value.code == "DECISION_NOT_EXECUTABLE"
+    assert provider.calls == 0
+
+
+def test_unknown_reconciliation_persists_reference_and_settles_reservation(env_setup) -> None:  # type: ignore[no-untyped-def]
+    executor, provider, repos, spend, keys = env_setup
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+    provider.script = [TimeoutError("unknown after send")]
+    unknown = executor.execute(
+        signed_ticket=signed,
+        binding=binding,
+        intent_id=contract.intent_id,
+        now_utc=NOW,
+    )
+
+    resolved = executor.resolve_unknown(
+        unknown.execution_attempt_id,
+        ProviderOutcome.SUCCEEDED,
+        provider_reference="mock_reconciled_001",
+    )
+    assert resolved.state == AttemptState.SUCCEEDED.value
+    assert resolved.provider_reference == "mock_reconciled_001"
+    snapshot = spend.snapshot(contract.intent_id)
+    assert snapshot is not None
+    assert snapshot.reserved_minor == 0 and snapshot.committed_minor == 100000
+
+    with pytest.raises(IllegalAttemptTransition):
+        executor.resolve_unknown(resolved.execution_attempt_id, ProviderOutcome.UNKNOWN)
+
+
+def test_pre_provider_failure_closes_attempt_and_releases_capacity(
+    env_setup, monkeypatch: pytest.MonkeyPatch
+) -> None:  # type: ignore[no-untyped-def]
+    executor, provider, repos, spend, keys = env_setup
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+
+    def fail_audit(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("audit unavailable")
+
+    monkeypatch.setattr("razormesh_api.executor.EvidenceLedger.append", fail_audit)
+    with pytest.raises(RuntimeError, match="audit unavailable"):
+        executor.execute(
+            signed_ticket=signed,
+            binding=binding,
+            intent_id=contract.intent_id,
+            now_utc=NOW,
+        )
+
+    with repos.transaction() as session:
+        attempt = session.query(ExecutionAttempt).one()
+        ticket = session.query(ExecutionTicket).one()
+    assert attempt.state == AttemptState.FAILED.value
+    assert attempt.error_code == "PRE_PROVIDER_ABORTED"
+    assert provider.calls == 0
+    snapshot = spend.snapshot(contract.intent_id)
+    assert snapshot is not None and snapshot.reserved_minor == 0
+    assert _redis().holder_of(ticket.nonce) is None

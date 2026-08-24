@@ -133,6 +133,10 @@ class AuthorizationSpend(Base):
         CheckConstraint("reserved_minor >= 0", name="ck_spend_reserved_nonneg"),
         CheckConstraint("committed_minor >= 0", name="ck_spend_committed_nonneg"),
         CheckConstraint("authorized_minor >= 0", name="ck_spend_authorized_nonneg"),
+        CheckConstraint(
+            "reserved_minor + committed_minor <= authorized_minor",
+            name="ck_spend_within_authorized",
+        ),
     )
 
     intent_id: Mapped[str] = mapped_column(
@@ -179,6 +183,7 @@ class ExecutionAttempt(Base):
     __tablename__ = "execution_attempts"
     __table_args__ = (
         UniqueConstraint("idempotency_key", name="uq_attempt_idempotency"),
+        UniqueConstraint("ticket_id", name="uq_attempt_ticket"),
         Index("ix_attempts_ticket_id", "ticket_id"),
         Index("ix_attempts_intent_id", "intent_id"),
         Index("ix_attempts_state", "state"),

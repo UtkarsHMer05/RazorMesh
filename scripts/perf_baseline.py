@@ -11,7 +11,7 @@ A. Pure-CPU micro latencies (no network/DB/Redis):
 B. End-to-end happy-path execution through the real trusted core
    (propose -> authorize -> reserve -> nonce claim -> mock provider),
    including PostgreSQL + Redis round trips.
-C. Paired safe/unsafe benchmark wall-clock (12 real-pipeline scenarios).
+C. Paired safe/unsafe benchmark wall-clock (one pair per unsafe family).
 D. In-process API latency over ASGI transport (excludes network stack).
 
 Results are written to docs/PHASE1_PERFORMANCE.json with hardware/runtime
@@ -183,7 +183,7 @@ class Harness:
 
 
 def micro_benchmarks(harness: Harness) -> dict[str, dict[str, float | int]]:
-    from razormesh_api.checkout_service import _domain_intent
+    from razormesh_api.revalidation import domain_intent_from_row
 
     iid = harness.reset_with_intent()
     svc = harness.service()
@@ -192,7 +192,7 @@ def micro_benchmarks(harness: Harness) -> dict[str, dict[str, float | int]]:
     row_intent = harness.repos.intents.get(iid)
     if row_intent is None:
         raise RuntimeError("intent fixture missing")
-    contract = _domain_intent(row_intent)
+    contract = domain_intent_from_row(row_intent)
     env = proposal.envelope
 
     facts: dict[str, ProductFacts] = {}
@@ -270,16 +270,13 @@ def micro_benchmarks(harness: Harness) -> dict[str, dict[str, float | int]]:
     }
 
 
-def e2e_benchmark(
-    harness: Harness, iterations: int = 25
-) -> dict[str, dict[str, float | int]]:
+def e2e_benchmark(harness: Harness, iterations: int = 25) -> dict[str, object]:
     samples: list[float] = []
     product = min(harness.repos.products.list(limit=100), key=lambda p: p.price_minor)
     for _ in range(iterations):
         iid = harness.reset_with_intent()
         svc = harness.service()
         executor = harness.executor()
-        spend = SpendManager(harness.repos)
         start = time.perf_counter_ns()
         proposal = svc.propose(intent_id=iid, items=[ProposedItem(product.id)])
         authz = svc.authorize(intent_id=iid, proposal=proposal)
@@ -287,13 +284,10 @@ def e2e_benchmark(
             raise RuntimeError(
                 f"expected ALLOW for fixture: {authz.outcome.reason_codes}"
             )
-        spend.ensure_authorization(iid, authorized_minor=10_000_000)
-        spend.reserve(iid, authz.binding.amount_minor)
         attempt = executor.execute(
             signed_ticket=authz.signed_ticket,
             binding=authz.binding,
             intent_id=iid,
-            idempotency_key=f"idx-perf-{new_ulid()}",
             now_utc=datetime.now(UTC),
         )
         elapsed_ms = (time.perf_counter_ns() - start) / 1e6
@@ -301,7 +295,7 @@ def e2e_benchmark(
             raise RuntimeError(f"expected SUCCEEDED, got {attempt.state}")
         samples.append(elapsed_ms)
     return {
-        "trusted_core_happy_path_propose_authz_reserve_execute": _stats(samples),
+        "trusted_core_happy_path_propose_authorize_execute": _stats(samples),
         "includes": "PostgreSQL persistence + Redis nonce claim + mock provider effect",
     }
 
@@ -394,7 +388,7 @@ def main() -> int:
         "precision": round(bench_report.precision, 4),
         "recall": round(bench_report.recall, 4),
         "f1": round(bench_report.f1, 4),
-        "note": "12 real-pipeline scenarios incl. DB wipe/reseed per scenario",
+        "note": "14 unsafe/safe pairs (28 isolated real-pipeline scenario executions)",
     }
     print("[4/4] in-process API latency…")
     report["api_asgi_inprocess"] = api_benchmark()

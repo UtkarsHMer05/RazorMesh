@@ -1,4 +1,4 @@
-"""M47: audit dashboard API — timeline, chain verification, states, tamper test."""
+"""M47: audit dashboard API — timeline, chain verification, states, tamper simulation."""
 
 from typing import Annotated
 
@@ -149,82 +149,40 @@ def authorization_state(
         ],
     }
 
+
 @router.post("/tamper-test")
 def tamper_test(repos: Annotated[Repositories, Depends(_repos)]) -> dict:
-    """Simulate an attacker who bypasses the append-only trigger, then verify.
+    """Prove a hypothetical mutation breaks the hash without mutating the ledger.
 
-    Self-restoring: the mutated event is removed afterwards and the trigger is
-    re-enabled. Demonstrates that chain verification DETECTS tampering.
+    Real UPDATE/DELETE operations remain unavailable at the application layer;
+    DB-trigger bypass is exercised only inside isolated integration tests.
     """
-    from sqlalchemy import text
+    from razormesh_api.domain.evidence import GENESIS_HASH, compute_event_hash
 
-    engine = repos.factory.kw["bind"]
     ledger = EvidenceLedger(repos)
-
-    # seed a tiny chain if empty
     if ledger.verify().events_checked == 0:
         ledger.append(event_type="TAMPER_TEST_SEED", actor="audit-dashboard")
-
-    events = _all_event_ids(engine)
-    target = events[-1]
-    with engine.begin() as conn:
-        conn.execute(
-            text("ALTER TABLE audit_events DISABLE TRIGGER trg_audit_no_update")
-        )
-        conn.execute(
-            text(
-                "UPDATE audit_events SET actor = 'ATTACKER' WHERE event_id = :eid"
-            ).bindparams(eid=target)
-        )
-        conn.execute(
-            text("ALTER TABLE audit_events ENABLE TRIGGER trg_audit_no_update")
-        )
-
-    report = ledger.verify()
-    detected = not report.valid
-
-    # restore: remove the poisoned tail (and everything after it) so the
-    # dashboard stays usable for the next run.
-    with engine.begin() as conn:
-        conn.execute(
-            text("ALTER TABLE audit_events DISABLE TRIGGER trg_audit_no_update")
-        )
-        conn.execute(
-            text("DELETE FROM audit_events WHERE seq >= :seq").bindparams(
-                seq=_seq_of(engine, target)
-            )
-        )
-        conn.execute(
-            text(
-                "SELECT setval('audit_events_seq_seq', "
-                "COALESCE((SELECT MAX(seq) FROM audit_events), 0) + 1, false)"
-            )
-        )
-        conn.execute(text("ALTER TABLE audit_events ENABLE TRIGGER trg_audit_no_update"))
+    event = repos.audit.list_recent(1)[0]
+    tampered_hash = compute_event_hash(
+        event.previous_event_hash or GENESIS_HASH,
+        event_id=event.event_id,
+        event_type=event.event_type,
+        actor="ATTACKER",
+        timestamp=event.timestamp,
+        intent_id=event.intent_id,
+        checkout_id=event.checkout_id,
+        decision_id=event.decision_id,
+        ticket_id=event.ticket_id,
+        intent_hash=event.intent_hash,
+        checkout_hash=event.checkout_hash,
+        reason_codes=list(event.reason_codes) if event.reason_codes else None,
+        payload=dict(event.metadata_json) if event.metadata_json else {},
+    )
+    detected = tampered_hash != event.current_event_hash
 
     return {
         "simulated_tamper": "actor field rewritten to ATTACKER on newest event",
         "detected": detected,
-        "verdict_reason": report.reason,
-        "note": "State restored after the test.",
+        "verdict_reason": "hash mismatch: hypothetical record contents were altered",
+        "note": "Non-mutating simulation; durable ledger was never changed.",
     }
-
-
-def _all_event_ids(engine) -> list[str]:  # type: ignore[no-untyped-def]
-    from sqlalchemy import text
-
-    with engine.connect() as conn:
-        rows = conn.execute(
-            text("SELECT event_id FROM audit_events ORDER BY seq ASC")
-        ).fetchall()
-    return [r[0] for r in rows]
-
-
-def _seq_of(engine, event_id: str) -> int:  # type: ignore[no-untyped-def]
-    from sqlalchemy import text
-
-    with engine.connect() as conn:
-        row = conn.execute(
-            text("SELECT seq FROM audit_events WHERE event_id = :e").bindparams(e=event_id)
-        ).scalar_one_or_none()
-    return int(row or 0)

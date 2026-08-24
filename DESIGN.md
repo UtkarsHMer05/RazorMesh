@@ -215,7 +215,8 @@ Must show:
 - synthetic catalog;
 - merchant identity;
 - product/price/subscription fields;
-- ability in Security Lab/dev mode to mutate checkout state.
+- a live catalog table loaded from the local API;
+- mutation demonstrations remain isolated to the Security Lab rather than granting the merchant surface authority over durable checkout state.
 
 ## `/security-lab`
 
@@ -246,6 +247,8 @@ Must show:
 - ticket/nonce status;
 - reservation/execution attempt state;
 - audit-chain verification.
+
+The tamper control must be labelled as a non-mutating simulation. Its result must state that the durable ledger was left unchanged.
 
 ## `/`
 

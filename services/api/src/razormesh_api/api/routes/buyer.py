@@ -20,11 +20,17 @@ from razormesh_api.checkout_service import (
 )
 from razormesh_api.decider import DecisionEngine
 from razormesh_api.domain.authz_hash import intent_authorization_hash
+from razormesh_api.domain.checkout import CheckoutEnvelope
 from razormesh_api.domain.ids import IntentId, new_ulid
 from razormesh_api.domain.state_machine import NotExecutableError
-from razormesh_api.keys import DevSigningKeys
+from razormesh_api.executor import TrustedPaymentExecutor
+from razormesh_api.keys import DevKeyPair, DevSigningKeys
 from razormesh_api.ledger import EvidenceLedger
-from razormesh_api.nonce import NonceAlreadyClaimed
+from razormesh_api.nonce import (
+    CoordinationUnavailable,
+    NonceAlreadyClaimed,
+    NonceRegistry,
+)
 from razormesh_api.persistence.models import IntentContract as RowIntent
 from razormesh_api.persistence.repositories import Repositories
 from razormesh_api.revalidation import Revalidator
@@ -32,7 +38,7 @@ from razormesh_api.rules.catalog_rules import CATALOG_RULES
 from razormesh_api.rules.money_rules import MONEY_RULES
 from razormesh_api.rules.policy_rules import POLICY_RULES
 from razormesh_api.settings import Settings, get_settings
-from razormesh_api.spend import SpendManager
+from razormesh_api.spend import SpendError, SpendManager
 from razormesh_api.tickets import CurrentBinding, SignedTicket, TicketRejected
 
 router = APIRouter(tags=["buyer"])
@@ -129,12 +135,13 @@ def propose(
 ) -> DecisionBody:
     svc = _service(repos, keys)
     try:
+        intent_id = IntentId(body.intent_id)
         proposal = svc.propose(
-            intent_id=IntentId(body.intent_id),
+            intent_id=intent_id,
             items=[ProposedItem(product_id=i.product_id, quantity=i.quantity) for i in body.items],
         )
-        result = svc.authorize(intent_id=IntentId(body.intent_id), proposal=proposal)
-    except CheckoutError as exc:
+        result = svc.authorize(intent_id=intent_id, proposal=proposal)
+    except (CheckoutError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except NotExecutableError as exc:
         raise HTTPException(status_code=422, detail=f"authorization not executable: {exc}") from exc
@@ -180,7 +187,13 @@ def execute(
     if row is None:
         raise HTTPException(status_code=404, detail="unknown checkout")
 
-    rebuilt = Revalidator(repos).rebuild_envelope(row)
+    try:
+        rebuilt = Revalidator(repos).rebuild_envelope(row)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "CHECKOUT_INVALID", "detail": type(exc).__name__},
+        ) from exc
     binding = CurrentBinding(
         principal_id=str(contract.principal_id),
         agent_id=str(contract.agent_id),
@@ -196,18 +209,12 @@ def execute(
     )
 
     spend = SpendManager(repos)
-    spend.ensure_authorization(
-        contract.intent_id, authorized_minor=contract.aggregate_budget.amount_minor
-    )
-    spend.reserve(contract.intent_id, binding.amount_minor)
-
     executor = _executor(repos, keys.ensure(), spend)
     try:
         attempt = executor.execute(
             signed_ticket=SignedTicket(body.ticket_json, body.signature_hex),
             binding=binding,
             intent_id=contract.intent_id,
-            idempotency_key=f"api-{body.checkout_id}",
             now_utc=datetime.now(UTC),
         )
     except TicketRejected as exc:
@@ -218,18 +225,25 @@ def execute(
         # A concurrent/replayed use of the same single-use authority is a
         # business denial (error taxonomy: replay), never a server fault.
         raise HTTPException(status_code=409, detail={"code": "NONCE_REPLAY_REJECTED"}) from None
+    except SpendError as exc:
+        raise HTTPException(
+            status_code=409, detail={"code": "AUTHORIZATION_CAPACITY_UNAVAILABLE"}
+        ) from exc
+    except CoordinationUnavailable as exc:
+        raise HTTPException(
+            status_code=503, detail={"code": "NONCE_COORDINATION_UNAVAILABLE"}
+        ) from exc
 
     return ExecutionBody(state=attempt.state, attempt_id=attempt.execution_attempt_id)
 
 
-def _checkout_hash(env):  # type: ignore[no-untyped-def]
+def _checkout_hash(env: CheckoutEnvelope) -> str:
     from razormesh_api.domain.authz_hash import checkout_authorization_hash
 
     return checkout_authorization_hash(env)
 
 
-def _executor(repos: Repositories, pair, spend: SpendManager):  # type: ignore[no-untyped-def]
-    from razormesh_api.executor import TrustedPaymentExecutor
+def _executor(repos: Repositories, pair: DevKeyPair, spend: SpendManager) -> TrustedPaymentExecutor:
     from razormesh_api.providers.mock import MockMode, MockPaymentProvider
 
     return TrustedPaymentExecutor(
@@ -241,12 +255,10 @@ def _executor(repos: Repositories, pair, spend: SpendManager):  # type: ignore[n
     )
 
 
-def _nonce_registry():  # type: ignore[no-untyped-def]
+def _nonce_registry() -> NonceRegistry:
     import os
 
     from redis import Redis
-
-    from razormesh_api.nonce import NonceRegistry
 
     url = os.environ.get("RAZORMESH_REDIS_URL") or get_settings().redis_url
     return NonceRegistry(Redis.from_url(url, decode_responses=True), ttl_seconds=120)

@@ -27,7 +27,7 @@ def test_safe_baseline_allows_exactly_once(runner: AdversarialRunner) -> None:
 
 
 def test_context_swap_rejected_with_reason_code(runner: AdversarialRunner) -> None:
-    spec = next(s for s in SCENARIOS if s.family.value == "CONTEXT_SWAP")
+    spec = next(s for s in SCENARIOS if s.family.value == "CROSS_PRINCIPAL")
     result = runner.run_one(spec)
     assert result.passed
     assert "PRINCIPAL_MISMATCH" in result.detail

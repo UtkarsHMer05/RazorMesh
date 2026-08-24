@@ -188,6 +188,55 @@ Confidence: Medium-high — registry + library docs reviewed at M26 gate with te
 
 ---
 
+# R-010 — Starlette TestClient dependency migration
+
+Date checked: 2026-08-24
+Source: PyPI project metadata for `httpx2`
+URL: https://pypi.org/pypi/httpx2/json
+Type: Authoritative package registry metadata
+
+Finding: `httpx2` 2.12.0 is classified Production/Stable and supports Python
+3.13. Starlette 1.6 imports it preferentially and emits a deprecation warning
+when falling back to legacy `httpx`.
+
+Impact: Add `httpx2==2.12.0` to the locked development group for TestClient.
+Keep `httpx==0.28.1` because the live clean-room acceptance script imports it
+directly.
+
+Confidence: High — current installed Starlette source and PyPI metadata agree.
+
+---
+
+# R-011 — jsdom compatibility pin for the Vitest runtime
+
+Date checked: 2026-08-24
+Sources: jsdom npm metadata; html-encoding-sniffer package metadata
+URLs: https://www.npmjs.com/package/jsdom and https://github.com/jsdom/html-encoding-sniffer/blob/main/package.json
+Type: Official package registry / upstream repository
+
+Finding: jsdom 30.0.1 was newly published and its installed dependency graph resolved `html-encoding-sniffer@6` to ESM-only `@exodus/bytes`, while that sniffer still exposes a CommonJS entry. Vitest therefore failed before loading any test. The established jsdom 26.1.0 line avoids that incompatible graph and supports the selected Node runtime.
+
+Impact: Pin `jsdom==26.1.0` exactly for the Phase-1 Vitest environment. The lockfile was regenerated; Vitest, Next build and production dependency audit pass.
+
+Confidence/limitation: High for the reproduced failure and installed graph. This is a compatibility pin, not a claim that every jsdom 30 consumer fails; re-evaluate after the upstream loader graph changes.
+
+---
+
+# R-012 — ESLint 9 temporary compatibility exception
+
+Date checked: 2026-08-24
+Sources: ESLint version-support policy and npm release metadata
+URLs: https://eslint.org/version-support/ and https://www.npmjs.com/package/eslint
+Type: Official project documentation / package registry
+
+Finding: ESLint v9 reached end of life on 2026-08-06 and v10 is current. However, the plugins bundled by `eslint-config-next@16.3.2` declare support only through ESLint 9; an exact 10.9.0 trial produced peer incompatibilities and crashed in `eslint-plugin-react@7.37.5` before linting.
+
+Impact: Retain exact ESLint 9.39.5 as a documented dev-only compatibility exception. Lint passes and `pnpm audit --prod` reports no vulnerabilities. Upgrade when the Next.js plugin stack supports ESLint 10.
+
+Confidence/limitation: High for official lifecycle status and the locally reproduced compatibility failure. ESLint 9 is not described as supported; this debt must remain visible.
+
+---
+
 # Future research topics
 
 Do not implement in Phase 1, but later research will cover:

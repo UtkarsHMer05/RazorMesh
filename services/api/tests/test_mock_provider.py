@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 
 import pytest
 
-from razormesh_api.domain.ids import new_ulid
 from razormesh_api.executor import AttemptState, ProviderOutcome
 from razormesh_api.executor import TrustedPaymentExecutor as Executor
 from razormesh_api.keys import DevSigningKeys
@@ -48,12 +47,10 @@ def harness(tmp_path):  # type: ignore[no-untyped-def]
         signed, binding, contract = _make_ticket(keys, repos)
         iid = contract.intent_id
         spend.ensure_authorization(iid, authorized_minor=5_000_000)
-        spend.reserve(iid, 100000)
         attempt = executor.execute(
             signed_ticket=signed,
             binding=binding,
             intent_id=iid,
-            idempotency_key=f"idx-{new_ulid()}",
             now_utc=NOW,
         )
         return attempt, iid

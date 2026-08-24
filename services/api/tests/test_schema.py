@@ -36,6 +36,7 @@ def test_unique_constraints_present():
     assert "uq_ticket_nonce" in uq
     uq2 = {(r["name"]) for r in insp.get_unique_constraints("execution_attempts")}
     assert "uq_attempt_idempotency" in uq2
+    assert "uq_attempt_ticket" in uq2
     uq3 = {(r["name"]) for r in insp.get_unique_constraints("audit_events")}
     assert "uq_audit_current_hash" in uq3
 
@@ -94,3 +95,4 @@ def test_check_constraints_exist():
     ccs = insp.get_check_constraints("authorization_spend")
     names = {c["name"] for c in ccs}
     assert "ck_spend_reserved_nonneg" in names
+    assert "ck_spend_within_authorized" in names

@@ -27,7 +27,7 @@
 | M17 | Intent Contract Model | PASS | IntentContract 7 tests PASS, frozen + generation/currency/expiry invariants, fixtures |
 | M18 | Canonical Checkout Envelope | PASS | CheckoutEnvelope recomputation 7 tests PASS, client total manipulation rejected |
 | M19 | Provenance Model | PASS | Provenanced trust classes 6 tests PASS, UNTRUSTED cannot occupy authority slots |
-| M20 | Database Schema | PASS | 9 tables + alembic 1 revision, upgrade/downgrade verified, audit trigger blocks UPDATE/DELETE, 4 schema tests PASS |
+| M20 | Database Schema | PASS | 9 tables + 3 Alembic revisions; latest execution-integrity constraints round-trip; audit trigger blocks UPDATE/DELETE; schema tests PASS |
 | M21 | Repository/Data Access Layer | PASS | Repositories for all entities; transactional scope + FOR UPDATE row lock; rollback + 5-thread concurrency overspend test PASS |
 | M22 | Merchant Catalog | PASS | 5 merchants / 50 synthetic products, price+seller+condition+recurring+shipping variations, idempotent atomic seed, live DB verified, 3 tests PASS |
 | M23 | Catalog API | PASS | GET /catalog/merchants + /catalog/products (+/{id}) read-only; pagination bounds (1..100), filter validation, typed ProductId path param (422 malformed / 404 missing); 6 API tests PASS |
@@ -36,32 +36,34 @@
 | M26 | Canonical Authorization Hashing | PASS | JCS(RFC 8785) canonicalization with RFC known-answer vectors; documented checkout/intent projections; untrusted text + presentation drift provably excluded; relevant drift (price/qty/revision/recurring/generation) changes hash; 7 tests PASS |
 | M27 | RazorGuard Rule Engine Foundation | PASS | StrEnum PASS/FAIL/UNKNOWN outcomes, FunctionRule + AllOf combinators, stable reason codes + explanations, crashing rules degrade to UNKNOWN (fail-closed), duplicate rule ids rejected, determinism test; 7 tests PASS |
 | M28 | Money Rules | PASS | 6 deterministic rules: currency match, positive amount, max_total (inclusive boundary), aggregate budget incl. open reservations (exact-fit PASS / -1 minor FAIL), fee sanity (<= subtotal), shipping sanity (<=10x subtotal); 7 boundary tests PASS |
-| M29 | Merchant/Product/Quantity Rules | PASS | Allowlists honor None=any/empty=nothing (SEC-018); category+brand rules use TRUSTED product facts; missing fact -> UNKNOWN (CATEGORY_UNKNOWN/BRAND_UNKNOWN), never silent PASS; brand allow_only/forbid modes case-insensitive; quantity per-line + aggregate; 7 tests PASS |
+| M29 | Merchant/Product/Quantity Rules | PASS | Persisted merchant/product/category/brand/condition constraints are hydrated; missing fact -> UNKNOWN; condition and aggregate-total quantity rules enforced; restriction enums validated |
 | M30 | Subscription/Expiry/Approval Rules | PASS | Recurring checkout requires explicit permission; expiry inclusive-dead (now==expires_at FAIL); approval threshold boundary: total==threshold PASS, +1 -> UNKNOWN APPROVAL_REQUIRED (deterministic challenge signal); 5 tests PASS |
 | M31 | Stateful Spend Reservation and Aggregate Budget | PASS | SpendManager: reserve/commit/release under FOR UPDATE row lock; 10 threads x 150k vs 1M -> exactly 6 reserved, invariants hold; provider-unknown keeps reservation; Hypothesis random sequences (15 examples) preserve authorized>=reserved+committed |
 | M32 | Decision Engine | PASS | Deterministic matrix: state gate (non-AUTHORIZED -> BLOCK incl. BLOCKED/CHALLENGED), FAIL->BLOCK, UNKNOWN->CHALLENGE, else ALLOW; policy_version pinned; 7 tests PASS incl. 6-status gate parametrization + determinism |
 | M33 | Dev Signing Key Management | PASS | Ed25519 pair via cryptography lib at settings-driven paths (infra/keys/, gitignored); 0o600 private perms; missing key -> actionable DevKeyError; sign/verify + cross-key rejection + idempotent ensure tested (6 tests); live keygen verified untracked |
 | M34 | Context-Bound Single-Use Execution Ticket | PASS | Signed JCS-canonical claims bind principal/agent/gen/intent+checkout hashes/merchant/amount/currency/decision/policy/nonce/window; ordered fail-closed verify: SIGNATURE_INVALID -> TICKET_EXPIRED -> 11 binding codes; 8 tests PASS |
 | M35 | Redis Nonce Claim and Concurrency | PASS | SET NX EX atomic claim; replay rejected; TTL bounded; holder-only Lua release; 20-worker same-nonce race -> exactly 1 winner; Redis down -> CoordinationUnavailable fail-closed; 5 tests PASS |
-| M36 | Trusted Payment Executor + Durable ExecutionAttempt | PASS | Only executor calls PaymentProvider; durable attempts CREATED->EXECUTING->SUCCEEDED/FAILED/PROVIDER_UNKNOWN (transition-guarded); idempotency-key re-entry returns same attempt (never fresh op); unknown keeps reservation, failure releases, success commits; ticket persisted for FK/audit; 6 tests PASS |
+| M36 | Trusted Payment Executor + Durable ExecutionAttempt | PASS | Executor revalidates PostgreSQL intent/checkout/current ALLOW at provider boundary; signed ticket ID derives idempotency; reservation occurs post-authentication; settlement/reconciliation is atomic; pre-provider failures compensate; 10 tests PASS |
 | M37 | Mock Payment Provider | PASS | 7 modes (success/failure/timeout-before/timeout-after-success/duplicate/delayed/out-of-order) driving REAL executor: provider-side effects ledger proves money-moved-vs-not; unknown+reconciliation resolves to SUCCEEDED; duplicate delivery keeps 1 effect; 7 tests PASS |
-| M38 | Checkout Service | PASS | Server recomputes ALL amounts from trusted catalog (client total mismatch rejected loudly); blocked intents refused pre-rules; propose persists checkout + ledger event; authorize runs full rule set -> durable decision + hashes; ALLOW-only ticket issuance; 7 tests PASS |
-| M39 | Live Checkout Revalidation | PASS | Revalidator re-reads durable checkout, rebuilds exact authz projection (condition/currency persisted), recomputes hash: relevant drift -> STALE_CHECKOUT; generation/status drift -> AUTHORIZATION_SUPERSEDED/STALE; untrusted title changes proven NOT to invalidate; 5 tests PASS |
+| M38 | Checkout Service | PASS | Server recomputes trusted item/tax/fee/shipping totals, enforces currency/no-FX and recurring frequency integrity, persists complete authorization projection, runs deterministic rules, and issues tickets only for ALLOW |
+| M39 | Live Checkout Revalidation | PASS | Revalidator rebuilds exact checkout and full persisted intent constraints; relevant drift/status/generation invalidates while presentation-only drift does not; executor invokes it at the provider boundary |
 | M40 | Untrusted Content Boundary | PASS | Hostile payloads (SQLi/prompt-injection/forged authority JSON) stored verbatim as UNTRUSTED_CONTENT; authorization hashes + decisions unaffected; smuggled policy/nonce strings stay inert; authority-slot attempt -> TrustViolation; ledger chain intact with hostile rows; 5 tests PASS |
 | M41 | Future SemanticVerifier Interface | PASS | Protocol + NullSemanticVerifier (UNDECIDED default) + DeterministicKeywordVerifier test double; rule adapter maps SAFE/UNSAFE/UNDECIDED -> PASS/FAIL/UNKNOWN fail-closed; zero ML deps asserted; 6 tests PASS |
-| M42 | Attack Scenario Specification | PASS | Pydantic-validated ScenarioSpec (id pattern, family-specific invariants: swap/replay>=2/drift-field/split>=2); registry covers all 7 required families exactly once; expected labels isolated from decision inputs; 5 tests PASS |
-| M43 | Adversarial Evaluation Runner | PASS | All 7 scenarios executed through REAL pipeline (service+engine+ledger+ticket+nonce+executor+mock): expected==actual for every family incl. split prevention via durable aggregate budget and provider-unknown no-fresh-op; labels never enter decision inputs; 5 tests PASS |
-| M44 | Safe/Unsafe Paired Benchmark | PASS | 6 attack/safe-twin pairs through real pipeline: TP=6 FP=0 TN=6 FN=0, P=R=F1=1.0, false-block 0%, safe-completion 100%; synthetic GMV completed 389340 + protected 324450 minor units (explicitly labelled); artifact docs/PHASE1_BENCHMARK.json; 4 tests PASS |
+| M42 | Attack Scenario Specification | PASS | Pydantic-validated registry covers 16 Phase-1 families (safe controls plus drift, substitution, replay, cross-context, split, supersession, untrusted content, unknown and expiry); expected labels remain evaluation-only |
+| M43 | Adversarial Evaluation Runner | PASS | All 16 isolated synthetic scenarios execute through the real service/rules/ledger/ticket/nonce/executor/mock pipeline and match expected outcomes; no destructive suite-wide data wipe |
+| M44 | Safe/Unsafe Paired Benchmark | PASS | 14 attack/safe-control pairs: TP=14 FP=0 TN=14 FN=0; precision/recall/F1=1.0; false-block=0; safe-completion=1.0; unsafe-execution=0; synthetic GMV labelled in artifact |
 | M45 | Buyer Experience UI | PASS | 4-step buyer flow (fixture authz -> catalog -> propose/decision -> mock execution) on real backend endpoints POST /buyer/*; live E2E: ALLOW->SUCCEEDED; forged signature 403 SIGNATURE_INVALID; replay collapses to same attempt (1 effect); CORS now GET+POST; tsc+build+vitest clean |
-| M46 | Security Lab UI | PASS | GET /security-lab/scenarios + POST /security-lab/run (server executes all 7 real-pipeline scenarios, 7/7 as-designed) with hash-chained evidence tail; lab page renders scenario list + outcomes table + evidence; tsc+build clean; 2 tests PASS |
-| M47 | Audit Dashboard | PASS | GET /audit/timeline (chronological + hash heads + reason codes), /audit/verify, /audit/state/{intent} (spend/decisions/tickets/attempts), POST /audit/tamper-test (simulates trigger bypass -> DETECTED -> self-restores); dashboard page renders all views; 5 tests PASS; tsc+build clean |
-| M48 | Deep Test and Security Gate | PASS | pytest 213/213 incl. new Hypothesis stateful lifecycle; secret scan 0; pip-audit 2.10.1 clean; pnpm audit clean; eslint/tsc/vitest 3/3/build OK; Playwright E2E 2/2; Makefile entry points repaired; benchmark CLI writes artifact |
-| M49 | Performance/Resource Baseline | PASS | scripts/perf_baseline.py -> docs/PHASE1_PERFORMANCE.json: micro (hash ~0.03ms, sign 0.11ms, verify 0.20ms, decide 0.035ms), e2e happy path mean 31.0ms, benchmark suite 0.54s, in-process API latencies; hardware+version context recorded; LOCAL ONLY |
-| M50 | Clean-Room Phase-1 Acceptance | PASS | Fresh volume -> migrate -> seed -> live API: scripts/acceptance.py 10/10 PASS (purchase, replay collapse, forged sig 403, 20-worker race =1 effect, lab 7/7, audit verify+tamper detect, benchmark artifact); pytest 213/213; build+E2E green; completion report written |
+| M46 | Security Lab UI | PASS | GET registry + POST execution runs 16/16 isolated real-pipeline scenarios and returns audit evidence; expected outcomes appear only after execution |
+| M47 | Audit Dashboard | PASS | Timeline/verify/state endpoints plus a non-mutating tamper simulation; live merchant catalog table and audit UI build cleanly |
+| M48 | Deep Test and Security Gate | PASS | Final validation: pytest 225/225 with 93.25% coverage; ruff/mypy clean; secret scan 0; pip-audit and pnpm production audit clean; eslint/tsc/Vitest 3/3/build and Playwright 2/2 green |
+| M49 | Performance/Resource Baseline | PASS | Regenerated local-only artifact on pinned Python 3.13.15; 14-pair/28-execution suite and updated trusted-core path measured with hardware/runtime context |
+| M50 | Clean-Room Phase-1 Acceptance | PASS | Live API acceptance 10/10: purchase, replay collapse, forged signature, 20-worker one-effect race, lab 16/16, non-mutating audit detection and 14-pair benchmark evidence |
 
 ---
 
-# Current milestone evidence
+# Historical milestone evidence (recorded at each original gate)
+
+The entries below preserve what was implemented and measured at each milestone. Where the final validation audit found and corrected a later defect, the current summary table and final-validation section supersede the historical implementation detail without erasing it.
 
 ## M01 — Environment Discovery
 
@@ -355,6 +357,34 @@ M03 — Project Charter.
 - Repair surfaced by acceptance: concurrent/replayed nonce use returned HTTP 500 via uncaught NonceAlreadyClaimed; now returns 409 NONCE_REPLAY_REJECTED per error taxonomy (replay is a business denial, not a server fault). Lint/mypy re-verified.
 - Final gates on clean deployment: pytest 213/213; next production build OK; Playwright chromium E2E 2/2; ruff+mypy clean.
 - `docs/PHASE1_COMPLETION_REPORT.md` written: architecture summary, live demonstration table, benchmark metrics (labelled synthetic), LOCAL-ONLY performance baseline, honest limitations, phase-transition request.
+
+---
+
+## Phase-1 final validation audit — PASS
+
+Date: 2026-08-24
+Authority: human request to validate the completed phase against the autonomous engineering master prompt, repair defects, run the complete gate and create one final local commit. Historical milestone evidence above is preserved; this section records the current re-validation.
+
+### Defects found and corrected
+
+- Executor boundary: removed pre-verification reservation from the buyer route; the executor now verifies signature/binding and re-reads PostgreSQL intent, rebuilt checkout and matching durable `ALLOW` before reserving or writing an attempt. Idempotency derives from signed ticket ID.
+- Financial consistency: current authorization amount synchronizes durable capacity without erasing spend; reductions below consumed capacity fail closed. Success/failure/reconciliation settles attempt plus reservation atomically; unknown retains capacity; pre-provider setup failure closes partial attempts and compensates reservation/nonce. PostgreSQL constrains `reserved + committed <= authorized` and one attempt per ticket.
+- Durable reconstruction: persisted merchant/product/category/brand/condition restrictions, trusted tax/fee/currency and recurring terms now survive proposal, authorization and revalidation. Missing recurring frequency, currency mismatch and invalid restriction values fail closed; quantity aggregate means total units.
+- Audit safety: the public tamper demonstration no longer disables protections or changes/deletes a real event. It computes a hypothetical altered hash and proves detection while the durable chain/event count remain unchanged.
+- Evaluation integrity: registry expanded from 7 to 16 families; unsafe cases receive safe controls, pipeline crashes/unclassified outcomes abort the benchmark instead of counting as prevented attacks, and the runner uses isolated fixtures without wiping unrelated business data.
+- Product surface: merchant placeholder replaced with the live synthetic catalog; audit UI labels the non-mutating simulation; Makefile formatting no longer masks frontend failures.
+- Toolchain: added Starlette's stable `httpx2` TestClient dependency; pinned Python 3.13.15; pinned compatible jsdom 26.1.0 after reproducing the jsdom 30 loader failure. ESLint 9.39.5 remains a documented dev-only exception because the current Next plugin graph crashes on ESLint 10.9.0.
+
+### Validation evidence
+
+- Initial audit intentionally recorded a formatter failure on 7 Python files; after correction Ruff format/check and mypy pass.
+- Backend: **225/225 pytest PASS**, including security/concurrency/property/integration regressions; coverage **93.25%** (90% gate).
+- Database: Alembic `d8b412f091c3` downgrade to `c5f21a9d3e10` and upgrade back to head PASS.
+- Frontend: ESLint PASS; TypeScript PASS; Vitest **3/3**; Next production build PASS (6 routes); Playwright Chromium **2/2**.
+- Security/dependencies: secret scan 0 findings; pip-audit 0 blocking findings; `pnpm audit --prod` 0 known vulnerabilities.
+- Evaluation: Security Lab **16/16**; paired benchmark **14 pairs**, TP=14 FP=0 TN=14 FN=0, unsafe-execution rate 0, synthetic legitimate GMV blocked 0.
+- Live acceptance: the first post-test invocation correctly failed because the catalog had been cleared and the documented `make seed` precondition had not yet been rerun. After `make seed` restored 50 synthetic products, `scripts/acceptance.py` **10/10 PASS** against 127.0.0.1 and the mock provider, including 20 concurrent same-ticket requests yielding one durable succeeded attempt/provider effect.
+- Performance: `docs/PHASE1_PERFORMANCE.json` regenerated on the pinned runtime and remains explicitly local-only; no production capacity claim.
 
 ---
 

@@ -33,7 +33,7 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 **Current milestone:** NONE — Phase 1 complete, awaiting human Phase-2 approval  
 **Milestones passed:** M01–M50 (50/50)  
 **Last updated:** 2026-08-24  
-**Gate:** clean-room acceptance 10/10 PASS; pytest 213/213; ruff/mypy/audit/E2E all green; docs/PHASE1_COMPLETION_REPORT.md exists
+**Gate:** final Phase-1 validation PASS; live acceptance 10/10; pytest 225/225 at 93.25% coverage; ruff/mypy/security audits/frontend build/E2E green; local final commit requested
 
 ---
 
@@ -41,20 +41,20 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 - macOS 26.5, arm64, Apple M2, 8 GB RAM, 168 GiB free disk.
 - Node v22.23.2 LTS installed + default via nvm (v20 EOL). npm 10.9.8, pnpm 10.18.2.
-- uv 0.12.5 installed (~/.local/bin/uv). Python 3.13 line will be uv-managed (3.13.15 current).
+- uv 0.12.5 installed (~/.local/bin/uv). Python 3.13.15 is uv-managed and pinned in `services/api/.python-version`.
 - Docker 29.7.2 + Compose v5.4.0; daemon launched on demand at M09 (approved).
 - User's own non-Docker PostgreSQL occupies 127.0.0.1:5432 — DO NOT TOUCH. Our Docker PG binds 127.0.0.1:15432.
 - Infra live: razormesh-postgres (18.6-alpine @127.0.0.1:15432, vol pgdata, PG18 mounts /var/lib/postgresql) + razormesh-redis (8.8.2-alpine @127.0.0.1:16379, no persistence by design — coordination only).
 - Ports 3000/8000 free. All host bindings loopback-only.
-- Repo: governance pack only; git init happens at M06 with .gitignore in place.
+- Repo: complete Phase-1 modular monolith on `main`; no push authorization.
 
 # Version decisions (M02, full detail in VERSION_MANIFEST.md)
 
 - fastapi 0.141.1 / pydantic 2.13.4 / sqlalchemy 2.0.52 / alembic 1.19.1 / psycopg[binary] 3.3.4
-- redis-py 8.1.0 / cryptography 50.0.0 (Ed25519) / rfc8785 0.1.4 (JCS) / httpx 0.28.1
+- redis-py 8.1.0 / cryptography 50.0.0 (Ed25519) / rfc8785 0.1.4 (JCS) / httpx 0.28.1 / httpx2 2.12.0
 - pytest 9.1.1 + asyncio 1.4.0 + hypothesis 6.165.10 + ruff 0.16.4 + mypy 2.3.1
-- next 16.3.2 / react 19.2.8 / typescript 5.9.3 (NOT 7.0 — maturity) / eslint 10.9.0
-- vitest 4.1.11 + RTL 16.3.2 + jsdom 30.0.1 + @playwright/test 1.62.1
+- next 16.3.2 / react 19.2.8 / typescript 5.9.3 / eslint 9.39.5 (dev-only compatibility exception)
+- vitest 4.1.11 + RTL 16.3.2 + jsdom 26.1.0 compatibility pin + @playwright/test 1.62.1
 - postgres:18.6-alpine, redis:8.8.2-alpine; Blade NOT selected (D-022) → fallback tokens
 
 ---
@@ -88,7 +88,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Intent: frozen contract with generation/expiry/currency invariants (M17)
 - Checkout: server recomputed totals, mixed-currency and tampering rejected (M18)
 - Provenance: UNTRUSTED_CONTENT cannot satisfy authority gates (M19)
-- DB: 9 tables, alembic upgrade/downgrade, audit trigger blocks mutation (M20)
+- DB: 9 tables, 3 Alembic revisions; execution-ticket uniqueness and spend-capacity constraints; latest downgrade/upgrade verified (M20 + final audit)
 - DAL: repos + FOR UPDATE row lock, concurrency overspend guard (M21)
 - Catalog: 5 merchants/50 products seeded idempotently+atomically; IDs must be ULIDs (M22)
 - API: read-only /catalog endpoints, bounded pagination, typed-ID path params (M23)
@@ -104,21 +104,21 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Dev keys: Ed25519 at infra/keys/ (gitignored), ensure/load/sign/verify (M33)
 - Tickets: signed JCS claims; verify sig->expiry->11 bindings fail-closed (M34)
 - Nonce: Redis SET NX EX claim, 20-worker race proven 1 winner (M35)
-- Executor: sole provider caller; durable attempts; unknown keeps reservation (M36)
+- Executor: sole provider caller; verifies durable intent/checkout/current ALLOW before post-auth reservation; signed-ticket-derived idempotency; atomic settlement; unknown keeps reservation (M36 + D-027/D-028)
 - Mock provider: 7 scripted modes incl. timeout-after-success + event replay (M37)
-- Checkout service: server-authoritative totals; propose+authorize+ticket flow (M38)
-- Revalidation: rebuild hash from DB pre-execution; drift blocks, cosmetics don't (M39)
+- Checkout service: server-authoritative item/tax/fee/shipping/currency/recurring projection; persisted constraints enforced; propose+authorize+ticket flow (M38)
+- Revalidation: full intent constraints and checkout projection rebuild from DB at executor boundary; drift blocks, cosmetics don't (M39)
 - Untrusted boundary: hostile text inert end-to-end; authority slots protected (M40)
 - Semantic seam: Null + deterministic keyword verifier; UNDECIDED fail-closed (M41)
-- Scenarios: 7 families schema-validated; expected labels isolated (M42)
-- Runner: all 7 real-pipeline scenarios pass; authorize() now binds durable budgets (M43)
-- Benchmark: 6 pairs TP6 FP0 TN6 FN0 P=R=F1=1.0 synthetic GMV labelled (M44)
+- Scenarios: 16 families schema-validated; expected labels isolated (M42 + final audit)
+- Runner: all 16 isolated real-pipeline scenarios pass; no unrelated-data wipe (M43)
+- Benchmark: 14 pairs TP14 FP0 TN14 FN0, unsafe-execution 0, synthetic GMV labelled (M44)
 - Buyer API/UI: POST /buyer/* flow live-E2E verified; replay collapses idempotently (M45)
 - Security Lab: /security-lab/run executes suite server-side with evidence tail (M46)
-- Audit dashboard: timeline/verify/state/tamper-test endpoints + UI live (M47)
-- Deep gate: stateful lifecycle props; Makefile entry points repaired; security_check.py real; pip-audit 2.10.1 added; React hooks lint fixed; 213 tests (M48)
-- Perf baseline: scripts/perf_baseline.py -> docs/PHASE1_PERFORMANCE.json; decide 0.035ms, verify 0.20ms, e2e happy path ~31ms, benchmark suite 0.54s (M49)
-- Clean-room acceptance: fresh volume->migrate->seed->API; scripts/acceptance.py 10/10 PASS; replay race now 409 NONCE_REPLAY_REJECTED; completion report written (M50)
+- Audit dashboard: timeline/verify/state plus non-mutating tamper simulation; event count/chain remain unchanged (M47 + D-029)
+- Deep gate: 225 tests at 93.25% coverage, stateful/concurrency/security properties; security audits clean; frontend build/test/E2E green (M48 + final audit)
+- Perf baseline: `docs/PHASE1_PERFORMANCE.json` regenerated on Python 3.13.15 and the 14-pair pipeline (M49)
+- Acceptance: documented fresh-volume M50 run plus final live `scripts/acceptance.py` 10/10 PASS; security lab 16/16 and benchmark 14 pairs (M50 + final audit)
 
 ---
 
@@ -137,13 +137,14 @@ None recorded.
 
 # Active decisions
 
-See `DECISIONS.md`, currently D-001 through D-020.
+See `DECISIONS.md`, currently D-001 through D-029.
 
 ---
 
 # Known technical debt
 
-None yet; do not invent.
+- ESLint 9.39.5 is EOL but retained as a dev-only compatibility exception because the current Next 16.3.2 plugin stack crashes under ESLint 10.9.0. Re-test when upstream peers add v10 support.
+- Benchmark safe controls are synthetic fixture twins; metrics must never be generalized beyond the recorded suite.
 
 ---
 

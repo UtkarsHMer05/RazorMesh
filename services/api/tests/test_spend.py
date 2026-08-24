@@ -3,6 +3,7 @@
 import os
 from threading import Thread
 
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 from sqlalchemy import create_engine
@@ -13,7 +14,7 @@ from razormesh_api.persistence import models  # noqa: F401
 from razormesh_api.persistence.db import create_session_factory
 from razormesh_api.persistence.models import AuthorizationSpend, IntentContract
 from razormesh_api.persistence.repositories import Repositories
-from razormesh_api.spend import InsufficientCapacity, SpendManager
+from razormesh_api.spend import InsufficientCapacity, InvalidSpendState, SpendManager
 
 
 def _engine() -> Engine:
@@ -133,6 +134,32 @@ def test_provider_unknown_keeps_reservation_held():
         with repos.transaction() as s:
             s.query(AuthorizationSpend).filter_by(intent_id=str(iid)).delete()
             s.query(IntentContract).filter_by(intent_id=str(iid)).delete()
+
+
+def test_capacity_synchronizes_to_current_authorization_without_erasing_spend():
+    mgr, repos, _ = _make()
+    iid = IntentId(f"intent_{new_ulid()}")
+    with repos.transaction() as session:
+        session.add(_intent(iid))
+    try:
+        mgr.ensure_authorization(iid, authorized_minor=1_000_000)
+        mgr.reserve(iid, 300_000)
+        mgr.commit(iid, 300_000)
+
+        mgr.ensure_authorization(iid, authorized_minor=500_000)
+        snapshot = mgr.snapshot(iid)
+        assert snapshot is not None
+        assert snapshot.authorized_minor == 500_000
+        assert snapshot.committed_minor == 300_000
+        assert mgr.available(iid) == 200_000
+
+        with pytest.raises(InvalidSpendState, match="below already"):
+            mgr.ensure_authorization(iid, authorized_minor=250_000)
+        assert mgr.available(iid) == 200_000
+    finally:
+        with repos.transaction() as session:
+            session.query(AuthorizationSpend).filter_by(intent_id=str(iid)).delete()
+            session.query(IntentContract).filter_by(intent_id=str(iid)).delete()
 
 
 def test_concurrent_reservations_cannot_exceed_capacity():

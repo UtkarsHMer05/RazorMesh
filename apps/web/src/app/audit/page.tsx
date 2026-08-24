@@ -130,7 +130,7 @@ export default function AuditPage() {
       <div className="card" data-testid="audit-controls">
         <button onClick={loadTimeline}>Refresh timeline</button>{" "}
         <button onClick={verifyChain}>Verify hash chain</button>{" "}
-        <button onClick={runTamperTest}>Run tamper test (self-restoring)</button>
+        <button onClick={runTamperTest}>Run non-mutating tamper simulation</button>
         {verify && (
           <p data-testid="verify-result">
             Chain {verify.valid ? "VALID" : "BROKEN"} over {verify.events_checked} events
@@ -141,7 +141,7 @@ export default function AuditPage() {
         {tamper && (
           <p data-testid="tamper-result">
             Tamper simulation: {tamper.detected ? "DETECTED by chain verification" : "NOT DETECTED"}
-            {tamper.verdict_reason ? ` — ${tamper.verdict_reason}` : ""} (state restored)
+            {tamper.verdict_reason ? ` — ${tamper.verdict_reason}` : ""} (ledger unchanged)
           </p>
         )}
       </div>

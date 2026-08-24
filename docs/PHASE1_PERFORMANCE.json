@@ -6,7 +6,7 @@
     "cpu": "Apple M2",
     "memory_bytes": 8589934592,
     "logical_cpus": 8,
-    "python_version": "3.13.11",
+    "python_version": "3.13.15",
     "package_versions": {
       "fastapi": "0.141.1",
       "pydantic": "2.13.4",
@@ -16,101 +16,101 @@
       "rfc8785": "0.1.4",
       "uvicorn": "0.52.4"
     },
-    "measured_at_utc": "2026-08-24T04:20:10.508304+00:00"
+    "measured_at_utc": "2026-08-24T09:11:01.681893+00:00"
   },
   "micro": {
     "checkout_authz_hash_jcs_sha256": {
       "n": 3000,
-      "mean_ms": 0.0294,
-      "p50_ms": 0.0289,
-      "p95_ms": 0.0323,
-      "min_ms": 0.0285,
-      "max_ms": 0.0524
+      "mean_ms": 0.0265,
+      "p50_ms": 0.026,
+      "p95_ms": 0.0272,
+      "min_ms": 0.0245,
+      "max_ms": 0.1495
     },
     "intent_authz_hash_jcs_sha256": {
       "n": 3000,
-      "mean_ms": 0.0269,
-      "p50_ms": 0.0267,
-      "p95_ms": 0.0276,
-      "min_ms": 0.0262,
-      "max_ms": 0.0615
+      "mean_ms": 0.0277,
+      "p50_ms": 0.0251,
+      "p95_ms": 0.0305,
+      "min_ms": 0.0232,
+      "max_ms": 0.303
     },
     "ticket_issue_canonicalize_and_sign": {
       "n": 2000,
-      "mean_ms": 0.1089,
-      "p50_ms": 0.108,
-      "p95_ms": 0.1143,
-      "min_ms": 0.1045,
-      "max_ms": 0.1559
+      "mean_ms": 0.1511,
+      "p50_ms": 0.1137,
+      "p95_ms": 0.3535,
+      "min_ms": 0.1054,
+      "max_ms": 4.5689
     },
     "ticket_verify_signature_and_bindings": {
       "n": 2000,
-      "mean_ms": 0.1956,
-      "p50_ms": 0.194,
-      "p95_ms": 0.2063,
-      "min_ms": 0.1878,
-      "max_ms": 0.2785
+      "mean_ms": 0.2343,
+      "p50_ms": 0.203,
+      "p95_ms": 0.4338,
+      "min_ms": 0.1888,
+      "max_ms": 1.3107
     },
     "razorguard_decide_all_rule_groups": {
       "n": 2000,
-      "mean_ms": 0.0352,
-      "p50_ms": 0.0349,
-      "p95_ms": 0.0361,
-      "min_ms": 0.0337,
-      "max_ms": 0.1805
+      "mean_ms": 0.0277,
+      "p50_ms": 0.027,
+      "p95_ms": 0.0297,
+      "min_ms": 0.0264,
+      "max_ms": 0.2182
     }
   },
   "end_to_end": {
-    "trusted_core_happy_path_propose_authz_reserve_execute": {
+    "trusted_core_happy_path_propose_authorize_execute": {
       "n": 25,
-      "mean_ms": 31.0014,
-      "p50_ms": 30.0871,
-      "p95_ms": 32.5603,
-      "min_ms": 28.6653,
-      "max_ms": 51.2592
+      "mean_ms": 50.8975,
+      "p50_ms": 42.2205,
+      "p95_ms": 84.8744,
+      "min_ms": 38.9144,
+      "max_ms": 139.3464
     },
     "includes": "PostgreSQL persistence + Redis nonce claim + mock provider effect"
   },
   "benchmark_suite": {
-    "wall_seconds": 0.542,
-    "pairs": 6,
+    "wall_seconds": 1.229,
+    "pairs": 14,
     "confusion": {
-      "TP": 6,
+      "TP": 14,
       "FP": 0,
-      "TN": 6,
+      "TN": 14,
       "FN": 0
     },
     "precision": 1.0,
     "recall": 1.0,
     "f1": 1.0,
-    "note": "12 real-pipeline scenarios incl. DB wipe/reseed per scenario"
+    "note": "14 unsafe/safe pairs (28 isolated real-pipeline scenario executions)"
   },
   "api_asgi_inprocess": {
     "api_get_health": {
       "n": 300,
-      "mean_ms": 0.4154,
-      "p50_ms": 0.4065,
-      "p95_ms": 0.472,
-      "min_ms": 0.3837,
-      "max_ms": 0.6658,
+      "mean_ms": 0.3806,
+      "p50_ms": 0.3728,
+      "p95_ms": 0.436,
+      "min_ms": 0.3192,
+      "max_ms": 0.5988,
       "note": "in-process ASGI transport; excludes network stack"
     },
     "api_get_catalog_products_limit100": {
       "n": 200,
-      "mean_ms": 16.1035,
-      "p50_ms": 15.5372,
-      "p95_ms": 18.9263,
-      "min_ms": 14.0923,
-      "max_ms": 47.641,
+      "mean_ms": 16.4536,
+      "p50_ms": 15.351,
+      "p95_ms": 21.6152,
+      "min_ms": 13.6031,
+      "max_ms": 58.5421,
       "note": "in-process ASGI transport; excludes network stack"
     },
     "api_post_buyer_fixture_intent": {
       "n": 40,
-      "mean_ms": 14.0782,
-      "p50_ms": 13.6596,
-      "p95_ms": 18.052,
-      "min_ms": 12.4546,
-      "max_ms": 23.4474,
+      "mean_ms": 14.1844,
+      "p50_ms": 13.9784,
+      "p95_ms": 15.6764,
+      "min_ms": 12.7445,
+      "max_ms": 18.5171,
       "note": "in-process ASGI transport; excludes network stack; writes durable intent"
     }
   }

@@ -38,10 +38,11 @@ exact transaction still matches the human's confirmed authorization
 ```text
 apps/web/          Next.js frontend (buyer / merchant / security-lab / audit)
 services/api/      FastAPI modular monolith (domain, razor_guard, execution, …)
-benchmark/         Attack scenarios, generator, adversarial runner
-tests/             integration / security / e2e
-infra/docker/      Compose support files
-scripts/           Dev utilities (key generation, seeds)
+services/api/tests Backend unit/integration/security/concurrency tests
+apps/web/e2e/      Playwright frontend smoke tests
+docs/              Benchmark, performance and completion evidence
+scripts/           Security, performance and live acceptance utilities
+infra/keys/        Generated local development keys (gitignored)
 docker-compose.yml PostgreSQL 18 + Redis 8 (loopback-only host bindings)
 ```
 

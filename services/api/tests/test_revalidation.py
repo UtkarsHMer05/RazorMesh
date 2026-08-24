@@ -106,8 +106,7 @@ def test_relevant_drift_invalidates_stale_ticket(env) -> None:  # type: ignore[n
     with engine.begin() as conn:
         conn.execute(
             text(
-                "UPDATE checkouts SET line_items = CAST(:li AS jsonb) "
-                "WHERE checkout_id = :cid"
+                "UPDATE checkouts SET line_items = CAST(:li AS jsonb) WHERE checkout_id = :cid"
             ).bindparams(
                 li='[{"product_id": "prd_01ARZ3NDEKTSV4RRFFQ69G5FAV", "quantity": 9, '
                 '"unit_price_minor": 100000, "currency": "INR", "condition": "new"}]',

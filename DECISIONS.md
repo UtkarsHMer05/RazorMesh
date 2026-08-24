@@ -375,3 +375,54 @@ Alternatives considered: two separate Next.js apps (heavier, no benefit yet).
 Security/product consequences: None — authorization never lives in either variant of the frontend.
 
 Validation/evidence: M13 scaffold and M14 Playwright smoke run against the single app.
+
+---
+
+## D-027 — Provider-boundary authority is re-read from durable state
+
+Date: 2026-08-24
+Milestone: Phase-1 final validation audit
+Status: Accepted
+Affected docs: `ARCHITECTURE.md`, `SECURITY.md`, `TESTING.md`
+
+Decision: The trusted executor verifies the signed ticket first, then immediately re-reads the durable authorization, checkout and decision from PostgreSQL. Execution requires an unexpired `AUTHORIZED` intent whose authorization hash still matches, an exactly rebuildable checkout whose hash still matches, and the ticket's current durable `ALLOW` decision. The idempotency identity is derived from the signed ticket ID, never accepted from a caller.
+
+Rationale: Signature validity alone proves who issued a ticket, not that its underlying authority is still current. Durable revalidation at the provider boundary closes forged-state, supersession and stale-decision paths.
+
+Security consequences: Strengthens SEC-001, SEC-003–016 and Intent-to-Execution Integrity. Invalid or replayed requests cannot create an execution attempt or reserve spend.
+
+Validation/evidence: Executor and buyer-API regression tests cover blocked authority, non-ALLOW durable decisions, forged tickets, replay and current checkout reconstruction; live 20-worker acceptance produces one provider effect.
+
+---
+
+## D-028 — Execution reservation and settlement follow the provider-effect boundary
+
+Date: 2026-08-24
+Milestone: Phase-1 final validation audit
+Status: Accepted
+Affected docs: `ARCHITECTURE.md`, `SECURITY.md`, `TESTING.md`
+
+Decision: Durable capacity is synchronized to the current authorization amount without erasing reserved/committed spend, then reserved only after ticket and PostgreSQL authority validation. A lowered authorization below already consumed/held capacity fails closed. Pre-provider setup failures atomically close any created attempt as `FAILED`, release its reservation and release its nonce. Success/failure reconciliation updates attempt state and spend in one PostgreSQL transaction; `PROVIDER_UNKNOWN` retains the reservation until explicit reconciliation. PostgreSQL constraints enforce `reserved + committed <= authorized`, and each signed ticket may identify only one durable attempt.
+
+Rationale: Reservation before authentication leaked authority on forged/replayed requests, while non-atomic settlement could make attempt and financial state disagree.
+
+Security consequences: Preserves budget authority during failures, replays, concurrency and ambiguous provider outcomes without blind retries.
+
+Validation/evidence: Migration `d8b412f091c3` round-trips; schema, executor, spend, reconciliation and concurrency tests pass.
+
+---
+
+## D-029 — Public audit tamper demonstration is non-mutating
+
+Date: 2026-08-24
+Milestone: Phase-1 final validation audit
+Status: Accepted
+Affected docs: `SECURITY.md`, `DESIGN.md`, `TESTING.md`
+
+Decision: `/audit/tamper-test` computes and verifies a hypothetical changed event hash in memory. It never disables database protections and never updates or deletes the real evidence ledger.
+
+Rationale: A public demonstration endpoint must not contain a privileged path capable of altering financial evidence, even if it attempts to restore the original row afterward.
+
+Security consequences: The demo still proves hash-mismatch detection while the durable audit chain remains unchanged and valid.
+
+Validation/evidence: API tests assert detection, unchanged event count and a valid chain before and after simulation; live acceptance confirms the same.

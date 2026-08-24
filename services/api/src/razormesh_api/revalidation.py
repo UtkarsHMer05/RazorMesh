@@ -20,7 +20,12 @@ from razormesh_api.domain.authz_hash import (
     checkout_authorization_hash,
     intent_authorization_hash,
 )
-from razormesh_api.domain.checkout import BoundedText, CheckoutEnvelope, LineItem
+from razormesh_api.domain.checkout import (
+    BoundedText,
+    CheckoutEnvelope,
+    LineItem,
+    SubscriptionTerms,
+)
 from razormesh_api.domain.ids import (
     AgentId,
     CheckoutId,
@@ -30,6 +35,8 @@ from razormesh_api.domain.ids import (
     ProductId,
 )
 from razormesh_api.domain.intent import (
+    BrandRestriction,
+    ConditionRestriction,
     IntentContract,
     IntentStatus,
 )
@@ -70,6 +77,29 @@ def domain_intent_from_row(row: RowIntent) -> IntentContract:
         agent_id=AgentId(row.agent_id),
         authorization_generation=row.authorization_generation,
         status=IntentStatus(row.status),
+        allowed_merchant_ids=(
+            None
+            if row.allowed_merchant_ids is None
+            else frozenset(MerchantId(value) for value in row.allowed_merchant_ids)
+        ),
+        allowed_product_ids=(
+            None
+            if row.allowed_product_ids is None
+            else frozenset(ProductId(value) for value in row.allowed_product_ids)
+        ),
+        allowed_categories=(
+            None if row.allowed_categories is None else frozenset(row.allowed_categories)
+        ),
+        brand_restriction=(
+            None
+            if row.brand_restriction is None
+            else BrandRestriction.model_validate(row.brand_restriction)
+        ),
+        condition_restriction=(
+            None
+            if row.condition_restriction is None
+            else ConditionRestriction.model_validate(row.condition_restriction)
+        ),
         currency=row.currency,
         max_total=Money(row.max_total_minor),
         aggregate_budget=Money(row.aggregate_budget_minor),
@@ -108,6 +138,11 @@ class Revalidator:
             .add(Money(row.shipping_minor, row.currency))
             .add(Money(row.fees_minor, row.currency))
         )
+        subscription_terms = (
+            None
+            if row.subscription_terms is None
+            else SubscriptionTerms.model_validate(row.subscription_terms)
+        )
         return CheckoutEnvelope(
             checkout_id=CheckoutId(row.checkout_id),
             revision=row.revision,
@@ -116,7 +151,7 @@ class Revalidator:
             tax=Money(row.tax_minor, row.currency),
             shipping=Money(row.shipping_minor, row.currency),
             fees=Money(row.fees_minor, row.currency),
-            subscription_terms=None,
+            subscription_terms=subscription_terms,
             provided_total=total,
             observed_at=row.observed_at or datetime.now(UTC),
         )

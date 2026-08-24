@@ -48,7 +48,7 @@ def list_scenarios() -> dict:
 
 @router.post("/run")
 def run_suite(runner: Annotated[AdversarialRunner, Depends(_runner)]) -> dict:
-    """Wipe -> seed -> execute every scenario through the REAL pipeline."""
+    """Seed isolated synthetic fixtures and execute the suite through the real pipeline."""
     results = []
     for res in runner.run_all():
         results.append(
