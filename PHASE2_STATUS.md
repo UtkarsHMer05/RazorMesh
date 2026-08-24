@@ -29,7 +29,7 @@
 | M17 | First Real Test Order | PASS | scripts/rzp_first_order.py: real ALLOW→reserve→ticket→nonce→attempt→order_TTaTD5sEvimzoD (created, 64890 INR minor); fetch matches amount/currency/receipt; security regressions green post-mutation |
 | M18 | Order Fetch & Reconciliation | PASS | reconcile_attempt(): amount/currency/receipt validated vs durable authority; conflicts raise AMOUNT/CURRENCY/CONTEXT_MISMATCH; paid classified as capture evidence WITHOUT settling (reducer owns that); 6 mock tests + REAL reconcile of order_TTagLmM6FL6oB4 consistent=True; suite 282/282 |
 | M19 | Checkout Launch Contract | PASS | CheckoutLaunchPayload frozen dataclass (public key id, order id, amount, currency, safe correlation); issued ONLY for EXECUTING attempts with order claim; secret-leak tests; buyer route returns launch on razorpay path; suite 282/282 |
-| M20 | Checkout Script Integration | NOT_STARTED | — |
+| M20 | Checkout Script Integration | PASS | src/lib/razorpay.ts: idempotent official checkout.js loader (once per page, typed states, retry-on-error, no secrets); 3 vitest cases; lint/tsc clean; suite 287 backend + 6 web |
 | M21 | Real Checkout UI | NOT_STARTED | — |
 | M22 | Client Success Handler | NOT_STARTED | — |
 | M23 | Server Checkout Signature Verification | NOT_STARTED | — |
@@ -770,3 +770,32 @@ ruff / mypy strict                       → clean
 
 ### Next
 - M20 — Checkout Script Integration.
+
+
+## M20 — Checkout Script Integration
+
+MILESTONE: M20
+STATUS: PASS
+
+Requirements: master prompt M20 — stable, testable loading of the OFFICIAL script.
+Security invariants: P2-S03/S04 (no secret anywhere near the bundle).
+
+### Implementation
+- `apps/web/src/lib/razorpay.ts`: `loadRazorpayCheckout()` injects
+  https://checkout.razorpay.com/v1/checkout.js once (id-deduped, shared inflight
+  promise), resolves true/false on load/error, removes a failed tag so a later
+  user action can retry. No API version pinning beyond the documented v1 URL;
+  Key ID arrives ONLY via backend launch payload (M19/M21).
+
+### Validation commands + results
+```text
+pnpm test        → 6 passed (single-injection, idempotency-under-concurrency, error+retry path)
+pnpm typecheck   → clean
+pnpm lint        → clean
+```
+
+### Real Razorpay interaction
+- NONE (script load only; no payment initiated).
+
+### Next
+- M21 — Real Checkout UI.
