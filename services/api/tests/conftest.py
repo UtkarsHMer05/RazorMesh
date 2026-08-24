@@ -27,6 +27,14 @@ def wipe_business_tables(engine: Engine) -> None:
     with engine.begin() as conn:
         for stmt in statements:
             conn.execute(text(stmt))
+        conn.execute(
+            text("ALTER TABLE audit_events DISABLE TRIGGER trg_audit_no_update")
+        )
+        conn.execute(text("DELETE FROM audit_events"))
+        conn.execute(text("ALTER SEQUENCE audit_events_seq_seq RESTART WITH 1"))
+        conn.execute(
+            text("ALTER TABLE audit_events ENABLE TRIGGER trg_audit_no_update")
+        )
 
 
 @pytest.fixture(scope="session")

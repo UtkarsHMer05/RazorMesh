@@ -54,7 +54,7 @@
 | M44 | Safe/Unsafe Paired Benchmark | PASS | 6 attack/safe-twin pairs through real pipeline: TP=6 FP=0 TN=6 FN=0, P=R=F1=1.0, false-block 0%, safe-completion 100%; synthetic GMV completed 389340 + protected 324450 minor units (explicitly labelled); artifact docs/PHASE1_BENCHMARK.json; 4 tests PASS |
 | M45 | Buyer Experience UI | PASS | 4-step buyer flow (fixture authz -> catalog -> propose/decision -> mock execution) on real backend endpoints POST /buyer/*; live E2E: ALLOW->SUCCEEDED; forged signature 403 SIGNATURE_INVALID; replay collapses to same attempt (1 effect); CORS now GET+POST; tsc+build+vitest clean |
 | M46 | Security Lab UI | PASS | GET /security-lab/scenarios + POST /security-lab/run (server executes all 7 real-pipeline scenarios, 7/7 as-designed) with hash-chained evidence tail; lab page renders scenario list + outcomes table + evidence; tsc+build clean; 2 tests PASS |
-| M47 | Audit Dashboard | NOT_STARTED | — |
+| M47 | Audit Dashboard | PASS | GET /audit/timeline (chronological + hash heads + reason codes), /audit/verify, /audit/state/{intent} (spend/decisions/tickets/attempts), POST /audit/tamper-test (simulates trigger bypass -> DETECTED -> self-restores); dashboard page renders all views; 5 tests PASS; tsc+build clean |
 | M48 | Deep Test and Security Gate | NOT_STARTED | — |
 | M49 | Performance/Resource Baseline | NOT_STARTED | — |
 | M50 | Clean-Room Phase-1 Acceptance | NOT_STARTED | — |
@@ -325,6 +325,11 @@ M03 — Project Charter.
 - Backend: `api/routes/security_lab.py` — GET /security-lab/scenarios (registry listing) + POST /security-lab/run (wipes, seeds, executes all 7 scenarios through the REAL pipeline via AdversarialRunner; returns actual outcomes + hash-chained ledger evidence tail). Explicitly framed as synthetic/local/mock-only.
 - Frontend: security-lab page lists registered scenarios, executes the suite server-side on click, renders outcome table (scenario/family/actual/as-designed) and evidence tail with truncated SHA-256 heads. No offensive tooling; nothing touches third parties.
 - Validation: ruff clean; mypy strict 47 files clean; pytest 206/206; tsc clean; next build OK.
+
+## M47 — Audit Dashboard — PASS
+- Backend: `api/routes/audit.py` — GET /audit/timeline (chronological events with seq, hashes (16-hex heads), reason codes), GET /audit/verify (chain verdict), GET /audit/state/{intent_id} (intent status/generation + spend authorized/reserved/committed/available + decisions + tickets incl. nonce presence + execution attempts), POST /audit/tamper-test (simulates attacker bypassing the append-only trigger by rewriting the newest event's actor, runs verify -> DETECTED, then self-restores with correct sequence continuation).
+- Frontend: audit page renders timeline (newest-first with hash heads), verify banner, intent state inspector (spend/decisions/tickets/attempts) and tamper-test result.
+- Validation: ruff clean; mypy strict 48 files clean; pytest 211/211; tsc clean; next build OK.
 
 ---
 
