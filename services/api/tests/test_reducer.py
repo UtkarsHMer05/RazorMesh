@@ -24,13 +24,22 @@ from test_executor import _make_ticket, _redis
 
 
 class _ScriptedTransport(httpx.BaseTransport):
-    """Answers order creation only; asserts no other network use."""
+    """Answers order creation with a UNIQUE id per request."""
+
+    def __init__(self) -> None:
+        self._n = 0
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
+        self._n += 1
         assert request.method == "POST" and request.url.path.endswith("/orders")
         return httpx.Response(
             201,
-            json={"id": "order_red_1", "status": "created", "amount": 100000, "currency": "INR"},
+            json={
+                "id": f"order_red_{self._n}",
+                "status": "created",
+                "amount": 100000,
+                "currency": "INR",
+            },
         )
 
 
@@ -84,11 +93,9 @@ def reducer_env(tmp_path):  # type: ignore[no-untyped-def]
         s.query(RowIntent).delete()
 
 
-def _captured(order_id: str) -> VerifiedProviderEvent:
+def _captured(order_id: str, payment_id: str = "pay_red_1") -> VerifiedProviderEvent:
     return VerifiedProviderEvent(
-        kind="payment.captured",
-        razorpay_order_id=order_id,
-        razorpay_payment_id="pay_red_1",
+        kind="payment.captured", razorpay_order_id=order_id, razorpay_payment_id=payment_id
     )
 
 
@@ -265,3 +272,111 @@ def test_order_paid_alone_settles_exactly_once(reducer_env) -> None:  # type: ig
     row = _spend_row(repos, contract.intent_id)
     assert row.committed_minor == binding.amount_minor
     assert row.reserved_minor == 0
+
+
+# ---------------------------------------------------------------------------
+# P2-M34: delivery-order permutation matrix
+# ---------------------------------------------------------------------------
+
+
+def _run_sequence(reducer_env, sequence):  # type: ignore[no-untyped-def]
+    """Drive an EXECUTING attempt through a list of events; return final state."""
+    repos, keys, spend, executor, reducer = reducer_env
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+    attempt = executor.execute(signed_ticket=signed, binding=binding, intent_id=contract.intent_id)
+    oid = str(attempt.razorpay_order_id)
+    events = {
+        "auth": _authorized(oid),
+        "cap": _captured(oid),
+        "paid": _paid_order_event(oid),
+        "fail": _failed(oid),
+        "cap_dup": _captured(oid),
+        "paid_dup": _paid_order_event(oid),
+    }
+    for name in sequence:
+        reducer.apply_event(events[name])
+    state, fulfilment = _attempt_state(repos, oid)
+    row = _spend_row(repos, contract.intent_id)
+    return state, fulfilment, row.committed_minor, row.reserved_minor
+
+
+def test_permutation_canonical_order(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    assert _run_sequence(reducer_env, ["auth", "cap", "paid"]) == (
+        "SUCCEEDED",
+        "ELIGIBLE",
+        100000,
+        0,
+    )
+
+
+def test_permutation_captured_first(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    assert _run_sequence(reducer_env, ["cap", "auth", "paid"]) == (
+        "SUCCEEDED",
+        "ELIGIBLE",
+        100000,
+        0,
+    )
+
+
+def test_permutation_failed_then_captured(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    assert _run_sequence(reducer_env, ["auth", "fail", "cap"]) == (
+        "SUCCEEDED",
+        "ELIGIBLE",
+        100000,
+        0,
+    )
+
+
+def test_permutation_order_paid_before_captured(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    assert _run_sequence(reducer_env, ["paid", "cap"]) == ("SUCCEEDED", "ELIGIBLE", 100000, 0)
+
+
+def test_permutation_all_duplicates(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    assert _run_sequence(reducer_env, ["cap", "cap_dup", "paid", "paid_dup"]) == (
+        "SUCCEEDED",
+        "ELIGIBLE",
+        100000,
+        0,
+    )
+
+
+def test_permutation_delayed_authorization_only_stays_executing(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    assert _run_sequence(reducer_env, ["auth"]) == ("EXECUTING", "NOT_ELIGIBLE", 0, 100000)
+
+
+def test_permutation_failure_without_capture_stays_failed(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    assert _run_sequence(reducer_env, ["auth", "fail"]) == ("FAILED", "NOT_ELIGIBLE", 0, 0)
+
+
+def test_permutation_every_ordering_converges_to_single_commit(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    """All orderings ENDING in capture evidence must commit exactly once."""
+    import itertools
+
+    for seq in [
+        *itertools.permutations(["cap", "paid", "auth"], 3),
+        ("cap",),
+        ("paid",),
+    ]:
+        repos, keys, spend, executor, reducer = reducer_env
+        signed, binding, contract = _make_ticket(keys, repos)
+        spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+        attempt = executor.execute(
+            signed_ticket=signed, binding=binding, intent_id=contract.intent_id
+        )
+        oid = str(attempt.razorpay_order_id)
+        suffix = oid[-6:]
+        events = {
+            "auth": _authorized(oid),
+            "cap": _captured(oid, payment_id=f"pay_{suffix}"),
+            "paid": _paid_order_event(oid),
+            "fail": _failed(oid),
+            "cap_dup": _captured(oid, payment_id=f"pay_{suffix}"),
+            "paid_dup": _paid_order_event(oid),
+        }
+        for name in seq:
+            reducer.apply_event(events[name])
+        state, fulfilment = _attempt_state(repos, oid)
+        row = _spend_row(repos, contract.intent_id)
+        assert (state, fulfilment) == ("SUCCEEDED", "ELIGIBLE"), f"{seq} diverged"
+        assert row.committed_minor == binding.amount_minor and row.reserved_minor == 0

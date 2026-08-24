@@ -43,7 +43,7 @@
 | M31 | Raw-Body Webhook Endpoint | PASS | POST /api/v1/webhooks/razorpay: raw bytes before parse, 256KB cap (413), event-id required, zero mutation pre-verification, controlled statuses |
 | M32 | Webhook Signature Verification | PASS | verify_webhook_signature HMAC over RAW body; matrix: valid, one-byte mutation, wrong secret, reserialization mismatch, missing header/event-id, unknown-type accepted-ignored; DI settings fix |
 | M33 | Durable Webhook Inbox & Dedup | PASS | webhook_inbox.py: provider_events PK claim via insert-race; loser classified DUPLICATE with zero processing; PROCESSED/ERROR states recorded; route wired through inbox; suite 308/308 |
-| M34 | Ordering & Reconciliation Tests | NOT_STARTED | — |
+| M34 | Ordering & Reconciliation Tests | PASS | permutation matrix (15 cases): canonical, captured-first, failed-then-captured, paid-before-captured, all-dups, delayed-auth-only, fail-no-capture, and EVERY capture-ending ordering converges to single commit; suite 316/316 |
 | M35 | Public Webhook Tunnel Preparation | NOT_STARTED | — |
 | M36 | HUMAN GATE — Webhook Dashboard | NOT_STARTED | — |
 | M37 | Real Success Checkout Readiness Gate | NOT_STARTED | — |
@@ -1042,3 +1042,22 @@ ruff / mypy strict                           → clean
 
 ### Next
 - M34 — Ordering & Reconciliation Tests.
+
+
+## M34 — Ordering & Reconciliation Tests
+
+MILESTONE: M34
+STATUS: PASS
+
+Requirements: master prompt M34 — arbitrary event orderings converge safely.
+Security invariants: P2-S13/S14/S15/S16.
+
+### Evidence
+pytest tests/test_reducer.py -v -> 15 passed. Parametrized matrix covers:
+authorized->captured->paid; captured-first; failed->captured reconcile;
+order.paid-before-captured; all-duplicates; delayed authorization only;
+failure without capture stays FAILED with released capacity; and EVERY
+permutation of {captured, order.paid, authorized} ending in capture evidence
+converges to exactly one commit with zero residual reservation.
+
+Full suite: 316 passed. ruff + mypy strict clean.
