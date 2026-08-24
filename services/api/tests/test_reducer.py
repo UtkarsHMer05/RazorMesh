@@ -220,9 +220,7 @@ def test_lagged_authorized_snapshot_cannot_regress_state(reducer_env) -> None:  
     repos, keys, spend, executor, reducer = reducer_env
     signed, binding, contract = _make_ticket(keys, repos)
     spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
-    attempt = executor.execute(
-        signed_ticket=signed, binding=binding, intent_id=contract.intent_id
-    )
+    attempt = executor.execute(signed_ticket=signed, binding=binding, intent_id=contract.intent_id)
     oid = str(attempt.razorpay_order_id)
     reducer.apply_event(_captured(oid))
     before = _attempt_state(repos, oid)
@@ -237,9 +235,7 @@ def test_failure_releases_reservation_definitively(reducer_env) -> None:  # type
     repos, keys, spend, executor, reducer = reducer_env
     signed, binding, contract = _make_ticket(keys, repos)
     spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
-    attempt = executor.execute(
-        signed_ticket=signed, binding=binding, intent_id=contract.intent_id
-    )
+    attempt = executor.execute(signed_ticket=signed, binding=binding, intent_id=contract.intent_id)
     oid = str(attempt.razorpay_order_id)
 
     first = reducer.apply_event(_failed(oid))
@@ -258,9 +254,7 @@ def test_order_paid_alone_settles_exactly_once(reducer_env) -> None:  # type: ig
     repos, keys, spend, executor, reducer = reducer_env
     signed, binding, contract = _make_ticket(keys, repos)
     spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
-    attempt = executor.execute(
-        signed_ticket=signed, binding=binding, intent_id=contract.intent_id
-    )
+    attempt = executor.execute(signed_ticket=signed, binding=binding, intent_id=contract.intent_id)
     oid = str(attempt.razorpay_order_id)
 
     out1 = reducer.apply_event(_paid_order_event(oid))

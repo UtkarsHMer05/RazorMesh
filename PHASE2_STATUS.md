@@ -42,7 +42,7 @@
 | M30 | order.paid Handling | PASS | order.paid alone settles exactly-once without prior captured event; duplicates no-op |
 | M31 | Raw-Body Webhook Endpoint | PASS | POST /api/v1/webhooks/razorpay: raw bytes before parse, 256KB cap (413), event-id required, zero mutation pre-verification, controlled statuses |
 | M32 | Webhook Signature Verification | PASS | verify_webhook_signature HMAC over RAW body; matrix: valid, one-byte mutation, wrong secret, reserialization mismatch, missing header/event-id, unknown-type accepted-ignored; DI settings fix |
-| M33 | Durable Webhook Inbox & Dedup | NOT_STARTED | — |
+| M33 | Durable Webhook Inbox & Dedup | PASS | webhook_inbox.py: provider_events PK claim via insert-race; loser classified DUPLICATE with zero processing; PROCESSED/ERROR states recorded; route wired through inbox; suite 308/308 |
 | M34 | Ordering & Reconciliation Tests | NOT_STARTED | — |
 | M35 | Public Webhook Tunnel Preparation | NOT_STARTED | — |
 | M36 | HUMAN GATE — Webhook Dashboard | NOT_STARTED | — |
@@ -1011,3 +1011,34 @@ pytest (full) -> 308 passed. ruff + mypy strict clean.
 
 ### Real Razorpay interaction
 - NONE (local fixtures only; real delivery awaits M36 human gate).
+
+
+## M33 — Durable Webhook Inbox & Dedup
+
+MILESTONE: M33
+STATUS: PASS
+
+Requirements: master prompt M33/§24 — durable event-id dedup; concurrent duplicates one effect.
+Security invariants: P2-S12/S13.
+
+### Implementation
+- `webhook_inbox.py`: `ingest_verified_event()` — INSERT into provider_events
+  (event_id PRIMARY KEY) is the claim; the losing concurrent delivery hits the
+  unique constraint and is classified DUPLICATE without running business logic.
+  Winner runs the reducer exactly once; row transitions RECEIVED->PROCESSED or
+  ERROR (with safe error text) for operators.
+- Webhook route now ingests EVERY verified payment/order event through the inbox.
+
+### Validation commands + results
+```text
+pytest tests/test_webhook_verification.py -q → 7 passed (incl. real duplicate
+  delivery across runs returning duplicate=true)
+pytest (full)                                → 308 passed
+ruff / mypy strict                           → clean
+```
+
+### Real Razorpay interaction
+- NONE.
+
+### Next
+- M34 — Ordering & Reconciliation Tests.

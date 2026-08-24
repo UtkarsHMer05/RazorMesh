@@ -3,6 +3,7 @@
 import hashlib
 import hmac as hmac_mod
 import json
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
@@ -69,11 +70,12 @@ def test_valid_signature_accepted(hook_client: TestClient) -> None:
         headers={
             "Content-Type": "application/json",
             "X-Razorpay-Signature": _sign(raw),
-            "x-razorpay-event-id": "evt_ok_1",
+            "x-razorpay-event-id": f"evt_ok_{uuid.uuid4()}",
         },
     )
-    assert res.status_code == 200
-    assert res.json()["processed"] is True
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["received"] is True and body["processed"] is True
 
 
 def test_missing_signature_rejected_no_mutation(hook_client: TestClient) -> None:
@@ -96,7 +98,7 @@ def test_one_byte_body_mutation_rejected(hook_client: TestClient) -> None:
         content=bytes(mutated),
         headers={
             "X-Razorpay-Signature": _sign(raw),  # signature over ORIGINAL bytes
-            "x-razorpay-event-id": "evt_mut",
+            "x-razorpay-event-id": f"evt_mut_{uuid.uuid4()}",
         },
     )
     assert res.status_code == 403
@@ -109,7 +111,7 @@ def test_wrong_secret_rejected(hook_client: TestClient) -> None:
         content=raw,
         headers={
             "X-Razorpay-Signature": _sign(raw, secret="attacker"),
-            "x-razorpay-event-id": "evt_ws",
+            "x-razorpay-event-id": f"evt_ws_{uuid.uuid4()}",
         },
     )
     assert res.status_code == 403
@@ -130,7 +132,10 @@ def test_reserialization_can_break_signature_proving_raw_body_necessity(hook_cli
     res = hook_client.post(
         "/api/v1/webhooks/razorpay",
         content=raw,
-        headers={"X-Razorpay-Signature": sig_over_redumped, "x-razorpay-event-id": "evt_r"},
+        headers={
+            "X-Razorpay-Signature": sig_over_redumped,
+            "x-razorpay-event-id": f"evt_r_{uuid.uuid4()}",
+        },
     )
     assert res.status_code == 403
 

@@ -65,15 +65,23 @@ async def razorpay_webhook(
     order_id = entity.get("order_id")
     payment_id = entity.get("id")
 
-    reducer = _reducer(settings)
+    from razormesh_api.webhook_inbox import ingest_verified_event
 
-    if event_type in (
-        "payment.captured",
-        "order.paid",
-        "payment.failed",
-        "payment.authorized",
-    ) and isinstance(order_id, str):
-        try:
+    reducer = _reducer(settings)
+    repos = _repos_for(settings)
+    import hashlib as _hl
+
+    payload_sha256 = _hl.sha256(raw).hexdigest()
+    payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
+    rid = payment_entity.get("id") if isinstance(payment_entity, dict) else None
+
+    def _apply() -> None:
+        if event_type in (
+            "payment.captured",
+            "order.paid",
+            "payment.failed",
+            "payment.authorized",
+        ) and isinstance(order_id, str):
             reducer.apply_event(
                 VerifiedProviderEvent(
                     kind=event_type,
@@ -81,15 +89,32 @@ async def razorpay_webhook(
                     razorpay_payment_id=payment_id if isinstance(payment_id, str) else None,
                 )
             )
-        except Exception as exc:  # noqa: BLE001 - controlled acceptance below
-            # Unknown/unmatched orders must still 200 so Razorpay stops retrying;
-            # the mismatch is surfaced to operators via logs/monitoring.
-            del exc
-            return {"received": True, "processed": False, "reason": "UNMATCHED_CONTEXT"}
-    elif not event_type.startswith(_KNOWN_EVENT_PREFIXES):
+
+    if event_type in (
+        "payment.captured",
+        "order.paid",
+        "payment.failed",
+        "payment.authorized",
+    ) and isinstance(order_id, str):
+        result = ingest_verified_event(
+            repos,
+            event_id=event_id,
+            event_type=event_type,
+            payload_sha256=payload_sha256,
+            razorpay_order_id=order_id,
+            razorpay_payment_id=rid,
+            process=_apply,
+        )
+        return {
+            "received": True,
+            "processed": result.processed,
+            "duplicate": result.duplicate,
+            "reason": result.reason or ("OK" if result.processed else "IGNORED"),
+        }
+    if not str(event_type).startswith(_KNOWN_EVENT_PREFIXES):
         return {"received": True, "processed": False, "reason": "IGNORED_EVENT_TYPE"}
 
-    return {"received": True, "processed": True}
+    return {"received": True, "processed": False, "reason": "UNROUTED_EVENT"}
 
 
 async def _read_bounded(request: Request) -> bytes:
@@ -102,16 +127,20 @@ async def _read_bounded(request: Request) -> bytes:
     return body
 
 
+def _repos_for(settings: Settings):  # type: ignore[no-untyped-def]
+    from razormesh_api.persistence.db import create_db_engine, create_session_factory
+    from razormesh_api.persistence.repositories import Repositories
+
+    engine = create_db_engine(settings.database_url)
+    return Repositories(create_session_factory(engine))
+
+
 def _reducer(settings: Settings) -> ProviderStateReducer:
     """Test seam: monkeypatched by the suite to inject fakes."""
     from razormesh_api.keys import DevSigningKeys
     from razormesh_api.nonce import NonceRegistry
-    from razormesh_api.persistence.db import create_db_engine, create_session_factory
-    from razormesh_api.persistence.repositories import Repositories
     from razormesh_api.providers.razorpay import RazorpayClient, RazorpayPaymentProvider
 
-    engine = create_db_engine(settings.database_url)
-    repos = Repositories(create_session_factory(engine))
     keys = DevSigningKeys(
         private_path=settings.dev_ticket_private_key_path,
         public_path=settings.dev_ticket_public_key_path,
@@ -127,5 +156,8 @@ def _reducer(settings: Settings) -> ProviderStateReducer:
         timeout_seconds=settings.razorpay_request_timeout_seconds,
     )
     return ProviderStateReducer(
-        repos=repos, keys=keys, nonces=nonces, provider=RazorpayPaymentProvider(client)
+        repos=_repos_for(settings),
+        keys=keys,
+        nonces=nonces,
+        provider=RazorpayPaymentProvider(client),
     )
