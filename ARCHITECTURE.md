@@ -559,3 +559,25 @@ RAZORPAY_MODE=test only, RAZORPAY_KEY_ID (public), RAZORPAY_KEY_SECRET /
 RAZORPAY_WEBHOOK_SECRET (backend-only), bounded request timeout, webhook path +
 public tunnel URL. Startup guard `validate_payment_provider_config` enforces
 P2-S01..S03 with name-only errors.
+
+## Reconciliation service and ops surface (P2-M41, D-036)
+
+`ReconciliationService` (reconciliation.py) is the operator-driven recovery path
+for PROVIDER_UNKNOWN attempts:
+
+1. Receipt discovery: when a create-response was lost, `discover_order_by_receipt`
+   scans ONE bounded read-only orders listing for the exact durable receipt
+   (`r_{execution_attempt_id}`). The discovered order is claimed onto the attempt
+   ONLY after amount/currency authority validation; claiming binds correlation
+   only — business state remains exclusively the reducer's.
+2. Fetch validation: reconcile_attempt revalidates amount/currency/receipt on
+   every fetch; mismatches raise loudly and mutate nothing (P2-S06).
+3. Settlement: fetched `paid` is reduced as order.paid through the ONE reducer
+   (exactly-once); every terminal settlement marks reconcile_state=RESOLVED;
+   other statuses only snapshot — the attempt keeps identity+reservation and
+   waits for outcome evidence.
+
+Ops surface (read-only unless explicitly invoked):
+- GET /ops/reconciliation/required — REQUIRED attempts, safe fields, zero mutation;
+- POST /ops/reconciliation/{attempt_id} — one reconciliation pass (404 unknown,
+  409 authority conflict).

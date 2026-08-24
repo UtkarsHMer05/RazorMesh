@@ -155,12 +155,12 @@ GET /buyer/status — browser is never a source of payment truth).
 
 # Next action
 
-M41 (Provider-Unknown / Timeout Reconciliation): local fault injection only
-(no human gate, no real Razorpay interaction needed): executor timeout/5xx
-paths leave attempt PROVIDER_UNKNOWN with reservation HELD +
-reconcile_state=REQUIRED; later verified events (captured/failed) resolve
-the unknown exactly once; no blind retry as a new payment. Then M42
-(real-provider concurrency & replay regression). Tunnel/share: if the zrok
+M42 (Real-Provider Concurrency & Replay Regression): re-run replay/spend/event
+races against the NEW provider architecture; high volume via mock/fake only so
+Razorpay is not spammed; prove 20 concurrent same-ticket attempts cause at most
+one business/provider effect and webhook/callback duplicates cannot double-commit.
+M41 done (D-036): receipt discovery + guarded claim + RESOLVED marking + ops
+surface /ops/reconciliation/*; test_reconciliation.py 10 tests; 343 total. Tunnel/share: if the zrok
 share dies, re-run make phase2-up and UPDATE the Dashboard URL + .env
 RAZORPAY_WEBHOOK_PUBLIC_URL (share is not reserved). Payment-#1 retry 403s
 (old secret) may still tail off; zero-mutation by design. M45 candidate

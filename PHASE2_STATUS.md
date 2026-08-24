@@ -50,7 +50,7 @@
 | M38 | HUMAN GATE — Real Test Success | PASS | payment #3 end-to-end: ALLOW→ticket→order→failed→late-capture reconcile→SUCCEEDED/ELIGIBLE; 4 REAL signed webhooks verified=true (7 total real rows); reserved→committed EXACTLY ONCE by live fixed webhook path (v4: ensure→reserve→release→commit); provider_name=razorpay; audit chain valid (7 events); provider-side fetch paid/captured matches; authorized-in-FAILED semantics defect found live, fixed+regression-tested (D-034); payment #2 losses disclosed (D-033) |
 | M39 | Success Evidence Reconciliation | PASS | docs/PHASE2_M39_EVIDENCE_RECONCILIATION.md: DB↔provider fetch↔webhook inbox↔audit chain↔Dashboard observations reconciled for payments #2/#3; honest limitations recorded (Events API 404 R-018; payment #2 rows destroyed; one ERROR inbox row disclosed) |
 | M40 | HUMAN GATE — Real Test Failure | PASS | failure checkout end-to-end: payment.failed webhook verified=true PROCESSED; attempt FAILED/NOT_ELIGIBLE; reservation released exactly once (v3: ensure→reserve→release; reserved=0, committed=0); PAYMENT_FAILED audited (chain valid, 13 events); provider fetch order=attempted/payment=failed; stale-UI verdict = propagation gap, NOT reconciliation defect → read-only /buyer/status + ondismiss re-sync + 5 new regressions; suite 333/333; dev DB byte-identical |
-| M41 | Provider-Unknown / Timeout Reconciliation | NOT_STARTED | — |
+| M41 | Provider-Unknown / Timeout Reconciliation | PASS | local fault injection (dropped response): UNKNOWN+REQUIRED+reservation held, re-entry calls==1; D-036 receipt DISCOVERY claims correlation only after authority validation (duplicate receipt conflicts loudly); fetch-paid settles exactly-once via reducer + RESOLVED; post-claim webhooks correlate; resolve_unknown now marks RESOLVED (gap fixed); ops surface GET/POST /ops/reconciliation/*; test_reconciliation.py 10 tests; suite 343/343 |
 | M42 | Real-Provider Concurrency & Replay Regression | NOT_STARTED | — |
 | M43 | Security Lab Phase-2 Expansion | NOT_STARTED | — |
 | M44 | Audit & Evidence Ledger Upgrade | NOT_STARTED | — |
@@ -1513,3 +1513,56 @@ served dev bundle                → contains the new re-sync UI
 
 ### Next
 - M41 — Provider-Unknown / Timeout Reconciliation (local fault injection).
+
+
+## M41 — Provider-Unknown / Timeout Reconciliation
+
+MILESTONE: M41
+STATUS: PASS
+
+Requirements: master prompt M41 — local network fault injection only; prove
+durable identity + reservation hold + provider read/correlation path prevent a
+blind second payment; expose reconciliation-required state.
+Security invariants: P2-S06/S17/S18/S19.
+
+### Implementation
+- `providers/razorpay.py`: `list_orders()` (bounded read-only listing) +
+  `discover_order_by_receipt()` (exact-match discovery; multiple matches are a
+  loud RAZORPAY_ORDER_CONTEXT_MISMATCH).
+- `reconciliation.py` (new): `ReconciliationService.reconcile()` — discovery →
+  authority-validated claim → reconcile_attempt fetch validation → reducer-only
+  settlement of fetch-proven capture evidence. Non-terminal results snapshot
+  only and keep identity+reservation.
+- `api/routes/ops.py` (new): GET /ops/reconciliation/required (read-only safe
+  listing), POST /ops/reconciliation/{attempt_id} (one pass; 404 unknown,
+  409 authority conflict). Registered in main.py.
+- `executor.py`: resolve_unknown() now passes reconcile_state=RESOLVED —
+  fixes stranded REQUIRED after webhook settlement (found during M41).
+
+### Key proofs (test_reconciliation.py, all LOCAL fault injection)
+1. ReadTimeout on create -> PROVIDER_UNKNOWN + REQUIRED + reservation held +
+   razorpay_order_id NULL; same-ticket re-entry never re-sends the order.
+2. Discovery miss -> still waiting, nothing invented, reservation intact.
+3. Discovery claim (created) -> correlation bound; later payment.captured for
+   the previously-unknown order settles exactly-once (pre-claim it could NOT
+   correlate — the motivating regression).
+4. Fetch paid -> SUCCEEDED + committed exactly-once + ELIGIBLE + RESOLVED;
+   duplicate pass is a no-op.
+5. Amount/currency mismatch -> loud conflict, zero mutation, order NEVER claimed.
+6. Duplicate receipt -> loud conflict.
+7. Failure event on unknown -> FAILED + release + RESOLVED (never stranded).
+8. Ops wiring: listing exposes/hides REQUIRED rows; POST 200/404/409.
+
+### Validation commands + results
+```text
+ruff check .                                          -> clean
+mypy -p razormesh_api (root AND services/api)         -> Success, 54 files
+pytest (full)                                         -> 343 passed
+make security-check                                   -> PASS
+```
+
+### Real Razorpay interaction
+- NONE (httpx transport fault injection only; Razorpay never contacted).
+
+### Next
+- M42 — Real-Provider Concurrency & Replay Regression.

@@ -452,6 +452,9 @@ class TrustedPaymentExecutor:
             now,
             provider_reference=provider_reference,
             error_code=error_code,
+            # P2-M41: a terminal settlement IS the reconciliation resolution —
+            # leaving REQUIRED here stranded settled attempts on the ops view.
+            reconcile_state="RESOLVED",
         )
 
     def _persist_ticket(self, claims: ExecutionTicketClaims, now: datetime) -> None:

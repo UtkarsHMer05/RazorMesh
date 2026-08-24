@@ -687,3 +687,47 @@ regressions — `test_status_endpoint_reflects_server_truth_and_is_read_only`
 (read-only, no-secret, exactly-once release), two callback race regressions
 (callback after failure settlement inert; mid-request settlement reported
 fresh), three frontend re-sync vitest cases; full suite 333 passed.
+
+## D-036 — Reconciliation service: receipt discovery, guarded claim, RESOLVED marking (P2-M41)
+
+Context: a Razorpay order-create timeout leaves the attempt PROVIDER_UNKNOWN
+with reconcile_state=REQUIRED and — critically — NO razorpay_order_id, because
+the response was lost before parsing. Before M41 nothing could recover this:
+fetch reconciliation required a known order id, and webhooks for the unknown
+order raised ORDER_CONTEXT_MISMATCH (UNMATCHED_CONTEXT) forever. Additionally,
+resolve_unknown() never marked reconcile_state=RESOLVED, so webhook-settled
+unknowns stayed REQUIRED on any ops view.
+
+Decision:
+1. Receipt-based discovery: GET /orders?count=100 (read-only, one bounded page)
+   scanned for an exact receipt match `r_{execution_attempt_id}`. Zero or one
+   match proceeds; multiple matches raise RAZORPAY_ORDER_CONTEXT_MISMATCH.
+2. Guarded claim: a discovered order is persisted onto the attempt ONLY after
+   amount/currency validation against durable authority (P2-S06), under the
+   partial-unique index (races surface as loud conflicts). Claiming binds
+   CORRELATION only; settlement still flows exclusively through the reducer.
+   After claiming, later webhooks for that order correlate normally.
+3. Fetch-proven capture reduces as order.paid through the ONE idempotent
+   reducer; every terminal settlement (including resolve_unknown) marks
+   reconcile_state=RESOLVED. Non-terminal fetch results snapshot only.
+4. Operator surface: GET /ops/reconciliation/required (read-only listing) and
+   POST /ops/reconciliation/{attempt_id} (one safe pass; 404/409 controlled).
+   No endpoint creates financial operations or retries order creation.
+
+Rationale: the receipt is durable internal identity embedded at create time
+(M14); matching it exactly against provider data is authoritative read
+evidence, not a guess. Keeping PROVIDER_UNKNOWN until OUTCOME evidence
+(captured/failed) preserves P2-S18/S19 semantics while restoring correlation.
+
+Security consequences: positive — closes an indefinite-stuck state and a
+correlation hole without adding any mutation authority outside the executor/
+reducer; all new provider reads are bounded and read-only; no secrets touched.
+
+Validation/evidence: services/api/tests/test_reconciliation.py (10 tests) —
+timeout→UNKNOWN/REQUIRED/held; re-entry calls==1; discovery miss keeps
+identity+reservation; created-snapshot keeps waiting; paid settles exactly-once
++ RESOLVED + ELIGIBLE with duplicate-pass no-op; pre-claim orphan webhook cannot
+correlate but post-claim settles once; amount/currency mismatch mutate nothing
+and never claim; duplicate receipt conflict; failure resolution marks RESOLVED;
+ops listing/pass wiring incl. 404/409. Full suite 343 passed; ruff/mypy strict
+(54 files, both roots) clean; security-check PASS.

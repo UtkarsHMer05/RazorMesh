@@ -213,6 +213,27 @@ class RazorpayClient:
     def fetch_order(self, order_id: str) -> RazorpayOrder:
         return self._request("GET", f"/orders/{order_id}")
 
+    def list_orders(self, *, count: int = 100) -> list[RazorpayOrder]:
+        """READ-ONLY bounded orders listing (GET /orders?count=N) for receipt
+        discovery after lost create-responses (P2-M41). Malformed entries are
+        skipped: discovery scans for an exact receipt match and must not be
+        crashed by unrelated noise in the listing."""
+        if count < 1 or count > 100:
+            raise ValueError("count must be within the documented 1..100 range")
+        payload = self._request_payload("GET", f"/orders?count={count}")
+        if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
+            raise RazorpayUnknownOutcomeError(
+                "malformed provider response during order discovery",
+                operation="ORDER_LIST_UNKNOWN",
+            )
+        orders: list[RazorpayOrder] = []
+        for entry in payload["items"]:
+            try:
+                orders.append(_validate_order_payload(entry, operation="ORDER_LIST_INVALID"))
+            except RazorpayError:
+                continue
+        return orders
+
     def fetch_payment(self, payment_id: str) -> RazorpayPaymentEntity:
         """READ-ONLY reconciliation/evidence fetch (GET /payments/{id})."""
         payload = self._request_payload("GET", f"/payments/{payment_id}")
@@ -502,6 +523,31 @@ class ReconcileResult:
     provider_status: str
     payment_status: str | None
     consistent: bool
+
+
+def discover_order_by_receipt(
+    *, provider: RazorpayPaymentProvider, receipt: str
+) -> RazorpayOrder | None:
+    """P2-M41/D-036: READ-ONLY correlation recovery for lost create-responses.
+
+    When an order create times out AFTER transmission, the order may exist at
+    the provider while the internal attempt never learned its id. The receipt
+    (r_{execution_attempt_id}) is the durable correlation key: one bounded,
+    read-only orders listing is scanned for an EXACT receipt match.
+
+    - no match        -> None (truth not disproven either way; keep waiting);
+    - exactly one     -> the discovered order (validated by the caller against
+      durable amount/currency BEFORE any claim is persisted);
+    - multiple        -> provider-side anomaly, loud conflict, no mutation.
+    """
+    orders = provider.client.list_orders(count=100)
+    matches = [order for order in orders if order.receipt == receipt]
+    if len(matches) > 1:
+        raise RazorpayProviderStateConflict(
+            "RAZORPAY_ORDER_CONTEXT_MISMATCH",
+            f"{len(matches)} provider orders claim receipt {receipt!r}",
+        )
+    return matches[0] if matches else None
 
 
 def reconcile_attempt(

@@ -299,6 +299,13 @@ Release-blocking additions on top of all Phase-1 gates:
     state even when a webhook settles mid-request; the frontend re-syncs on
     modal dismiss, hides Re-open on FAILED, and renders SUCCEEDED as
     CAPTURED/PAID.
+12. Provider-unknown reconciliation (P2-M41, D-036): timeout faults leave
+    PROVIDER_UNKNOWN/REQUIRED with reservation held and no blind second order
+    create; receipt discovery claims correlation only after amount/currency
+    authority validation; duplicate receipts conflict loudly; fetch-proven
+    capture settles exactly-once via the reducer and marks RESOLVED; webhooks
+    correlate after a claim; mismatches mutate nothing; /ops surface is
+    read-only listing + single safe pass.
 
 Real Razorpay interaction is limited to milestones that explicitly require it
 (M12 auth diagnostic, M17 first order, M18 fetch, M36 webhook, M38/M40 human-gated
