@@ -149,6 +149,42 @@ async def razorpay_webhook(
             razorpay_payment_id=rid,
             process=_apply,
         )
+        # P2-M44: tamper-evident ingestion record — the WINNER only, so
+        # duplicate deliveries never grow the hash chain (single effect).
+        # Best-effort correlation to the durable attempt (safe identifiers
+        # only; an unmatched context still records its own evidence).
+        if result.processed:
+            from razormesh_api.ledger import EvidenceLedger
+            from razormesh_api.persistence.models import ExecutionAttempt
+
+            intent_ref = checkout_ref = attempt_ref = None
+            with repos.transaction() as session:
+                claimed = (
+                    session.query(ExecutionAttempt)
+                    .filter(ExecutionAttempt.razorpay_order_id == order_id)
+                    .first()
+                )
+                if claimed is not None:
+                    intent_ref = str(claimed.intent_id)
+                    checkout_ref = str(claimed.checkout_id)
+                    attempt_ref = claimed.execution_attempt_id
+
+            EvidenceLedger(repos).append(
+                event_type="RAZORPAY_WEBHOOK_INGESTED",
+                actor="webhook-route",
+                intent_id=intent_ref,
+                checkout_id=checkout_ref,
+                ticket_id=None,
+                payload={
+                    "event_id": event_id,
+                    "event_type": event_type,
+                    "razorpay_order_id": order_id,
+                    "razorpay_payment_id": rid if isinstance(rid, str) else None,
+                    "payload_sha256": payload_sha256,
+                    "signature_verified": True,
+                    "execution_attempt_id": attempt_ref,
+                },
+            )
         return {
             "received": True,
             "processed": result.processed,

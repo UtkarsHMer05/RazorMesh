@@ -390,13 +390,32 @@ def checkout_callback(
         )
 
     now = datetime.now(UTC)
+    first_verification = False
     with repos.transaction() as session:
         row = session.get(
             ExecutionAttemptForCallback, attempt.execution_attempt_id, with_for_update=True
         )
         if row is not None:
+            first_verification = row.callback_verified_at is None
             row.callback_verified_at = now
             row.updated_at = now
+
+    # P2-M44: tamper-evident record of callback verification (exactly-once:
+    # duplicate deliveries must not grow the ledger).
+    if first_verification:
+        EvidenceLedger(repos).append(
+            event_type="RAZORPAY_CALLBACK_VERIFIED",
+            actor="buyer-callback-route",
+            intent_id=str(attempt.intent_id),
+            checkout_id=str(attempt.checkout_id),
+            ticket_id=str(attempt.ticket_id),
+            payload={
+                "execution_attempt_id": attempt.execution_attempt_id,
+                "razorpay_order_id": stored_order,
+                "razorpay_payment_id": payload_in.razorpay_payment_id,
+                "verification": "HMAC-SHA256(server-stored order|payment)",
+            },
+        )
 
     # ---- P2-M25: a valid signature alone is NOT fulfilment authority.
     # Require captured/paid evidence from the provider before any settlement.

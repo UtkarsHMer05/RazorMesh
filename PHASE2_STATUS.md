@@ -53,7 +53,7 @@
 | M41 | Provider-Unknown / Timeout Reconciliation | PASS | local fault injection (dropped response): UNKNOWN+REQUIRED+reservation held, re-entry calls==1; D-036 receipt DISCOVERY claims correlation only after authority validation (duplicate receipt conflicts loudly); fetch-paid settles exactly-once via reducer + RESOLVED; post-claim webhooks correlate; resolve_unknown now marks RESOLVED (gap fixed); ops surface GET/POST /ops/reconciliation/*; test_reconciliation.py 10 tests; suite 343/343 |
 | M42 | Real-Provider Concurrency & Replay Regression | PASS | 20-worker same-ticket race on razorpay path: ONE attempt, ONE order-create call (transport-counted), reservation exactly once; losers refuse via nonce coordination; 20 duplicate capture deliveries -> inbox claim once, committed EXACTLY once; mixed distinct events under concurrency collapse to one commit; callback racing webhook cannot double-commit; post-settlement replay re-pays nothing; suite 347/347 |
 | M43 | Security Lab Phase-2 Expansion | PASS | 6 new labeled SYNTHETIC families: FORGED_CALLBACK (rejected zero-mutation), WRONG_ORDER_CONTEXT (server-stored binding holds), DUPLICATE_CALLBACK/DUPLICATE_WEBHOOK (single effect), OUT_OF_ORDER_WEBHOOK + FAILED_THEN_CAPTURED (reconcile exactly-once); registry 22/22 pass via /security-lab/run; benchmark now 20 pairs P=R=F1=1.0; synthetic ids unique per execution; Razorpay never contacted |
-| M44 | Audit & Evidence Ledger Upgrade | NOT_STARTED | — |
+| M44 | Audit & Evidence Ledger Upgrade | PASS | 3 new hash-chained events: RAZORPAY_CALLBACK_VERIFIED (exactly-once; duplicates/forgery grow nothing), RAZORPAY_WEBHOOK_INGESTED (winner-only + best-effort attempt/intent correlation), RAZORPAY_RECONCILIATION_RUN (ops pass w/ before/after+reconcile_state+reservation note); payloads carry safe identifiers only (secret-scan asserted); chain verify() green after mixed Phase-1/2 evidence; suite 352/352 |
 | M45 | Buyer UI Trust-State Polish | NOT_STARTED | — |
 | M46 | Automated E2E w/ External Checkout Boundary | NOT_STARTED | — |
 | M47 | Phase-2 Performance & Network Baseline | NOT_STARTED | — |
@@ -1657,3 +1657,49 @@ make security-check                              -> PASS
 
 ### Next
 - M44 — Audit & Evidence Ledger Upgrade.
+
+
+## M44 — Audit & Evidence Ledger Upgrade
+
+MILESTONE: M44
+STATUS: PASS
+
+Requirements: master prompt M44 — record safe Phase-2 evidence in the
+tamper-evident ledger: callback verification, webhook ids/types/verifications,
+reconciliation, reservation/final state. Append-oriented behavior preserved;
+no secrets stored.
+Security invariants: S11/S30 (tamper evidence, secret hygiene), P2-S12..S15.
+
+### Implementation
+- `buyer.py` callback route: `RAZORPAY_CALLBACK_VERIFIED` appended EXACTLY ONCE
+  (only on the NULL->set transition of callback_verified_at); payload carries
+  attempt/order/payment identifiers and the verification formula name.
+- `webhooks.py`: `RAZORPAY_WEBHOOK_INGESTED` appended by the inbox WINNER only;
+  includes event id/type, order/payment refs, payload sha256,
+  signature_verified=true, plus best-effort execution_attempt/intent/checkout
+  correlation resolved from the claimed order.
+- `ops.py`: `RAZORPAY_RECONCILIATION_RUN` records every operator pass:
+  before/after attempt states, reconcile_state_after, provider status,
+  discovery claim flag, settlement flag, and an explicit reservation note.
+
+### Evidence (tests/test_ledger_phase2.py)
+1. Valid callback x2 -> exactly ONE verification event; SECRET absent from payloads.
+2. Forged callback -> 403, ledger grows by zero.
+3. Webhook winner-only: one PROCESSED delivery -> exactly one ingestion event;
+   duplicate adds none; forged signature adds none; WEBHOOK_SECRET absent.
+4. Ops reconciliation pass recorded with RESOLVED + order refs.
+5. EvidenceLedger.verify() passes across mixed Phase-1/Phase-2 chain.
+
+### Validation commands + results
+```text
+ruff check .                                     -> clean
+mypy -p razormesh_api (root AND services/api)    -> Success, 54 files
+pytest (full)                                    -> 352 passed
+make security-check                              -> PASS
+```
+
+### Real Razorpay interaction
+- NONE.
+
+### Next
+- M45 — Buyer UI Trust-State Polish.

@@ -111,9 +111,35 @@ def run_reconciliation(
 ) -> ReconciliationOutcome:
     service = _service(settings)
     try:
-        return service.reconcile(attempt_id)
+        outcome = service.reconcile(attempt_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail={"code": "ATTEMPT_NOT_RECONCILABLE"}) from exc
     except RazorpayProviderStateConflict as exc:
         # Authority conflict: fail loudly, mutate nothing (P2-S06).
         raise HTTPException(status_code=409, detail={"code": exc.code}) from exc
+
+    # P2-M44: tamper-evident record of the operator-driven reconciliation pass.
+    from razormesh_api.ledger import EvidenceLedger
+
+    EvidenceLedger(_repos_for(settings)).append(
+        event_type="RAZORPAY_RECONCILIATION_RUN",
+        actor="ops-reconciliation-route",
+        intent_id=outcome.intent_id,
+        payload={
+            "execution_attempt_id": outcome.attempt_id,
+            "razorpay_order_id": outcome.order_id,
+            "state_before": outcome.attempt_state_before,
+            "state_after": outcome.attempt_state_after,
+            "reconcile_state_after": outcome.reconcile_state_after,
+            "provider_order_status": outcome.provider_order_status,
+            "order_discovered_and_claimed": outcome.order_discovered_and_claimed,
+            "settled_by_reconciliation": outcome.settled_by_reconciliation,
+            "reservation_note": (
+                "committed exactly-once via reducer"
+                if outcome.settled_by_reconciliation
+                else "held/unchanged"
+            ),
+            "detail": outcome.detail,
+        },
+    )
+    return outcome

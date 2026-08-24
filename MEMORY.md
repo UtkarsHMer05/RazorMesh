@@ -155,11 +155,12 @@ GET /buyer/status — browser is never a source of payment truth).
 
 # Next action
 
-M44 (Audit & Evidence Ledger Upgrade): record safe Phase-2 evidence (intent/
-checkout hashes, decision, ticket, attempt, razorpay order/payment ids,
-callback verification, webhook ids/types/verifications, reconciliation,
-reservation state, final state) in the hash-chained ledger; no secrets; keep
-append-only tamper-evidence. Done so far: M41 (D-036 discovery+claim+RESOLVED +
+M45 (Buyer UI Trust-State Polish): TEST MODE labeling, no-real-money message,
+VERIFYING/CAPTURED-PAID/FAILED/PROVIDER_UNKNOWN states, unknown must not offer
+fresh Pay, keep authorization diff/reason explanations; DESIGN/a11y/responsive/
+reduced-motion conformance. M44 done: CALLBACK_VERIFIED (exactly-once) +
+WEBHOOK_INGESTED (winner-only, attempt-correlated) + RECONCILIATION_RUN ledger
+events; test_ledger_phase2.py 5 tests. Done earlier: M41 (D-036 discovery+claim+RESOLVED +
 ops surface), M42 (concurrency single-effect proofs), M43 (lab 22/22 incl. 6
 new SYNTHETIC provider-evidence families; benchmark 20 pairs F1=1.0; lesson:
 synthetic event/payment ids must be unique per execution). Suite 347. Tunnel/share: if the zrok
