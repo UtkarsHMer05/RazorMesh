@@ -74,9 +74,11 @@ All 50 milestones in `MILESTONES.md` pass and Phase-1 completion report exists.
 
 # Phase 2 — Real Razorpay Test-Mode Integration
 
-> **Status: ACTIVE** (since P2-M05/M10, human-approved 2026-08-24). Progress:
-> `PHASE2_STATUS.md`; plan: `PHASE2_MILESTONES.md`. Test Mode only; Live Mode
-> forbidden (D-030 guard, P2-S01/S02).
+> **Status: COMPLETE — local prototype (all 50 milestones PASS, finished
+> 2026-08-25).** Completion report: `docs/PHASE2_COMPLETION_REPORT.md`.
+> Progress: `PHASE2_STATUS.md`; plan: `PHASE2_MILESTONES.md`. Test Mode only;
+> Live Mode forbidden (D-030 guard, P2-S01/S02). Phase 3 awaits explicit human
+> approval.
 
 ## Objective
 

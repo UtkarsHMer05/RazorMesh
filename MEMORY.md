@@ -155,13 +155,12 @@ GET /buyer/status — browser is never a source of payment truth).
 
 # Next action
 
-M50 (Completion Report & STOP): write docs/PHASE2_COMPLETION_REPORT.md per
-master prompt (Phase-1 revalidation, architecture, versions, Orders/Checkout/
-callback/webhook verification, duplicate/out-of-order handling, failed->captured,
-real success/failure evidence, provider-unknown behavior, tests/security/
-performance, limitations, human gates, no-Live statement, reproduction, commits);
-update governance; prepare INTERFACES ONLY for Phase-3/4; mark Phase 3 awaiting
-human approval; STOP. M49 done: clean-room PASS; findings fixed —
+PHASE 2 COMPLETE (all 50 milestones PASS) — AWAITING HUMAN APPROVAL FOR PHASE 3.
+Completion report: docs/PHASE2_COMPLETION_REPORT.md. Final suite 353 backend +
+11 vitest + 5 Playwright; mypy strict 54 files both roots; benchmark 20 pairs
+F1=1.0; security battery green. Do NOT start Phase 3 without explicit human
+instruction. If asked to continue anything: verify gates first, then follow
+the resume protocol below. Historical M49 notes: clean-room PASS; findings fixed —
 (a) rzp_first_order ghost reservation removed (executor owns D-028 reservation),
 (b) NEW `make test-db` provisions razormesh_test after volume resets (suite
 needs it; migrate alone does NOT create it). M48 done: full gate battery green, zero findings (see PHASE2_STATUS M48 table).
