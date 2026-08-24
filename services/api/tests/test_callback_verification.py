@@ -353,3 +353,145 @@ def test_uncaptured_order_stays_executing(cb_env, cb_client, monkeypatch) -> Non
         sp = s.get(AuthorizationSpend, intent_id)
         assert sp is not None
         assert sp.committed_minor == 0  # nothing settled without capture evidence
+
+
+def test_callback_after_webhook_failure_settlement_stays_failed_and_released(
+    cb_env,
+    cb_client,
+    monkeypatch,  # type: ignore[no-untyped-def]
+) -> None:
+    """P2-M40 race regression (live shape): the payment.failed webhook settles
+    the attempt FAILED and releases the reservation; a later verified browser
+    callback must be an inert no-op — FAILED state, release intact, no
+    re-reservation/commit, fulfilment NOT_ELIGIBLE.
+    """
+    from datetime import UTC, datetime
+
+    from razormesh_api.api.routes import buyer as buyer_route
+    from razormesh_api.reducer import ProviderStateReducer, VerifiedProviderEvent
+
+    repos, _executor, spend, keys = cb_env
+    attempt_id, order_id, intent_id = _run_trusted_flow(cb_env)
+
+    # The webhook path: verified payment.failed event through the reducer.
+    reducer = ProviderStateReducer(
+        repos=repos, keys=keys, nonces=_redis(), provider=None, spend=spend
+    )
+    settled = reducer.apply_event(
+        VerifiedProviderEvent(
+            kind="payment.failed",
+            razorpay_order_id=order_id,
+            razorpay_payment_id="pay_m40_fail",
+        ),
+        now=datetime.now(UTC),
+    )
+    assert settled.state == "FAILED"
+    with repos.transaction() as s:
+        sp = s.get(AuthorizationSpend, intent_id)
+        assert sp is not None
+        assert sp.reserved_minor == 0 and sp.committed_minor == 0
+        version_after_settle = sp.version
+
+    # Provider snapshot for the callback fetch: failed payment, order not paid.
+    def unpaid_provider(settings: Settings):  # type: ignore[no-untyped-def]
+        client = RazorpayClient(
+            key_id="rzp_test_k",
+            key_secret=SECRET,
+            base_url=get_settings().razorpay_api_base_url,
+            timeout_seconds=5,
+            transport=_PaidTransport(status="attempted"),
+        )
+        return RazorpayPaymentProvider(client)
+
+    monkeypatch.setattr(buyer_route, "_razorpay_provider", unpaid_provider)
+
+    res = cb_client.post(
+        "/buyer/callback",
+        json={
+            "intent_id": intent_id,
+            "checkout_id": _real_checkout(repos, attempt_id),
+            "razorpay_payment_id": "pay_m40_fail",
+            "razorpay_order_id": order_id,
+            "razorpay_signature": _signature(order_id, "pay_m40_fail"),
+        },
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["state"] == "FAILED"
+    assert "NOT_CAPTURED" in str(body.get("detail"))
+
+    with repos.transaction() as s:
+        a = s.get(ExecutionAttempt, attempt_id)
+        sp = s.get(AuthorizationSpend, intent_id)
+        assert a is not None and sp is not None
+        assert a.state == "FAILED"
+        assert a.error_code == "RAZORPAY_PAYMENT_FAILED"
+        assert a.fulfilment_state == "NOT_ELIGIBLE"
+        assert sp.reserved_minor == 0
+        assert sp.committed_minor == 0
+        assert sp.version == version_after_settle  # release happened exactly once
+
+
+def test_callback_reports_fresh_state_when_failure_settles_mid_request(
+    cb_env,
+    cb_client,
+    monkeypatch,  # type: ignore[no-untyped-def]
+) -> None:
+    """P2-M40 intra-request race: a webhook failure settles the attempt WHILE
+    the callback is in flight (after its initial read). The not-captured
+    response must report the CURRENT durable state (FAILED), never the stale
+    pre-lock EXECUTING snapshot.
+    """
+    from datetime import UTC, datetime
+
+    from razormesh_api.api.routes import buyer as buyer_route
+
+    repos, executor, _spend, _keys = cb_env
+    attempt_id, order_id, intent_id = _run_trusted_flow(cb_env)
+
+    class _FailDuringFetchProvider(RazorpayPaymentProvider):
+        def fetch_order(self, order_id_: str):  # type: ignore[override]
+            # Simulates the payment.failed webhook committing at this instant.
+            executor.record_provider_failure(
+                attempt_id,
+                error_code="RAZORPAY_PAYMENT_FAILED",
+                now=datetime.now(UTC),
+            )
+            return super().fetch_order(order_id_)
+
+    def racing_provider(settings: Settings):  # type: ignore[no-untyped-def]
+        client = RazorpayClient(
+            key_id="rzp_test_k",
+            key_secret=SECRET,
+            base_url=get_settings().razorpay_api_base_url,
+            timeout_seconds=5,
+            transport=_PaidTransport(status="attempted"),
+        )
+        return _FailDuringFetchProvider(client)
+
+    monkeypatch.setattr(buyer_route, "_razorpay_provider", racing_provider)
+
+    res = cb_client.post(
+        "/buyer/callback",
+        json={
+            "intent_id": intent_id,
+            "checkout_id": _real_checkout(repos, attempt_id),
+            "razorpay_payment_id": "pay_race_fail",
+            "razorpay_order_id": order_id,
+            "razorpay_signature": _signature(order_id, "pay_race_fail"),
+        },
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    # Fresh-read proof: FAILED, not the stale EXECUTING snapshot.
+    assert body["state"] == "FAILED"
+    assert "NOT_CAPTURED" in str(body.get("detail"))
+
+    with repos.transaction() as s:
+        a = s.get(ExecutionAttempt, attempt_id)
+        sp = s.get(AuthorizationSpend, intent_id)
+        assert a is not None and sp is not None
+        assert a.state == "FAILED"
+        assert a.fulfilment_state == "NOT_ELIGIBLE"
+        assert sp.reserved_minor == 0
+        assert sp.committed_minor == 0

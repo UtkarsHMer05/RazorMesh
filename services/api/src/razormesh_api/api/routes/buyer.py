@@ -9,7 +9,7 @@ without a valid ticket; no client field influences totals.
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
@@ -120,6 +120,17 @@ class ExecutionBody(BaseModel):
     attempt_id: str
     detail: str | None = None
     launch: LaunchPayload | None = None
+
+
+class StatusBody(BaseModel):
+    """Read-only authoritative attempt snapshot for UI re-sync (P2-M40)."""
+
+    state: str
+    attempt_id: str | None = None
+    fulfilment_state: str | None = None
+    razorpay_order_id: str | None = None
+    razorpay_payment_status: str | None = None
+    error_code: str | None = None
 
 
 @router.post("/buyer/fixture-intent")
@@ -413,11 +424,52 @@ def checkout_callback(
             settled = existing
         return ExecutionBody(state=settled.state, attempt_id=settled.execution_attempt_id)
 
+    # Re-read the CURRENT durable state: a webhook may have settled the attempt
+    # (e.g. payment.failed) while this callback was in flight. The response must
+    # never report a pre-lock snapshot as the truth (P2-M40 race analysis).
+    with repos.factory() as session:
+        fresh = session.get(ExecutionAttemptForCallback, attempt.execution_attempt_id)
+    current_state = fresh.state if fresh is not None else attempt.state
     return ExecutionBody(
-        state=attempt.state,
+        state=current_state,
         attempt_id=attempt.execution_attempt_id,
         detail="RAZORPAY_PAYMENT_NOT_CAPTURED",
     )
+
+
+@router.get("/buyer/status")
+def attempt_status(
+    repos: Annotated[Repositories, Depends(_repos)],
+    intent_id: Annotated[str, Query(min_length=6, max_length=64)],
+    checkout_id: Annotated[str, Query(min_length=6, max_length=64)],
+) -> StatusBody:
+    """P2-M40: READ-ONLY authoritative attempt state for UI re-sync.
+
+    The browser is never a source of payment truth: after the checkout modal
+    is dismissed without a success callback, a webhook may already have
+    settled the attempt (FAILED or SUCCEEDED). The UI must render the server
+    state, not its last local phase. Zero mutation.
+    """
+    with repos.transaction() as session:
+        attempt = (
+            session.query(ExecutionAttemptForCallback)
+            .filter(
+                ExecutionAttemptForCallback.intent_id == intent_id,
+                ExecutionAttemptForCallback.checkout_id == checkout_id,
+            )
+            .order_by(ExecutionAttemptForCallback.created_at.desc())
+            .first()
+        )
+        if attempt is None:
+            return StatusBody(state="NO_ATTEMPT")
+        return StatusBody(
+            state=attempt.state,
+            attempt_id=attempt.execution_attempt_id,
+            fulfilment_state=attempt.fulfilment_state,
+            razorpay_order_id=attempt.razorpay_order_id,
+            razorpay_payment_status=attempt.razorpay_payment_status,
+            error_code=attempt.error_code,
+        )
 
 
 def _razorpay_provider(settings: Settings) -> RazorpayPaymentProvider:

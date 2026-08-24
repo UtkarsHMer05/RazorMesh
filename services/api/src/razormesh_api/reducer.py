@@ -213,16 +213,8 @@ class ProviderStateReducer:
         return refreshed
 
     def _mark_payment_fields(self, attempt_id: str, payment_id: str | None, status: str) -> None:
-        from razormesh_api.domain.ids import ExecutionAttemptId
-
         with self._repos.transaction() as session:
-            row = (
-                session.get(
-                    ExecutionAttemptId and ExecutionAttempt, attempt_id, with_for_update=True
-                )
-                if False
-                else session.get(ExecutionAttempt, attempt_id, with_for_update=True)
-            )
+            row = session.get(ExecutionAttempt, attempt_id, with_for_update=True)
             if row is not None:
                 if payment_id:
                     row.razorpay_payment_id = payment_id

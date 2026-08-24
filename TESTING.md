@@ -290,6 +290,15 @@ Release-blocking additions on top of all Phase-1 gates:
    unit-testing the payload builder alone is not sufficient.
 10. Readiness honesty: `/ready` reports the provider selector actually loaded
     from settings; no hardcoded provider flag.
+11. UI truth re-sync (P2-M40, D-035): `GET /buyer/status` is strictly
+    read-only and mirrors the authoritative attempt state (EXECUTING→FAILED
+    transition visible; no secrets; unknown context → controlled
+    `NO_ATTEMPT`); a verified failure settlement leaves a later browser
+    callback inert (FAILED preserved, release intact, no re-reserve/commit,
+    NOT_ELIGIBLE); the callback's not-captured response reports the CURRENT
+    state even when a webhook settles mid-request; the frontend re-syncs on
+    modal dismiss, hides Re-open on FAILED, and renders SUCCEEDED as
+    CAPTURED/PAID.
 
 Real Razorpay interaction is limited to milestones that explicitly require it
 (M12 auth diagnostic, M17 first order, M18 fetch, M36 webhook, M38/M40 human-gated

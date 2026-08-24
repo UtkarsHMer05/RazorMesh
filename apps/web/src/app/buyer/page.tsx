@@ -42,6 +42,14 @@ type RazorpayHandlerResponse = {
   razorpay_signature: string;
 };
 
+type StatusBody = {
+  state: string;
+  attempt_id?: string | null;
+  fulfilment_state?: string | null;
+  razorpay_payment_status?: string | null;
+  error_code?: string | null;
+};
+
 type PayPhase = "idle" | "awaiting_checkout" | "verifying" | "captured" | "failed" | "provider_unknown";
 
 type RazorpayInstance = { open: () => void };
@@ -198,6 +206,35 @@ export default function BuyerPage() {
     [],
   );
 
+  const refreshStatus = useCallback(
+    async (launch: NonNullable<ExecutionState["launch"]>) => {
+      // P2-M40: the browser is never a source of payment truth. After the
+      // modal is dismissed without a success callback, a webhook may already
+      // have settled the attempt — render the SERVER state, not the last
+      // local phase.
+      setBusy(true);
+      setError(null);
+      try {
+        const res = await fetch(
+          `${API}/buyer/status?intent_id=${encodeURIComponent(launch.intent_id)}` +
+            `&checkout_id=${encodeURIComponent(launch.checkout_id)}`,
+        );
+        const body = (await res.json()) as StatusBody;
+        if (!res.ok) throw new Error(`status ${res.status}`);
+        setExecution((prev) => (prev ? { ...prev, state: body.state } : prev));
+        if (body.state === "SUCCEEDED") setPayPhase("captured");
+        else if (body.state === "FAILED") setPayPhase("failed");
+        else if (body.state === "PROVIDER_UNKNOWN") setPayPhase("provider_unknown");
+        else if (body.state === "EXECUTING") setPayPhase("awaiting_checkout");
+      } catch (e) {
+        setError(`Status refresh failed: ${String(e)} — the backend remains authoritative.`);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [],
+  );
+
   const openRazorpayCheckout = async (
     launch: NonNullable<ExecutionState["launch"]>,
   ): Promise<void> => {
@@ -222,7 +259,12 @@ export default function BuyerPage() {
       handler: (response: RazorpayHandlerResponse) => {
         void submitCallback(response, launch);
       },
-      modal: { confirm_close: true },
+      modal: {
+        confirm_close: true,
+        ondismiss: () => {
+          void refreshStatus(launch);
+        },
+      },
     });
     rzp.open();
   };
@@ -352,8 +394,27 @@ export default function BuyerPage() {
                 Re-open Razorpay Test Checkout
               </button>
             )}
+            {(payPhase === "awaiting_checkout" || payPhase === "provider_unknown") && (
+              <button
+                data-testid="refresh-status"
+                disabled={busy}
+                onClick={() => {
+                  const launch = lastLaunchRef.current;
+                  if (launch) void refreshStatus(launch);
+                }}
+              >
+                Refresh status from server
+              </button>
+            )}
             {payPhase === "verifying" && (
               <p role="status">Verifying payment server-side… do not close this page.</p>
+            )}
+            {payPhase === "failed" && (
+              <p data-testid="failed-note" role="status">
+                Payment failed — nothing was fulfilled and the reservation was released
+                server-side. Re-opening this checkout is disabled; start a fresh checkout
+                (Steps 1–3) to try again.
+              </p>
             )}
             {payPhase === "provider_unknown" && (
               <p data-testid="unknown-note" role="alert">

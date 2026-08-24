@@ -638,3 +638,52 @@ The same live sequence also constitutes the first production demonstration
 of the guarded FAILED→SUCCEEDED late-capture reconciliation (P2-S16/M26):
 release on failure, then exactly one capacity-checked commit, audited as
 RAZORPAY_RECONCILED_LATE_CAPTURE.
+
+---
+
+## D-035 — UI re-syncs payment truth via read-only GET /buyer/status
+
+Date: 2026-08-25
+Milestones: Phase-2 M40
+Status: Accepted
+Affected docs: `PHASE2_STATUS.md`, `TESTING.md` (§14.11), `MEMORY.md`,
+`docs/PHASE2_M40_EVIDENCE.md`
+
+Context: the live M40 failure checkout settled correctly server-side
+(verified payment.failed webhook → FAILED, reservation released exactly
+once, audited), but the buyer page kept showing EXECUTING with a Re-open
+button. Root cause: on failure, checkout.js never invokes the success
+handler, so no `/buyer/callback` occurs, and the page had no path to
+re-read server truth after the modal was dismissed — it rendered its last
+local phase, not the backend state.
+
+Decision:
+1. Add `GET /buyer/status?intent_id&checkout_id` — strictly READ-ONLY,
+   zero mutation, returning the authoritative snapshot (state, attempt_id,
+   fulfilment_state, razorpay_order_id, razorpay_payment_status,
+   error_code); unknown contexts return a controlled `NO_ATTEMPT`.
+2. The buyer page re-syncs from this endpoint on modal `ondismiss` and
+   offers a manual "Refresh status from server" action while
+   EXECUTING/PROVIDER_UNKNOWN. FAILED renders a truthful note (nothing
+   fulfilled, reservation released) and hides Re-open; SUCCEEDED renders
+   CAPTURED/PAID. Re-open remains available only while the SERVER says
+   EXECUTING (same-order retry, consistent with M21 and the live M38
+   payment-#3 failed→retry→captured behavior).
+3. The callback's not-captured response re-reads the CURRENT attempt state
+   instead of returning its initial pre-lock snapshot, so a webhook
+   settling mid-request cannot produce a stale EXECUTING response.
+
+Rationale: the browser is never a source of payment truth (RULES UI §1–3);
+UI state must be a view over backend state. Modal dismissal without a
+success handler is a normal failure-path event, not an error, and the UI
+must converge to server truth without requiring a page reload.
+
+Security consequences: none adverse — the new endpoint is read-only and
+secret-free (regression-scanned); it creates no mutation surface and no
+authority. Settlement remains exclusively the reducer/executor's job.
+
+Validation/evidence: live endpoint returned FAILED for the M40 attempt;
+regressions — `test_status_endpoint_reflects_server_truth_and_is_read_only`
+(read-only, no-secret, exactly-once release), two callback race regressions
+(callback after failure settlement inert; mid-request settlement reported
+fresh), three frontend re-sync vitest cases; full suite 333 passed.

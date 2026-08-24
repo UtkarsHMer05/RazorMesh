@@ -49,7 +49,7 @@
 | M37 | Real Success Checkout Readiness Gate | PASS | readiness checklist fully evidenced (order create, Checkout UI, callback verify, webhook verify/dedup, provider fetch, reducer, reservation, audit, Test Mode guard, Phase-1 regressions 323/323); one reliable start workflow `make phase2-up` proven live; auth diagnostic OK; R-017 test instruments verified |
 | M38 | HUMAN GATE — Real Test Success | PASS | payment #3 end-to-end: ALLOW→ticket→order→failed→late-capture reconcile→SUCCEEDED/ELIGIBLE; 4 REAL signed webhooks verified=true (7 total real rows); reserved→committed EXACTLY ONCE by live fixed webhook path (v4: ensure→reserve→release→commit); provider_name=razorpay; audit chain valid (7 events); provider-side fetch paid/captured matches; authorized-in-FAILED semantics defect found live, fixed+regression-tested (D-034); payment #2 losses disclosed (D-033) |
 | M39 | Success Evidence Reconciliation | PASS | docs/PHASE2_M39_EVIDENCE_RECONCILIATION.md: DB↔provider fetch↔webhook inbox↔audit chain↔Dashboard observations reconciled for payments #2/#3; honest limitations recorded (Events API 404 R-018; payment #2 rows destroyed; one ERROR inbox row disclosed) |
-| M40 | HUMAN GATE — Real Test Failure | NOT_STARTED | — |
+| M40 | HUMAN GATE — Real Test Failure | PASS | failure checkout end-to-end: payment.failed webhook verified=true PROCESSED; attempt FAILED/NOT_ELIGIBLE; reservation released exactly once (v3: ensure→reserve→release; reserved=0, committed=0); PAYMENT_FAILED audited (chain valid, 13 events); provider fetch order=attempted/payment=failed; stale-UI verdict = propagation gap, NOT reconciliation defect → read-only /buyer/status + ondismiss re-sync + 5 new regressions; suite 333/333; dev DB byte-identical |
 | M41 | Provider-Unknown / Timeout Reconciliation | NOT_STARTED | — |
 | M42 | Real-Provider Concurrency & Replay Regression | NOT_STARTED | — |
 | M43 | Security Lab Phase-2 Expansion | NOT_STARTED | — |
@@ -1431,3 +1431,85 @@ pytest (full)               → 330 passed (no code change this milestone
 ### Next
 - M40 HUMAN GATE — Real Test Failure (failure@razorpay or sub-4-digit OTP;
   expect no fulfilment, reservation released, audited).
+
+---
+
+## M40 — HUMAN GATE — Real Test Failure
+
+MILESTONE: M40
+STATUS: PASS
+REAL RAZORPAY INTERACTION: TEST_CHECKOUT (human, one failure) + WEBHOOK
+(one real signed payment.failed delivery) + READ_ONLY (order/payment fetches)
+
+Full evidence record: `docs/PHASE2_M40_EVIDENCE.md`. Evidence was captured
+BEFORE any pytest run or state reset, per the gate instruction.
+
+### Gate sequence (2026-08-24 19:26–19:27 UTC; evidence captured 2026-08-25)
+
+Human failure checkout (R-017 instrument): intent
+`intent_01M0TKTHR5D43WHWY4ZCDANCPC` → RazorGuard ALLOW → ticket
+`tk_01M0TKTN4D7C5CDRWWD1NQD7M7` (single-use: used_at == attempt creation) →
+attempt `exa_01M0TKTPWPR593Y4HNW48BF0SE` → order `order_TTionNHkv0TPGs`
+(479900 INR minor, receipt binds order→attempt). Razorpay payment
+`pay_TTipbCGaqWBrVD` FAILED; human closed the modal, no retry. Real signed
+payment.failed webhook `TTiphMTgXsdq0K` delivered 19:27:41.541 UTC →
+verified=true, PROCESSED exactly once → atomic EXECUTING→FAILED settlement
+19:27:41.671 UTC with single reservation release → PAYMENT_FAILED audited
+(seq 13; chain valid, 13 events, `/audit/verify` live).
+
+### Checklist disposition (all captured read-only, pre-test)
+
+- payment.failed webhook verified=true, PROCESSED ✓
+- attempt FAILED, error RAZORPAY_PAYMENT_FAILED, provider_name=razorpay ✓
+- fulfilment NOT_ELIGIBLE; reconcile_state NONE ✓
+- reservation released EXACTLY ONCE: spend version 3 (ensure→reserve→release),
+  reserved=0, committed=0; M38 payment-#3 row unchanged (committed=479900) ✓
+- PAYMENT_FAILED audit event present; chain valid ✓
+- provider-side fetch matches: order=attempted, payment=failed, 479900 INR ✓
+- no callback/webhook race can leave the attempt EXECUTING: `_settle` holds
+  FOR UPDATE + require_transition + spend effect in one transaction; terminal
+  states have empty transition sets; inbox PK dedups duplicates; callback
+  never settles FAILED — analysis + 2 new race regressions ✓
+
+### Diagnosis of the reported symptom (stale EXECUTING UI)
+
+Backend state was FAILED the whole time — this was UI state-propagation
+lag, NOT a reconciliation defect: on failure, checkout.js never invokes the
+success handler, so no `/buyer/callback` occurs, and the pre-M40 page had
+no path to re-read server truth after modal dismissal.
+
+### Remediation completed this milestone
+
+An in-progress fix was found uncommitted in the working tree at session
+start (status endpoint + UI re-sync + one test, referencing the live
+attempt); it was reviewed, completed and gated:
+
+1. `GET /buyer/status` — read-only authoritative snapshot for UI re-sync;
+   controlled NO_ATTEMPT; zero mutation.
+2. Buyer page — modal `ondismiss` re-sync; manual "Refresh status from
+   server"; FAILED note + Re-open hidden on FAILED.
+3. Callback not-captured branch re-reads CURRENT state (no stale snapshot
+   when a webhook settles mid-request).
+4. Reducer dead-code artifact removed (`_mark_payment_fields`).
+
+### Gate run at PASS
+
+```text
+ruff format --check / ruff check → clean / clean
+mypy strict (root + services/api)→ no issues in 52 source files (both)
+pytest (full)                    → 333 passed; dev DB business rows
+                                   byte-identical after the run
+pnpm lint / typecheck / test     → clean / clean / 9 passed (3 new M40)
+pnpm build                       → OK (6 routes)
+playwright                       → 2 passed
+make security-check              → PASS (scan 0; audits clean)
+live GET /buyer/status           → FAILED / NOT_ELIGIBLE / failed
+served dev bundle                → contains the new re-sync UI
+```
+
+### Known limitations
+- Page reload resets buyer component state (no cross-session attempt
+  redisplay); backend remains the durable record — M45 candidate.
+
+### Next
+- M41 — Provider-Unknown / Timeout Reconciliation (local fault injection).
