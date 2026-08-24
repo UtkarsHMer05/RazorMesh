@@ -155,10 +155,12 @@ GET /buyer/status — browser is never a source of payment truth).
 
 # Next action
 
-M46 (Automated E2E w/ External Checkout Boundary): stub Checkout script for
-browser tests + provider fakes for failure permutations; preserve real M38/M40
-evidence; test launch payload, success verification UI, failure UI, unknown
-state, absence of secrets in rendered/network data. M45 done: unknown offers NO
+M47 (Performance & Network Baseline): measure local RazorGuard/ticket latency +
+real Test create-order/fetch latency + callback verify + webhook processing;
+SEPARATE local compute from provider/network/human time; record sample sizes,
+hardware, Test Mode caveats. M46 done: e2e/checkout.spec.ts stubs checkout.js +
+API boundary; success/failure/unknown paths; DOM+wire secret scans; PW 5/5.
+M45 done: unknown offers NO
 payment action (refresh only), authorization-binding explanation, aria-live,
 reduced-motion + responsive CSS. M44 done: CALLBACK_VERIFIED (exactly-once) +
 WEBHOOK_INGESTED (winner-only, attempt-correlated) + RECONCILIATION_RUN ledger

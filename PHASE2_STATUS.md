@@ -55,7 +55,7 @@
 | M43 | Security Lab Phase-2 Expansion | PASS | 6 new labeled SYNTHETIC families: FORGED_CALLBACK (rejected zero-mutation), WRONG_ORDER_CONTEXT (server-stored binding holds), DUPLICATE_CALLBACK/DUPLICATE_WEBHOOK (single effect), OUT_OF_ORDER_WEBHOOK + FAILED_THEN_CAPTURED (reconcile exactly-once); registry 22/22 pass via /security-lab/run; benchmark now 20 pairs P=R=F1=1.0; synthetic ids unique per execution; Razorpay never contacted |
 | M44 | Audit & Evidence Ledger Upgrade | PASS | 3 new hash-chained events: RAZORPAY_CALLBACK_VERIFIED (exactly-once; duplicates/forgery grow nothing), RAZORPAY_WEBHOOK_INGESTED (winner-only + best-effort attempt/intent correlation), RAZORPAY_RECONCILIATION_RUN (ops pass w/ before/after+reconcile_state+reservation note); payloads carry safe identifiers only (secret-scan asserted); chain verify() green after mixed Phase-1/2 evidence; suite 352/352 |
 | M45 | Buyer UI Trust-State Polish | PASS | TEST MODE banner + no-real-money messaging; VERIFYING/CAPTURED-PAID/FAILED/PROVIDER_UNKNOWN states with aria-live; PROVIDER_UNKNOWN now offers NO payment action (same-order re-open removed on unknown; refresh only); authorization-binding explanation rendered at decision time; prefers-reduced-motion + <=640px responsive guards added; vitest 11/11 incl. 2 new M45 regressions; tsc/eslint/build/Playwright green |
-| M46 | Automated E2E w/ External Checkout Boundary | NOT_STARTED | — |
+| M46 | Automated E2E w/ External Checkout Boundary | PASS | e2e/checkout.spec.ts: checkout.js replaced by deterministic in-browser stub + API boundary route-mocked; 3 paths proven (success handler->CAPTURED/PAID with server-issued fields only; FAILED note + no payment actions; network-fail -> PROVIDER_UNKNOWN refresh-only); DOM+request secret scan (key_secret/webhook_secret fixtures never appear); Playwright 5/5 |
 | M47 | Phase-2 Performance & Network Baseline | NOT_STARTED | — |
 | M48 | Full Phase-2 Security & Dependency Gate | NOT_STARTED | — |
 | M49 | Phase-2 Clean-Room Acceptance | NOT_STARTED | — |
@@ -1742,3 +1742,40 @@ Security invariants: P2-S04/S06 (browser never authoritative), UI §1-3.
 
 ### Next
 - M46 — Automated E2E with External Checkout Boundary.
+
+
+## M46 — Automated E2E with External Checkout Boundary
+
+MILESTONE: M46
+STATUS: PASS
+
+Requirements: master prompt M46 — automated E2E stable WITHOUT manual Razorpay;
+stubbed Checkout script + provider fakes; real M38/M40 evidence preserved; test
+launch payload, success verification UI, failure UI, unknown state, absence of
+secrets in rendered/network data.
+Security invariants: P2-S03/S04 (secrets never reach browser/wire), UI truth rules.
+
+### Implementation
+- `apps/web/e2e/checkout.spec.ts` (new): route-level boundary stubs —
+  checkout.razorpay.com/v1/checkout.js replaced by a deterministic window.Razorpay
+  fake capturing options; all `/buyer/*` endpoints mocked at the network layer.
+- Proven per path: (1) SUCCESS — modal receives ONLY server-issued fields,
+  handler forwards fixed evidence, page renders CAPTURED/PAID and removes
+  payment actions; (2) FAILURE — FAILED state + failed-note + zero payment
+  actions; (3) UNKNOWN — callback network abort -> PROVIDER_UNKNOWN +
+  unknown-note + refresh-status only.
+- Secret hygiene: fixture key-secret/webhook-secret values asserted absent from
+  full DOM content AND from every captured request line; public key id allowed.
+
+### Validation commands + results
+```text
+npx playwright test     -> 5 passed (2 smoke + 3 checkout E2E)
+pnpm typecheck / lint   -> clean
+pnpm test               -> 11 passed
+```
+
+### Real Razorpay interaction
+- NONE (stubbed boundary; live M38/M40 records remain the only real evidence).
+
+### Next
+- M47 — Phase-2 Performance & Network Baseline.
