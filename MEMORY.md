@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 2 — Razorpay Test Mode Integration (ACTIVE since P2-M05)  
-**Current milestone:** P2-M06 — Live Razorpay Documentation Research (next)  
-**Phase-2 milestones passed:** P2-M01..P2-M05  
+**Current milestone:** P2-M36 — HUMAN GATE (webhook Dashboard config) — awaiting human  
+**Phase-2 milestones passed:** P2-M01..P2-M35  
 **Last updated:** 2026-08-24  
-**Gate:** Phase-1 fully revalidated (225/225, 10/10 clean-room, security suites green); baseline frozen in docs/PHASE2_BASELINE.md; ZERO Razorpay calls so far
+**Gate:** Phase-1 fully revalidated (225/225, 10/10 clean-room, security suites green); baseline frozen in docs/PHASE2_BASELINE.md; real auth diag OK; 2 real Test orders created+reconciled; callback sig verify + raw-body webhooks + reducer + inbox all green; pytest 316/316
 
 ---
 
@@ -150,7 +150,10 @@ See `DECISIONS.md`, currently D-001 through D-029.
 
 # Next action
 
-P2-M02 — re-run ALL Phase-1 quality gates (ruff/mypy/pytest 225/frontend/build/E2E/security-check/benchmark smoke); repair regressions before any Razorpay work.
+HUMAN GATE (M36): enable zrok (token from my.zrok.io), run scripts/webhook_tunnel.sh,
+register public URL in Test Dashboard (OTP 754081) with events payment.authorized/
+captured/failed + order.paid using the .env webhook secret. Then M37 readiness ->
+M38 real success checkout -> M40 real failure checkout. See docs/PHASE2_TUNNEL.md.
 
 ---
 
