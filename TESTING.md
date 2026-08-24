@@ -256,3 +256,33 @@ The final Phase-1 gate must also prove:
 - a pre-provider setup failure closes partial attempt state and releases both durable reservation and coordination nonce;
 - the public audit tamper simulation does not change the ledger's event count or validity;
 - the adversarial registry covers all required Phase-1 families and benchmark pipeline errors cannot be scored as prevented attacks.
+
+---
+
+# 13. Phase-2 test gates (Razorpay Test Mode — active)
+
+Release-blocking additions on top of all Phase-1 gates:
+
+1. Config guards: live-key rejection; missing-credential refusal naming variables
+   only; mock mode credential-free.
+2. Order creation: server-authoritative amount/currency; correlation persisted;
+   provider-unknown mapping on timeout-before-response and timeout-after-send.
+3. Callback verification: valid, forged, mutated payment id, wrong order context,
+   replayed, superseded authorization, stale checkout, duplicate → only the first
+   legitimate verified callback may commit.
+4. Webhook: raw-body HMAC tests (valid, one-byte mutation, reserialization
+   mismatch, wrong secret, missing header); durable event-id dedup under
+   concurrency; unknown event types handled safely.
+5. Reducer permutations: authorized→captured, captured→authorized,
+   failed→captured, order.paid→captured, captured→order.paid, duplicates,
+   delayed events → converge with exactly one commit/fulfilment effect.
+6. Provider-unknown: fault injection proves identity + reservation retention and
+   reconciliation (never blind retry).
+7. Concurrency regression WITH the real-provider adapter present (mock transport
+   for volume): 20 same-ticket attempts → ≤1 provider/business effect.
+8. Frontend: launch payload contains public data only; VERIFYING/CAPTURED/FAILED/
+   PROVIDER_UNKNOWN states render; no secrets in rendered output/bundle checks.
+
+Real Razorpay interaction is limited to milestones that explicitly require it
+(M12 auth diagnostic, M17 first order, M18 fetch, M36 webhook, M38/M40 human-gated
+checkouts). All high-volume/fault tests use mock/fakes so Razorpay is not spammed.

@@ -362,3 +362,26 @@ Not allowed:
 - AI model trained.
 
 Those belong to later phases or require actual evidence.
+
+---
+
+# 11. Phase-2 requirements (Razorpay Test Mode — added P2-M10)
+
+Phase-2 status: ACTIVE. Source of truth for scope: `PHASE2_MILESTONES.md` +
+human-approved Phase-2 master prompt. Test Mode ONLY; Live Mode forbidden.
+
+**PRD-RZP-001** Every real payment flow shall use a server-created Razorpay Order; amount/currency are server-authoritative.
+**PRD-RZP-002** The browser receives only public launch data (Key ID, order ID, amount, currency, display metadata); Key Secret/webhook secret never reach the browser.
+**PRD-RZP-003** Checkout success callbacks shall be signature-verified server-side using the SERVER-stored Razorpay order id (P2-S08).
+**PRD-RZP-004** Webhooks shall be verified over the RAW body before any parse/mutation; invalid signatures cause zero business change.
+**PRD-RZP-005** Provider events shall dedup durably by `x-razorpay-event-id`; duplicates and out-of-order delivery produce exactly one business effect.
+**PRD-RZP-006** `payment.captured`/`order.paid` commit reservation exactly once; a documented later capture may reconcile an earlier failure.
+**PRD-RZP-007** Timeouts are provider-unknown: execution identity + reservation retained; no blind retry as fresh payment.
+**PRD-RZP-008** Provider fetch is the active reconciliation path for missing/delayed/contradictory signals.
+**PRD-RZP-009** Live-mode keys/configuration are rejected at startup; missing credentials fail startup naming only variable names.
+**PRD-RZP-010** Mock provider remains available (`PAYMENT_PROVIDER=mock`) for CI/fault injection; provider failures never silently fall back to mock.
+**PRD-RZP-011** All Razorpay evidence (order/payment/event IDs, verification states) lands in the tamper-evident ledger without secrets.
+**PRD-RZP-012** UI must label Test Mode ("no real money") and distinguish VERIFYING / CAPTURED / FAILED / PROVIDER_UNKNOWN states; unknown must not offer dangerous fresh-pay actions.
+
+Phase-2 non-goals inherit §5 plus: no refunds/payouts/subscriptions/payment links,
+no real fulfilment, no protocol implementations (UCP/AP2/ACP/UAP/x402).

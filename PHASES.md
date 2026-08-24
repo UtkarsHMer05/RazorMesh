@@ -74,6 +74,10 @@ All 50 milestones in `MILESTONES.md` pass and Phase-1 completion report exists.
 
 # Phase 2 — Real Razorpay Test-Mode Integration
 
+> **Status: ACTIVE** (since P2-M05/M10, human-approved 2026-08-24). Progress:
+> `PHASE2_STATUS.md`; plan: `PHASE2_MILESTONES.md`. Test Mode only; Live Mode
+> forbidden (D-030 guard, P2-S01/S02).
+
 ## Objective
 
 Replace `MockPaymentProvider` with a real Razorpay test-mode adapter without weakening the trust core.

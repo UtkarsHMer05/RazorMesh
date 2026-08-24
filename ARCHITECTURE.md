@@ -513,3 +513,49 @@ Add real agent-commerce adapters/protocol work and expanded held-out benchmark.
 Deployment, hardening, demo/submission and final evidence.
 
 See `PHASES.md`.
+
+---
+
+# 14. Phase-2 provider architecture (Razorpay Test Mode)
+
+Status: ACTIVE from P2-M10. Decision D-030: one thin Razorpay HTTP wrapper over
+httpx 0.28.1 (no SDK, no transport-level retries). The `PaymentProvider` boundary
+and the trusted executor are unchanged; `MockPaymentProvider` remains for CI and
+fault injection.
+
+```text
+RazorGuard ALLOW -> reservation -> ExecutionTicket -> durable ExecutionAttempt
+    -> trusted executor
+        -> RazorpayPaymentProvider.create_order (server-authoritative amount/currency)
+        -> launch payload (PUBLIC key id + order id + amount/currency) to browser
+    -> Standard Checkout in browser (handler flow)
+        -> client callback {payment_id, order_id, signature}
+            -> server verification: HMAC-SHA256(SERVER-stored order_id|payment_id)
+        -> verified webhook (raw body) + x-razorpay-event-id dedup
+        -> provider fetch reconciliation
+    -> provider-state reducer (callback | webhook | fetch feed ONE reducer)
+        -> captured/paid evidence -> exactly-once reservation commit
+        -> synthetic fulfilment state -> Evidence Ledger
+```
+
+## State dimensions kept separate (master prompt §23)
+
+- internal execution attempt: CREATED/EXECUTING/PROVIDER_UNKNOWN/SUCCEEDED/FAILED
+- provider order: created/attempted/paid (+ documented states)
+- provider payment: authorized/captured/failed
+- reservation: RESERVED/COMMITTED/RELEASED (existing semantics unchanged)
+- fulfilment: NOT_ELIGIBLE / ELIGIBLE / FULFILLED_SYNTHETIC
+
+`payment.failed → payment.captured` for the same transaction is documented Razorpay
+behavior (UPI TPAP retries/late auth); failure is therefore never modeled as an
+unrecoverable terminal for reconciliation purposes. Durable correlation lives in
+PostgreSQL (provider order/payment/event ids with uniqueness constraints); Redis
+stays coordination-only.
+
+## Configuration model
+
+Typed `Settings` (SecretStr secrets): PAYMENT_PROVIDER mock|razorpay,
+RAZORPAY_MODE=test only, RAZORPAY_KEY_ID (public), RAZORPAY_KEY_SECRET /
+RAZORPAY_WEBHOOK_SECRET (backend-only), bounded request timeout, webhook path +
+public tunnel URL. Startup guard `validate_payment_provider_config` enforces
+P2-S01..S03 with name-only errors.

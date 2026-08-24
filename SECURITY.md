@@ -321,3 +321,45 @@ Phase-1 exit is blocked if any of these occur:
 Security Lab and benchmark must operate only on the local synthetic system.
 
 Do not scan, exploit or attack real Razorpay, merchants, payment systems or third-party services.
+
+---
+
+# 13. Phase-2 security invariants (Razorpay Test Mode — active)
+
+All Phase-1 invariants (SEC-001..030) remain release-blocking.
+
+**P2-S01** Only Razorpay Test Mode is allowed.
+**P2-S02** Live-key prefix (`rzp_live_`) is rejected in any provider mode.
+**P2-S03** Key Secret never reaches the browser.
+**P2-S04** Webhook secret never reaches the browser.
+**P2-S05** Every real Test payment flow uses a server-created Razorpay Order.
+**P2-S06** Browser amount/currency/order context is never authoritative.
+**P2-S07** Checkout success signature is verified server-side (HMAC-SHA256).
+**P2-S08** Verification uses the SERVER-stored Razorpay order id for the internal execution context.
+**P2-S09** Invalid callback signature cannot commit/fulfil.
+**P2-S10** Webhook verification uses the raw request body before any parse.
+**P2-S11** Invalid webhook signature causes no business mutation.
+**P2-S12** Provider event ID dedup is durable (unique constraint).
+**P2-S13** Duplicate events produce one business effect.
+**P2-S14** Event delivery order is never assumed.
+**P2-S15** `payment.captured` + `order.paid` produce exactly one commit/fulfilment effect.
+**P2-S16** A verified later capture can reconcile an earlier failure per Razorpay semantics.
+**P2-S17** Network timeout is not definitive failure.
+**P2-S18** Provider-unknown retains reservation.
+**P2-S19** Provider-unknown is not blindly retried as a fresh payment.
+**P2-S20** Mock provider remains available for deterministic tests/fault injection.
+**P2-S21** No provider failure silently switches a user transaction to mock mode.
+**P2-S22** Provider identifiers may be stored; secrets may not.
+**P2-S23** Real-provider integration cannot bypass ticket/nonce checks.
+**P2-S24** Real-provider integration cannot weaken aggregate authorization concurrency guarantees.
+
+# 14. Phase-2 defensive scenarios
+
+T19 Forged client callback → rejected pre-commit, precise reason code.
+T20 Wrong order context in callback → RAZORPAY_PAYMENT_CONTEXT_MISMATCH.
+T21 Duplicate callback/webhook → one effect (durable dedup).
+T22 Out-of-order webhooks (captured before authorized; order.paid before captured)
+    → reducer converges safely.
+T23 failed→captured same transaction → reconciled to captured exactly once.
+T24 Timeout after send → PROVIDER_UNKNOWN + reservation held + reconciliation path;
+    never a blind second order/payment.
