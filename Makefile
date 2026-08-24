@@ -10,7 +10,7 @@ UV      := uv
 
 .PHONY: help setup format lint typecheck test test-backend test-frontend \
         security-check benchmark infra-up infra-down migrate seed \
-        dev dev-api dev-web reset-local keys
+        dev dev-api dev-web reset-local keys phase2-up
 
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -74,6 +74,9 @@ dev-api: ## Run FastAPI locally (127.0.0.1:8000)
 
 dev-web: ## Run Next.js locally (localhost:3000)
 	@if [ -d "$(WEB_DIR)" ]; then cd $(WEB_DIR) && pnpm dev; else echo "frontend not scaffolded yet"; fi
+
+phase2-up: ## Start the full Phase-2 stack (infra+migrate+seed+api+web+tunnel), idempotent
+	scripts/phase2_start.sh
 
 reset-local: ## ⚠️ DESTRUCTIVE: drops Docker volumes + local DB data for THIS project only. Asks nothing.
 	@echo "⚠️  DESTRUCTIVE: removing razormesh docker volumes and containers"

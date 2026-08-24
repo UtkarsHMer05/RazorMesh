@@ -46,7 +46,7 @@
 | M34 | Ordering & Reconciliation Tests | PASS | permutation matrix (15 cases): canonical, captured-first, failed-then-captured, paid-before-captured, all-dups, delayed-auth-only, fail-no-capture, and EVERY capture-ending ordering converges to single commit; suite 316/316 |
 | M35 | Public Webhook Tunnel Preparation | PASS | zrok installed via brew; scripts/webhook_tunnel.sh + docs/PHASE2_TUNNEL.md (Dashboard steps, OTP 754081, event list, secret handling); enable step requires human token -> combined gate with M36 |
 | M36 | HUMAN GATE — Webhook Dashboard | PASS | Dashboard webhook verified (Enabled, 4 events) + tunnel end-to-end; M01–M37 audit remediation (5 defects fixed, 323 tests green); live signed-delivery proof DEFERRED to M38 per human instruction + D-032/R-016 (current docs: test events are triggered by Test Mode transactions; no test-notification action exists) |
-| M37 | Real Success Checkout Readiness Gate | NOT_STARTED | — |
+| M37 | Real Success Checkout Readiness Gate | PASS | readiness checklist fully evidenced (order create, Checkout UI, callback verify, webhook verify/dedup, provider fetch, reducer, reservation, audit, Test Mode guard, Phase-1 regressions 323/323); one reliable start workflow `make phase2-up` proven live; auth diagnostic OK; R-017 test instruments verified |
 | M38 | HUMAN GATE — Real Test Success | NOT_STARTED | — |
 | M39 | Success Evidence Reconciliation | NOT_STARTED | — |
 | M40 | HUMAN GATE — Real Test Failure | NOT_STARTED | — |
@@ -1201,3 +1201,65 @@ precedence, AGENTS.md §3), recorded as decision D-032:
 ### Next
 - M37 readiness gate → M38 human gate (real Test Mode success checkout; its
   gate evidence MUST include the deferred real signed webhook event).
+
+---
+
+## M37 — Real Success Checkout Readiness Gate
+
+MILESTONE: M37
+STATUS: PASS
+
+Requirements: master prompt M37 — before asking the human to pay, ensure order
+creation, Checkout UI, callback verification, webhook verification/dedup,
+provider fetch, reducer, reservation, audit, Test Mode guard and full Phase-1
+regressions are green; provide one reliable start command/workflow.
+
+### Readiness checklist → evidence
+
+| Readiness item | Evidence (milestone + tests) |
+|---|---|
+| Order creation | M15 executor prelude (timeout→UNKNOWN+hold, 400→FAILED+release, idempotent re-entry); M17 real order created; wiring test persists razorpay_order_id |
+| Checkout UI | M20/M21 (official checkout.js loader, TEST MODE banner, server-fields-only modal, no dangerous re-pay on unknown); vitest 6/6; Playwright 2/2; production build OK |
+| Callback verification | M23/M24: HMAC-SHA256 over SERVER-stored order id (P2-S08), constant-time compare, verify-before-mutation; 5 adversarial cases (forged/swapped/replay/wrong-secret) |
+| Webhook verification/dedup | M31/M32/M33: raw-body HMAC (P2-S13), 256KB cap, zero mutation pre-verification; durable provider_events inbox with DB-level event-id dedup (P2-S14) |
+| Provider fetch | M18 reconcile_attempt (amount/currency/context vs durable authority); M25 post-callback fetch, `paid` → capture evidence |
+| Reducer | M26–M30 + M34: 15-case permutation matrix; every capture-ending ordering converges to exactly one commit; authorized informative-only (D-031) |
+| Reservation | SpendManager atomic reserve/commit/release (row-locked, concurrency-proven); wiring test: EXECUTING holds reserved_minor>0 with committed_minor=0 |
+| Audit | Evidence ledger JCS+SHA256 chain (tamper-evident); RAZORPAY_PAYMENT_VERIFIED event on settlement (M25) |
+| Test Mode guard | M09 fail-safe (live prefix rejected in any mode; names-only error reporting); live auth diagnostic 2026-08-24: `mode: test (guard passed)`, credentials accepted read-only |
+| Full Phase-1 regressions | Full suite re-run at this gate: 323/323 |
+
+### One reliable start workflow (new)
+
+`make phase2-up` → `scripts/phase2_start.sh` (idempotent, non-destructive,
+never prints secrets): infra up → wait postgres/redis → alembic head →
+idempotent seed → config guard (names only) → API :8000 → web :3000 → zrok
+tunnel (reuses live share or starts a new one with explicit Dashboard/.env
+update instructions) → local+public `/ready` verification. Proven live this
+milestone: all 7 steps green, `payment_provider=razorpay`, `mock=false`,
+tunnel live at the registered share URL.
+
+### Gate run (2026-08-24, this milestone)
+```text
+pytest (full)                      → 323 passed
+make lint (ruff format+check+eslint) → clean
+mypy strict (root + services/api)  → no issues in 52 source files (both)
+pnpm typecheck / test / build      → clean / 6 passed / OK (6 routes)
+playwright                         → 2 passed
+make security-check                → PASS (secret scan 0; pip-audit clean; pnpm audit clean)
+scripts/phase2_start.sh            → all steps green; local+public /ready honest (razorpay)
+scripts/rzp_auth_check.py          → ok, credentials accepted (read-only), test guard passed, 1 order listed
+```
+
+### Real Razorpay interaction
+- READ_ONLY only (auth diagnostic GET /orders?count=1). No orders/payments
+  created this milestone.
+
+### Carried into M38 (per D-032)
+- M38 gate evidence MUST include ≥1 REAL signed webhook event in
+  provider_events (verified=true, event_id not matching `evt_ok_*`).
+
+### Next
+- M38 HUMAN GATE: one official Test Mode success checkout (R-017 instruments:
+  `success@razorpay` UPI), then end-to-end verification incl. the deferred
+  signed-delivery proof.

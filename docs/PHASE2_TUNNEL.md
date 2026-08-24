@@ -14,11 +14,20 @@ recommended tool. Test-mode Dashboard webhook setup prompts for OTP **754081**.
 
 ## Every run
 
+Recommended one-command workflow (P2-M37): brings up infra, migrations, seed,
+API, web and the tunnel idempotently, then verifies readiness:
+
+```bash
+make phase2-up          # = scripts/phase2_start.sh
+```
+
+Tunnel only (starts the API if needed, then shares it):
+
 ```bash
 scripts/webhook_tunnel.sh
 ```
 
-This starts the API if needed and prints a public HTTPS URL such as
+Both print a public HTTPS URL such as
 `https://<random>.share.zrok.io`. Append the webhook path:
 
 ```
@@ -34,7 +43,10 @@ This starts the API if needed and prints a public HTTPS URL such as
    (do NOT paste it into any chat; type/paste it directly in the Dashboard field).
 5. Select events: `payment.authorized`, `payment.captured`, `payment.failed`,
    `order.paid`.
-6. Save. Use "Send test notification" if available to verify delivery.
+6. Save. Note (R-016/D-032, checked 2026-08-24): current official docs state
+   "Test events get triggered on a transaction done in the Test mode" — there
+   is no Dashboard test-notification button for this account, so signed
+   deliveries are produced by the first real Test Mode transaction (M38).
 
 ## Point RazorMesh at the URL
 
@@ -48,6 +60,6 @@ and restart the API.
 
 ## Verify
 
-Trigger any test transaction (or Dashboard "send test") and watch:
+Perform a Test Mode transaction (e.g. the M38 success checkout) and watch:
 `/tmp/razormesh_api.log` plus `GET /audit/timeline` — verified events appear in the
 `provider_events` inbox and evidence ledger.

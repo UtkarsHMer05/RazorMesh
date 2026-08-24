@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 2 — Razorpay Test Mode Integration (ACTIVE since P2-M05)  
-**Current milestone:** P2-M37 — Real Success Checkout Readiness Gate (M36 PASS; signed-delivery proof deferred to M38 per D-032)  
-**Phase-2 milestones passed:** P2-M01..P2-M36  
+**Current milestone:** P2-M38 — HUMAN GATE: real Test Mode success checkout (M37 PASS)  
+**Phase-2 milestones passed:** P2-M01..P2-M37  
 **Last updated:** 2026-08-24  
-**Gate:** M36 closed PASS per explicit human instruction + D-032/R-016: Dashboard webhook verified (Enabled, 4 events at zrok URL); current official docs say test events are triggered by Test Mode transactions (no Dashboard test-notification button exists). Live signed-delivery proof NOT fabricated — provider_events has 0 real deliveries; that proof is a carried-forward M38 gate obligation (M38 cannot PASS without ≥1 real signed event verified=true). Full re-verification 2026-08-24 22:35: pytest 323/323, ruff format+check+eslint clean, mypy strict 52 files (both roots), tsc+vitest 6/6+build OK, Playwright 2/2, security-check PASS (0 secrets, audits clean), live auth diagnostic OK, webhook route via tunnel controlled 400 zero mutation, /ready honest in razorpay mode local+tunnel.
+**Gate:** M37 PASS: readiness checklist fully evidenced; one reliable start workflow `make phase2-up` (scripts/phase2_start.sh) proven live; gates re-run green (pytest 323/323, lint clean, mypy 52 files both roots, tsc+vitest 6/6+build OK, Playwright 2/2, security-check PASS, auth diagnostic OK read-only). R-017: current test instruments verified (success@razorpay / failure@razorpay; cards need any CVV + future expiry + 4–10-digit OTP). M36 closed PASS per D-032/R-016 (no Dashboard test-notification button; test events are triggered by Test Mode transactions). Carried obligation: M38 cannot PASS without ≥1 REAL signed webhook event (verified=true, non-fixture event_id) in provider_events.
 
 ---
 
@@ -150,15 +150,15 @@ See `DECISIONS.md`, currently D-001 through D-032 (D-032: M36 live signed-webhoo
 
 # Next action
 
-M37 readiness gate: re-run full gate suite, verify the readiness checklist
-(order creation, Checkout UI, callback verification, webhook verification/dedup,
-provider fetch, reducer, reservation, audit, Test Mode guard, Phase-1
-regressions), provide one reliable start workflow → M37 PASS + commit. Then
-M38 human gate: real Test Mode success checkout via buyer UI; M38 gate evidence
-MUST include ≥1 REAL signed webhook event (verified=true, non-fixture event_id)
-— the obligation deferred from M36 (D-032). See docs/PHASE2_TUNNEL.md. If the
-tunnel share dies, re-run scripts/webhook_tunnel.sh and UPDATE the Dashboard
-URL + .env RAZORPAY_WEBHOOK_PUBLIC_URL (share is not reserved).
+M38 human gate: human performs ONE official Test Mode success checkout via the
+buyer UI (http://127.0.0.1:3000/buyer) using `success@razorpay` (R-017). Stack
+must be up first: `make phase2-up`. After the payment, agent verifies
+end-to-end: ALLOW → reservation → ticket → attempt → Razorpay order → callback
+signature → provider state → REAL signed webhook(s) (verified=true, non-fixture
+event_id — the D-032 carried obligation) → exactly-once commit → audit. Then
+M39 success evidence reconciliation. If the tunnel share dies, re-run
+scripts/webhook_tunnel.sh (or make phase2-up) and UPDATE the Dashboard URL +
+.env RAZORPAY_WEBHOOK_PUBLIC_URL (share is not reserved).
 
 ---
 

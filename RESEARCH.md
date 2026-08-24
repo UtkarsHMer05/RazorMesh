@@ -381,3 +381,31 @@ recorded as if a test notification had occurred.
 
 Confidence: High (current official documentation + live Dashboard inspection by
 the human owner, same date).
+
+---
+
+# R-017 — Current Test Mode success/failure instruments (live re-verification)
+
+Date checked: 2026-08-24 (Phase 2 M37/M38 input)
+Sources (official; the old single "testing" page is gone — docs now split):
+- https://razorpay.com/docs/payments/payments/test-upi-details/
+- https://razorpay.com/docs/payments/payments/test-card-details/
+Type: Official Razorpay docs (canonical URLs verified live)
+
+Key findings:
+- UPI: "Test payment success flow using `success@razorpay`." and "Test payment
+  failure flow using `failure@razorpay`."
+- Cards (Indian, success): e.g. Visa 4100 2800 0000 1007, Mastercard
+  5555 5100 0008 1006, RuPay 6527 6589 0000 1005 (full table on the page).
+- "Enter any random CVV." / "Enter any future date as the expiry date." /
+  "Enter a random OTP between 4 to 10 digits to make the payment successful";
+  an OTP below 4 digits fails the payment.
+- Test mode uses a mock bank page with Success/Failure buttons; "No real money
+  is deducted due to the usage of test API keys."
+- UPI caveat: in Test Mode, payment CANCELLATION results in a successful
+  payment; cancellation testing requires Live Mode (out of scope for Phase 2).
+
+Impact: M38 success walkthrough uses `success@razorpay` (still documented);
+M40 failure walkthrough uses `failure@razorpay` or a sub-4-digit OTP.
+
+Confidence: High (current official pages fetched 2026-08-24).
