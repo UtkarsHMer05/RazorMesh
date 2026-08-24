@@ -16,7 +16,7 @@
 | M04 | Phase-1 Clean-Room Acceptance Re-run | PASS | fresh volume→3 migrations→50 products→live API: acceptance 10/10 PASS, lab 16/16 families, benchmark 14 pairs, tamper non-mutating |
 | M05 | Freeze Phase-2 Baseline | PASS | docs/PHASE2_BASELINE.md: HEAD 5186cca, pytest 225/225 cov 96%, migration head d8b412f091c3, versions recorded; zero Razorpay calls so far (declared) |
 | M06 | Live Razorpay Documentation Research | PASS | R-013/R-014/R-015 appended to RESEARCH.md: Orders limits (receipt≤40, notes≤15×256), checkout.js handler contract, HMAC formulas (callback uses SERVER-stored order id; webhook over RAW body), x-razorpay-event-id dedup, ordering not guaranteed, failed→captured expected, captured+order.paid both fire once, zrok guidance, OTP 754081, SDK razorpay 2.0.1 |
-| M07 | Provider Client & Dependency Decision | NOT_STARTED | — |
+| M07 | Provider Client & Dependency Decision | PASS | D-030: one thin httpx 0.28.1 wrapper (latest stable, 0 advisories, already locked); razorpay SDK 2.0.1 declined (Beta classifier, opt-in auto-retry foot-gun, extra requests dep); HMAC via stdlib |
 | M08 | Root `.env` / Typed Config Reconciliation | NOT_STARTED | — |
 | M09 | Razorpay Test-Mode Fail-Safe | NOT_STARTED | — |
 | M10 | Phase-2 Governance Transition | NOT_STARTED | — |
@@ -306,3 +306,30 @@ Research checked: RESEARCH.md R-013, R-014, R-015 (all official Razorpay sources
 
 ### Next
 - M07 — Provider Client & Dependency Decision.
+
+## M07 — Provider Client & Dependency Decision
+
+MILESTONE: M07
+STATUS: PASS
+
+Requirements: master prompt §10/M07 — choose exactly one client; record version,
+timeout policy, retry policy, error mapping, test approach, ExecutionAttempt impact.
+Decision ID: D-030.
+
+### Choice
+Project-standard HTTP client: **httpx 0.28.1** (live-verified latest stable, zero
+known vulnerabilities, already in uv.lock). Official razorpay SDK 2.0.1 evaluated
+and declined: Beta trove classifier; opt-in `enable_retry` automatic retries are a
+mutating-call foot-gun; adds `requests` dependency for two endpoints.
+
+### Policies established by D-030
+- Timeout: explicit per-call timeout on every Razorpay request (typed config, M08).
+- Retry: NONE at transport level. Mutating calls are never retried automatically;
+  read-only fetch may later get a bounded, explicitly-coded retry if justified.
+- Error mapping: httpx.TimeoutException/ConnectError → PROVIDER_UNKNOWN class;
+  401 → RAZORPAY_AUTH_FAILED; 400/422 → definitive rejection; 5xx → provider
+  degraded (unknown unless disproven); malformed body → unknown + audit.
+- Test approach: httpx.MockTransport fixtures incl. timeout-before-response and
+  timeout-after-send.
+- ExecutionAttempt impact: wrapper returns typed results only; the executor keeps
+  sole authority over attempt state/reservation — identical to mock semantics.
