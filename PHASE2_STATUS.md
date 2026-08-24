@@ -19,7 +19,7 @@
 | M07 | Provider Client & Dependency Decision | PASS | D-030: one thin httpx 0.28.1 wrapper (latest stable, 0 advisories, already locked); razorpay SDK 2.0.1 declined (Beta classifier, opt-in auto-retry foot-gun, extra requests dep); HMAC via stdlib |
 | M08 | Root `.env` / Typed Config Reconciliation | PASS | .env reconciled (14 nonsecret keys appended; 3 secrets untouched/never printed); typed Settings w/ SecretStr + Literal guards; 6 new tests; suite 231/231; secret scan clean |
 | M09 | Razorpay Test-Mode Fail-Safe | PASS | validate_payment_provider_config(): live prefix rejected in any mode; real provider requires test+3 creds (names only, never values); mock needs nothing; 5 new tests; suite 236/236 |
-| M10 | Phase-2 Governance Transition | NOT_STARTED | — |
+| M10 | Phase-2 Governance Transition | PASS | PHASES marked ACTIVE; PRD §11 PRD-RZP-001..012; ARCHITECTURE §14 provider flow + state dimensions; SECURITY P2-S01..S24 + T19..T24; TESTING §13 gates; D-030; R-013..R-015 |
 | M11 | Razorpay Provider Skeleton | NOT_STARTED | — |
 | M12 | Safe Auth Diagnostic | NOT_STARTED | — |
 | M13 | DB Schema for Razorpay Correlation | NOT_STARTED | — |
@@ -406,3 +406,31 @@ never appear in error strings.
 
 ### Next
 - M10 — Phase-2 Governance Transition.
+
+
+## M10 — Phase-2 Governance Transition
+
+MILESTONE: M10
+STATUS: PASS
+
+Requirements: master prompt §13/M10 — full governance sync without erasing Phase-1 history.
+
+### Updated
+- `PHASES.md`: Phase 2 marked ACTIVE with pointers.
+- `PRD.md`: §11 added (PRD-RZP-001..012) incl. non-goals.
+- `ARCHITECTURE.md`: §14 provider architecture, separated state dimensions,
+  configuration model, D-030 reference.
+- `SECURITY.md`: P2-S01..S24 invariants + defensive scenarios T19..T24.
+- `TESTING.md`: §13 Phase-2 release-blocking gates.
+- `DECISIONS.md`: D-030 (M07). `VERSION_MANIFEST.md`: razorpay client note.
+- `RESEARCH.md`: R-013..R-015 (M06). `MEMORY.md`: Phase 2 active since P2-M05.
+
+### Validation
+- Documentation-only milestone; suite re-run green (236/236 at last code change).
+- A fresh session can reconstruct scope/state from these files alone.
+
+### Real Razorpay interaction
+- NONE.
+
+### Next
+- M11 — Razorpay Provider Skeleton.
