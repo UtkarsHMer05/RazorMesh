@@ -25,7 +25,7 @@
 | M13 | DB Schema for Razorpay Correlation | PASS | migration a93c7d5e21f0: 8 correlation columns on attempts + partial unique idx (order/payment id) + provider_events inbox (event_id PK, verified, payload_sha256); up/down round-trip; dedup tests; suite 248/248 |
 | M14 | Internal→Razorpay Order Mapping | PASS | build_order_correlation(): receipt=r_{attempt_id} (≤40), notes=4 opaque refs+generation (≤15×256), no PII/secrets; parse_order_correlation() round-trip; 4 tests; suite 252/252 |
 | M15 | Server-Side Order Creation | PASS | executor Razorpay path: order created via trusted prelude, correlation persisted, attempt EXECUTING; timeout→UNKNOWN+REQUIRED+reservation held; 400→FAILED+release; idempotent re-entry (1 call); strict-mypy config gap found & closed (30 latent errors fixed); suite 255/255 |
-| M16 | Razorpay Error Taxonomy | NOT_STARTED | — |
+| M16 | Razorpay Error Taxonomy | PASS | exhaustive matrix test (21 cases): 401/403→AUTH; 400/404/422/429/3xx/4xx-residual→REJECTED(definitive, no-effect); 5xx/timeout/connect/malformed/bad-entity→UNKNOWN(never retried, calls==1); suite 276/276 |
 | M17 | First Real Test Order | NOT_STARTED | — |
 | M18 | Order Fetch & Reconciliation | NOT_STARTED | — |
 | M19 | Checkout Launch Contract | NOT_STARTED | — |
@@ -631,3 +631,40 @@ mypy -p razormesh_api (from BOTH dirs)      → Success: no issues in 49 source 
 
 ### Next
 - M16 — Razorpay Error Taxonomy (largely realized in skeleton; formalize remaining mappings).
+
+
+## M16 — Razorpay Error Taxonomy
+
+MILESTONE: M16
+STATUS: PASS
+
+Requirements: master prompt M16/§18 — explicit classes; no blanket 500; unknown keeps identity+reservation.
+Security invariants: P2-S17..S19 formalized at client level.
+
+### Final mapping (implemented + tested)
+| Provider signal | Internal class | Effect semantics |
+|---|---|---|
+| 401/403 | RAZORPAY_AUTH_FAILED | definitive no-effect |
+| 400/404/422 | RAZORPAY_ORDER_CREATE_REJECTED | definitive no-effect |
+| 429 | RAZORPAY_ORDER_CREATE_REJECTED (rate-limited) | no resource created; still NO auto-retry |
+| other 3xx / residual 4xx | RAZORPAY_ORDER_CREATE_REJECTED | definitive refusal |
+| 500/502/503/504 | UNKNOWN | truth not disproven → PROVIDER_UNKNOWN path |
+| timeout / connect errors | UNKNOWN | may have reached provider |
+| malformed JSON / invalid entity | UNKNOWN | cannot trust partial state |
+
+Executor settlement per class: REJECTED→FAILED (reservation released atomically);
+UNKNOWN→PROVIDER_UNKNOWN + reconcile_state=REQUIRED (reservation held); re-entry
+stays ticket-idempotent with zero extra network calls.
+
+### Validation commands + results
+```text
+pytest tests/test_razorpay_error_taxonomy.py -v → 21 passed (parametrized matrix incl. calls==1 assertions)
+pytest (full)                                   → 276 passed
+ruff / mypy strict                              → clean
+```
+
+### Real Razorpay interaction
+- NONE.
+
+### Next
+- M17 — First Real Razorpay Test Order.

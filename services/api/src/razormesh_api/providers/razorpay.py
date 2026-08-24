@@ -164,10 +164,21 @@ class RazorpayClient:
             # A 5xx after transmission leaves creation/fetch truth unknown.
             raise RazorpayUnknownOutcomeError(f"provider server error {response.status_code}")
 
+        if response.status_code == 429:
+            # Rate limiting refuses processing BEFORE any resource is created:
+            # definitive no-effect. We still never auto-retry (P2-S19); a later
+            # attempt requires a fresh execution authority.
+            raise RazorpayRejectionError("provider rate limit refused processing (HTTP 429)")
+
         if response.status_code in (400, 404, 422):
             # 404 on fetch is definitive (order does not exist); on create it is
             # also definitive validation rejection. Never retried.
             raise RazorpayRejectionError(f"provider rejected request ({response.status_code})")
+
+        if (300 <= response.status_code < 400) or (405 <= response.status_code < 500):
+            raise RazorpayRejectionError(
+                f"provider definitively refused request ({response.status_code})"
+            )
 
         if response.status_code != 200 and response.status_code != 201:
             raise RazorpayUnknownOutcomeError(f"unexpected provider status {response.status_code}")
