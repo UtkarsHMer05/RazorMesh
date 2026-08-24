@@ -262,3 +262,97 @@ Do not implement in Phase 1, but later research will cover:
 - Is the latest Blade release fully compatible with the selected Next/React versions?
 - Which maintained JCS implementation best supports the backend language and cross-language test vectors?
 - What exact application-vs-DB controls provide the cleanest append-oriented audit protection in Phase 1?
+
+---
+
+# R-013 — Razorpay Orders API + Standard Checkout (live re-verification)
+
+Date checked: 2026-08-24 (Phase 2 M06)
+Sources (official):
+- https://razorpay.com/docs/api/orders/
+- https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/integration-steps/
+Type: Official Razorpay docs
+
+Key findings:
+- Orders: POST https://api.razorpay.com/v1/orders, Basic Auth Key_ID:Key_Secret.
+  amount = integer subunit; currency = 3 chars; receipt optional max 40 chars;
+  notes optional max 15 key-value pairs, each value max 256 chars.
+- "An order should be created for every payment"; order_id ties checkout to the
+  payment and secures against tampering; payments without order_id cannot be
+  captured and are auto-refunded.
+- Standard Checkout web: script https://checkout.razorpay.com/v1/checkout.js with
+  options key (PUBLIC Key ID only), amount, currency, order_id (mandatory), name,
+  handler function (callback_url is only for redirect/WebView flows).
+- Success handler returns razorpay_payment_id, razorpay_order_id, razorpay_signature.
+- Signature verification is MANDATORY: generated_signature =
+  HMAC-SHA256(order_id + "|" + razorpay_payment_id, key_secret) hex digest.
+  CRITICAL: use the order_id stored on YOUR server — "Do not use the
+  razorpay_order_id returned by Checkout."
+- Payment status must reach `captured` before fulfilment; `authorized` alone has
+  NOT settled; uncaptured payments auto-refund after a fixed time. Auto-capture is
+  a Dashboard setting that works with the Orders API integration.
+- Recommended: webhooks for automation + immediate API Fetch when user-facing flow
+  needs instant status.
+
+Impact: defines M14 receipt/notes budget, M15 order-create contract, M19 launch
+payload, M23 verification formula using server-stored order id (P2-S08), M25
+captured-evidence requirement.
+
+Confidence: High (official current docs).
+
+---
+
+# R-014 — Razorpay Webhook validation, dedup and ordering (live re-verification)
+
+Date checked: 2026-08-24 (Phase 2 M06)
+Sources (official):
+- https://razorpay.com/docs/webhooks/validate-test/
+- https://razorpay.com/docs/webhooks/payments/
+Type: Official Razorpay docs
+
+Key findings:
+- Webhook signature: X-Razorpay-Signature = HMAC-SHA256 over the RAW webhook
+  request body keyed by the webhook secret. "Do not parse or cast the webhook
+  request body" before verifying. If secret rotated, old events retry under old
+  secret.
+- Dedup: x-razorpay-event-id header is unique per event; duplicates are expected;
+  check whether an event id was already processed.
+- Ordering NOT guaranteed: authorized→captured order "may not be followed at all
+  times"; systems must handle arbitrary delivery order.
+- payment.failed followed by payment.captured for the SAME transaction is
+  explicitly documented as EXPECTED behaviour (late authorization; UPI TPAP
+  in-app retries). Therefore failed must not be modeled as unrecoverable terminal.
+- Webhook payloads are SNAPSHOTS: a payment.authorized payload may describe an
+  entity whose real state already advanced to captured.
+- payment.captured and order.paid both fire when the payment associated with an
+  order is captured ("Once a payment is captured, the order is marked paid") →
+  one capture produces two events; business effect must be exactly-once.
+- payment.failed is not triggered when a payment fails during initial authorisation.
+- Localhost webhook testing requires a public URL; common tunnels (ngrok.io,
+  loca.lt, requestbin, webhook.site, etc.) are blacklisted; zrok is recommended.
+  Test-mode webhook setup/edit/delete prompts for OTP 754081.
+
+Impact: defines M31 raw-body endpoint, M32 verification tests, M33 durable event
+inbox keyed by provider event id, M34 ordering permutations, M26/M29 reducer rules
+(failed→captured reconciliation), M35 tunnel choice, M36 gate instructions.
+
+Confidence: High (official current docs).
+
+---
+
+# R-015 — razorpay Python SDK version decision input
+
+Date checked: 2026-08-24 (Phase 2 M06/M07 input)
+Source: PyPI JSON API https://pypi.org/pypi/razorpay/json + github.com/razorpay/razorpay-python
+Type: Official vendor package registry
+
+Key findings:
+- Latest stable release: 2.0.1 (uploaded 2026-03-09); matches master-prompt snapshot.
+- Depends on `requests`; exposes opt-in client.enable_retry(True) retry helper.
+- PyPI reports no known vulnerabilities for the release.
+- Classification remains "Beta" per trove classifier; MIT license.
+
+Impact: candidate for M07 client decision; blanket automatic retries MUST stay OFF
+for mutating calls (master prompt §27; P2-S19). Final decision recorded at M07.
+
+Confidence: High (authoritative registry + repo).

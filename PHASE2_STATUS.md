@@ -15,7 +15,7 @@
 | M03 | Phase-1 Security Invariant Revalidation | PASS | focused runs: 45 core security + 14 buyer/audit/lifecycle + 33 targeted (race/replay/forged/tamper/superseded/stale/unknown) all PASS; replay = idempotent collapse, never 500 |
 | M04 | Phase-1 Clean-Room Acceptance Re-run | PASS | fresh volume→3 migrations→50 products→live API: acceptance 10/10 PASS, lab 16/16 families, benchmark 14 pairs, tamper non-mutating |
 | M05 | Freeze Phase-2 Baseline | PASS | docs/PHASE2_BASELINE.md: HEAD 5186cca, pytest 225/225 cov 96%, migration head d8b412f091c3, versions recorded; zero Razorpay calls so far (declared) |
-| M06 | Live Razorpay Documentation Research | NOT_STARTED | — |
+| M06 | Live Razorpay Documentation Research | PASS | R-013/R-014/R-015 appended to RESEARCH.md: Orders limits (receipt≤40, notes≤15×256), checkout.js handler contract, HMAC formulas (callback uses SERVER-stored order id; webhook over RAW body), x-razorpay-event-id dedup, ordering not guaranteed, failed→captured expected, captured+order.paid both fire once, zrok guidance, OTP 754081, SDK razorpay 2.0.1 |
 | M07 | Provider Client & Dependency Decision | NOT_STARTED | — |
 | M08 | Root `.env` / Typed Config Reconciliation | NOT_STARTED | — |
 | M09 | Razorpay Test-Mode Fail-Safe | NOT_STARTED | — |
@@ -271,3 +271,38 @@ Requirements: master prompt M05 (baseline document; MEMORY declares Phase 2 acti
 
 ### Next
 - M06 — Live Razorpay Documentation Research.
+
+## M06 — Live Razorpay Documentation Research
+
+MILESTONE: M06
+STATUS: PASS
+
+Requirements: master prompt M06/§5 (live re-verification; official docs override snapshot).
+Research checked: RESEARCH.md R-013, R-014, R-015 (all official Razorpay sources + PyPI registry).
+
+### Confirmed against live docs (deltas vs prompt snapshot: none material)
+1. Basic Auth Key_ID:Key_Secret for all API calls.
+2. Orders create: POST /v1/orders; amount integer subunit; currency 3 chars;
+   receipt ≤40 chars; notes ≤15 pairs × ≤256 chars — binds M14 correlation design.
+3. Standard Checkout web uses handler functions (callback_url is redirect-only);
+   success handler yields payment_id/order_id/signature.
+4. Callback verification formula HMAC-SHA256(order_id|payment_id, key_secret) with the
+   SERVER-stored order id — "Do not use the razorpay_order_id returned by Checkout"
+   (P2-S08 exactly).
+5. Webhook: HMAC-SHA256 over RAW body with webhook secret vs X-Razorpay-Signature;
+   never parse/cast before verifying (P2-S10/S11).
+6. Dedup via x-razorpay-event-id (P2-S12); delivery order NOT guaranteed (P2-S14).
+7. payment.failed → payment.captured same transaction = documented expected behaviour
+   (late auth / UPI TPAP retry); payloads are snapshots that may lag (P2-S16).
+8. payment.captured and order.paid both fire on capture → exactly-once effect needed
+   (P2-S15).
+9. authorized ≠ settled; uncaptured auto-refund; fulfil only after captured (M25).
+10. Test UPI success@razorpay / failure@razorpay still current; test webhook setup OTP
+    754081; zrok recommended tunnel (ngrok blacklisted).
+11. razorpay PyPI 2.0.1 (2026-03-09), requests dep, opt-in enable_retry, no known vulns.
+
+### Real Razorpay interaction
+- NONE (documentation only).
+
+### Next
+- M07 — Provider Client & Dependency Decision.
