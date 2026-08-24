@@ -50,6 +50,9 @@ security-check: ## Secret scan + dependency audit findings
 benchmark: ## Run paired safe/unsafe benchmark (real metrics -> docs/PHASE1_BENCHMARK.json)
 	$(UV) run --project $(API_DIR) python -m razormesh_api.benchmark
 
+perf: ## Local performance/resource baseline -> docs/PHASE1_PERFORMANCE.json (LOCAL ONLY)
+	$(UV) run --project $(API_DIR) python scripts/perf_baseline.py
+
 infra-up: ## Start PostgreSQL + Redis via Docker Compose
 	docker compose up -d
 	docker compose ps

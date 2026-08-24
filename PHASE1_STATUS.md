@@ -56,7 +56,7 @@
 | M46 | Security Lab UI | PASS | GET /security-lab/scenarios + POST /security-lab/run (server executes all 7 real-pipeline scenarios, 7/7 as-designed) with hash-chained evidence tail; lab page renders scenario list + outcomes table + evidence; tsc+build clean; 2 tests PASS |
 | M47 | Audit Dashboard | PASS | GET /audit/timeline (chronological + hash heads + reason codes), /audit/verify, /audit/state/{intent} (spend/decisions/tickets/attempts), POST /audit/tamper-test (simulates trigger bypass -> DETECTED -> self-restores); dashboard page renders all views; 5 tests PASS; tsc+build clean |
 | M48 | Deep Test and Security Gate | PASS | pytest 213/213 incl. new Hypothesis stateful lifecycle; secret scan 0; pip-audit 2.10.1 clean; pnpm audit clean; eslint/tsc/vitest 3/3/build OK; Playwright E2E 2/2; Makefile entry points repaired; benchmark CLI writes artifact |
-| M49 | Performance/Resource Baseline | NOT_STARTED | — |
+| M49 | Performance/Resource Baseline | PASS | scripts/perf_baseline.py -> docs/PHASE1_PERFORMANCE.json: micro (hash ~0.03ms, sign 0.11ms, verify 0.20ms, decide 0.035ms), e2e happy path mean 31.0ms, benchmark suite 0.54s, in-process API latencies; hardware+version context recorded; LOCAL ONLY |
 | M50 | Clean-Room Phase-1 Acceptance | NOT_STARTED | — |
 
 ---
@@ -338,6 +338,16 @@ M03 — Project Charter.
 - Frontend React hooks compliance: replaced synchronous effect-invoked loaders on buyer/security-lab/audit pages with the documented async-IIFE + cancellation-flag pattern (fixes eslint react-hooks/set-state-in-effect errors without suppression).
 - Ruff config: documented per-file-ignores for alembic template conventions (E402/I001/UP007/UP035/BLE001).
 - Deep-gate results: ruff clean; mypy strict 48 files clean; **pytest 213/213** (incl. stateful lifecycle, 20-worker nonce race C1, spend concurrency C2, duplicate-event idempotency C3, wrong-context tickets T8–T10, stale checkout T11, superseded generation T12, provider-unknown T15, audit tamper detection); secret scan 0 findings; pip-audit "No known vulnerabilities found" (only local razormesh-api itself skipped as non-PyPI); pnpm audit --prod clean; eslint clean; tsc clean; vitest 3/3; next build OK (6 routes); Playwright chromium E2E 2/2; make benchmark regenerated docs/PHASE1_BENCHMARK.json with identical metrics (TP6 FP0 TN6 FN0, P=R=F1=1.0).
+
+## M49 — Performance/Resource Baseline — PASS
+- New `scripts/perf_baseline.py` (+ `make perf`): measures with real components and writes `docs/PHASE1_PERFORMANCE.json` labelled "LOCAL-ONLY Phase-1 baseline; NOT production capacity".
+- Context recorded: macOS 26.5, arm64 Apple M2, 8 GB RAM, 8 logical CPUs, Python 3.13.11, fastapi 0.141.1 / pydantic 2.13.4 / sqlalchemy 2.0.52 / cryptography 50.0.0 / rfc8785 0.1.4.
+- Micro (pure CPU, n=2000–3000): checkout authz hash mean 0.0294 ms; intent authz hash 0.0269 ms; ticket issue (JCS+Ed25519 sign) 0.1089 ms; ordered fail-closed ticket verify 0.1956 ms; RazorGuard decide over ALL rule groups 0.0352 ms.
+- End-to-end trusted core happy path (propose→authorize→reserve→nonce claim→mock execute incl. PostgreSQL+Redis, n=25): mean 31.00 ms, p50 30.09 ms, p95 32.56 ms.
+- Paired benchmark suite wall-clock: 0.542 s for 12 real-pipeline scenarios (6 pairs, P=R=F1=1.0).
+- In-process ASGI API latency: GET /health mean 0.415 ms; GET /catalog/products?limit=100 mean 16.10 ms (DB read of 100 rows); POST /buyer/fixture-intent mean 14.08 ms (durable write). Network stack explicitly excluded.
+- Validation: ruff clean; mypy strict clean; pytest 213/213 regression after harness addition.
+- Known limits: single-machine local numbers only; no load generation beyond stated n; ASGI transport for API figures; no production capacity claims.
 
 ---
 

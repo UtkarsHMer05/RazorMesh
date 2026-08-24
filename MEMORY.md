@@ -30,8 +30,8 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M49 — Performance/Resource Baseline (next)  
-**Milestones passed:** M01–M48  
+**Current milestone:** M50 — Clean-Room Phase-1 Acceptance (final)  
+**Milestones passed:** M01–M49  
 **Last updated:** 2026-08-24  
 **Gate:** ruff clean, mypy 48 files clean, pytest 213/213, secret scan 0, pip-audit clean, pnpm audit clean, vitest 3/3, Playwright E2E 2/2
 
@@ -117,6 +117,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Security Lab: /security-lab/run executes suite server-side with evidence tail (M46)
 - Audit dashboard: timeline/verify/state/tamper-test endpoints + UI live (M47)
 - Deep gate: stateful lifecycle props; Makefile entry points repaired; security_check.py real; pip-audit 2.10.1 added; React hooks lint fixed; 213 tests (M48)
+- Perf baseline: scripts/perf_baseline.py -> docs/PHASE1_PERFORMANCE.json; decide 0.035ms, verify 0.20ms, e2e happy path ~31ms, benchmark suite 0.54s (M49)
 
 ---
 
@@ -147,7 +148,7 @@ None yet; do not invent.
 
 # Next action
 
-M49 — Performance/Resource Baseline: measure RazorGuard/ticket/execution/API/benchmark latency locally with hardware context; no production claims.
+M50 — Clean-Room acceptance: documented setup from scratch, migrations, seeds, API+web, tests, benchmark, scenarios A–F equivalents, completion report; then STOP for human Phase-2 approval.
 
 ---
 
