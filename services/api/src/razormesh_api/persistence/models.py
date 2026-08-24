@@ -205,6 +205,51 @@ class ExecutionAttempt(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
+    # --- Phase-2 Razorpay correlation (P2-M13) ---
+    provider_name: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="mock", server_default="mock"
+    )
+    razorpay_order_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    razorpay_payment_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    razorpay_order_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    razorpay_payment_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    callback_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    fulfilment_state: Mapped[str] = mapped_column(
+        String(32),
+        nullable=False,
+        default="NOT_ELIGIBLE",
+        server_default="NOT_ELIGIBLE",
+    )
+    reconcile_state: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="NONE", server_default="NONE"
+    )
+
+
+class ProviderEvent(Base):
+    """Durable webhook/event inbox (P2-S12): one row per x-razorpay-event-id."""
+
+    __tablename__ = "provider_events"
+    __table_args__ = (
+        Index("ix_provider_events_type", "event_type"),
+        Index("ix_provider_events_order", "razorpay_order_id"),
+    )
+
+    event_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    provider_name: Mapped[str] = mapped_column(String(32), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    verified: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    processing_state: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="RECEIVED", server_default="RECEIVED"
+    )
+    payload_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    intent_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    razorpay_order_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    razorpay_payment_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
 
 class AuditEvent(Base):
     __tablename__ = "audit_events"

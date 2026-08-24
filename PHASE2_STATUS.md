@@ -22,7 +22,7 @@
 | M10 | Phase-2 Governance Transition | PASS | PHASES marked ACTIVE; PRD §11 PRD-RZP-001..012; ARCHITECTURE §14 provider flow + state dimensions; SECURITY P2-S01..S24 + T19..T24; TESTING §13 gates; D-030; R-013..R-015 |
 | M11 | Razorpay Provider Skeleton | PASS | providers/razorpay.py: typed client+errors (auth/rejection/unknown/config), order create/fetch, no-retry proven via MockTransport call counts; DI factory keeps mock default; buyer layer untouched; 9 tests; suite 245/245 |
 | M12 | Safe Auth Diagnostic | PASS | scripts/rzp_auth_check.py vs REAL Test keys: read-only GET /orders?count=1 → 200 OK, credentials accepted, 677ms; zero secrets printed; mock-transport tests for ok/401/timeout; suite 246/246 |
-| M13 | DB Schema for Razorpay Correlation | NOT_STARTED | — |
+| M13 | DB Schema for Razorpay Correlation | PASS | migration a93c7d5e21f0: 8 correlation columns on attempts + partial unique idx (order/payment id) + provider_events inbox (event_id PK, verified, payload_sha256); up/down round-trip; dedup tests; suite 248/248 |
 | M14 | Internal→Razorpay Order Mapping | NOT_STARTED | — |
 | M15 | Server-Side Order Creation | NOT_STARTED | — |
 | M16 | Razorpay Error Taxonomy | NOT_STARTED | — |
@@ -515,3 +515,42 @@ ruff / mypy strict                       → clean
 
 ### Next
 - M13 — Database Schema for Razorpay Correlation.
+
+
+## M13 — Database Schema for Razorpay Correlation
+
+MILESTONE: M13
+STATUS: PASS
+
+Requirements: master prompt M13/§24 — durable provider correlation + event inbox.
+Security invariants: P2-S12 (durable event dedup), P2-S22 (ids stored, never secrets).
+
+### Implementation
+- Migration `a93c7d5e21f0` (revises d8b412f091c3):
+  - execution_attempts += provider_name, razorpay_order_id, razorpay_payment_id,
+    razorpay_order_status, razorpay_payment_status, callback_verified_at,
+    fulfilment_state (NOT_ELIGIBLE default), reconcile_state (NONE default).
+  - Partial UNIQUE indexes: uq_attempt_razorpay_order / uq_attempt_razorpay_payment
+    (WHERE NOT NULL) — one attempt may claim a given provider order/payment id.
+  - New table `provider_events`: x-razorpay-event-id as PRIMARY KEY (durable dedup),
+    event_type, received_at, verified, processing_state, payload_sha256 (safe
+    evidence hash — no raw payloads), intent/order/payment refs, error.
+- `models.py`: ExecutionAttempt extended + ProviderEvent model.
+
+### Validation commands + results
+```text
+make migrate                                  → upgrade to a93c7d5e21f0 (head)
+alembic downgrade -1 && alembic upgrade head   → round-trip OK; idempotent re-run clean
+pytest tests/test_schema_phase2.py -v          → 2 passed:
+  • two attempts claiming same razorpay_order_id → second insert IntegrityError,
+    exactly one attempt survives
+  • duplicate provider event_id → IntegrityError at flush (durable constraint)
+pytest (full)                                  → 248 passed
+ruff / mypy strict                             → clean
+```
+
+### Real Razorpay interaction
+- NONE.
+
+### Next
+- M14 — Internal→Razorpay Order Mapping.
