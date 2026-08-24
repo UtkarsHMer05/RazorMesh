@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "RazorMesh Trust",
   description:
-    "Runtime trust infrastructure for agentic commerce — Phase 1 local prototype (simulated payments only).",
+    "Runtime trust infrastructure for agentic commerce — local prototype (Test Mode, no real money).",
 };
 
 export default function RootLayout({
@@ -15,7 +15,8 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <div className="mock-banner" role="note" data-testid="mock-provider-banner">
-          MOCK PAYMENT PROVIDER — NO REAL MONEY — PHASE 1 LOCAL PROTOTYPE
+          TEST ENVIRONMENT — NO REAL MONEY — UNOFFICIAL PROTOTYPE (MOCK OR RAZORPAY
+          TEST MODE)
         </div>
         <header className="header">
           <div className="container header-inner">

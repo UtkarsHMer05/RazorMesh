@@ -151,7 +151,9 @@ See `DECISIONS.md`, currently D-001 through D-032 (D-032: M36 live signed-webhoo
 # Next action
 
 M38 human gate: human performs ONE official Test Mode success checkout via the
-buyer UI (http://127.0.0.1:3000/buyer) using `success@razorpay` (R-017). Stack
+buyer UI (http://localhost:3000/buyer — MUST be localhost, not 127.0.0.1:
+dev CORS allows only WEB_ORIGIN=http://localhost:3000) using
+`success@razorpay` (R-017). Stack
 must be up first: `make phase2-up`. After the payment, agent verifies
 end-to-end: ALLOW → reservation → ticket → attempt → Razorpay order → callback
 signature → provider state → REAL signed webhook(s) (verified=true, non-fixture

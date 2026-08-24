@@ -123,5 +123,6 @@ echo -n "public /ready: "
 curl -s --max-time 10 "${EFFECTIVE_URL}/ready"
 echo
 echo
-echo "Stack ready. Buyer UI: http://127.0.0.1:${WEB_PORT}/buyer"
+echo "Stack ready. Buyer UI: http://localhost:${WEB_PORT}/buyer"
+echo "(Use localhost, NOT 127.0.0.1: dev CORS allows the WEB_ORIGIN http://localhost:3000.)"
 echo "Webhook inbox: ${EFFECTIVE_URL}/api/v1/webhooks/razorpay"
