@@ -97,3 +97,6 @@ Decision reference:
 | 2026-08-23 | M14 | ESLint | 10.9.0 | 9.39.5 | eslint-plugin-react@7.37.5 incompatible with ESLint 10; chose newest compatible stable per §11 policy; advisory re-check at M48 |
 | 2026-08-23 | M02 | Node.js | v20.20.2 (default) | v22.23.2 LTS default | v20 past EOL Apr 2026; human approved 22 LTS |
 | 2026-08-23 | M02 | uv | not installed | 0.12.5 | Governance prefers uv; human approved install |
+| Date | Milestone | Component | Old | New | Reason |
+|---|---|---|---|---|---|
+| 2026-08-24 | P2-M07 | Razorpay client | none | httpx 0.28.1 wrapper (D-030) | official razorpay SDK 2.0.1 declined: Beta classifier, opt-in auto-retry on mutating calls, extra requests dep; httpx already locked, latest stable, 0 advisories |

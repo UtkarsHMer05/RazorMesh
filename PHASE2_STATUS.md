@@ -17,7 +17,7 @@
 | M05 | Freeze Phase-2 Baseline | PASS | docs/PHASE2_BASELINE.md: HEAD 5186cca, pytest 225/225 cov 96%, migration head d8b412f091c3, versions recorded; zero Razorpay calls so far (declared) |
 | M06 | Live Razorpay Documentation Research | PASS | R-013/R-014/R-015 appended to RESEARCH.md: Orders limits (receipt≤40, notes≤15×256), checkout.js handler contract, HMAC formulas (callback uses SERVER-stored order id; webhook over RAW body), x-razorpay-event-id dedup, ordering not guaranteed, failed→captured expected, captured+order.paid both fire once, zrok guidance, OTP 754081, SDK razorpay 2.0.1 |
 | M07 | Provider Client & Dependency Decision | PASS | D-030: one thin httpx 0.28.1 wrapper (latest stable, 0 advisories, already locked); razorpay SDK 2.0.1 declined (Beta classifier, opt-in auto-retry foot-gun, extra requests dep); HMAC via stdlib |
-| M08 | Root `.env` / Typed Config Reconciliation | NOT_STARTED | — |
+| M08 | Root `.env` / Typed Config Reconciliation | PASS | .env reconciled (14 nonsecret keys appended; 3 secrets untouched/never printed); typed Settings w/ SecretStr + Literal guards; 6 new tests; suite 231/231; secret scan clean |
 | M09 | Razorpay Test-Mode Fail-Safe | NOT_STARTED | — |
 | M10 | Phase-2 Governance Transition | NOT_STARTED | — |
 | M11 | Razorpay Provider Skeleton | NOT_STARTED | — |
@@ -333,3 +333,41 @@ mutating-call foot-gun; adds `requests` dependency for two endpoints.
   timeout-after-send.
 - ExecutionAttempt impact: wrapper returns typed results only; the executor keeps
   sole authority over attempt state/reservation — identical to mock semantics.
+
+
+## M08 — Root `.env` and Typed Config Reconciliation
+
+MILESTONE: M08
+STATUS: PASS
+
+Requirements: master prompt §6/M08 — reconcile env, preserve human secrets, typed config.
+Security invariants: S30, P2-S01..S04 groundwork, secret-logging prevention.
+
+### Implementation
+- `settings.py`: added `payment_provider` (Literal mock|razorpay), `razorpay_mode`
+  (Literal test ONLY — 'live' is unrepresentable at the type level),
+  key_id + SecretStr key_secret/webhook_secret, api base URL, bounded timeout
+  (0 < t <= 60s), webhook path/public URL; `razorpay_credentials_present` helper.
+  SecretStr ensures repr/model_dump never leaks secrets (test-proven).
+- Root `.env`: appended 14 missing NONSECRET Phase-1/Phase-2 keys (DATABASE_URL,
+  REDIS_URL, key paths, API_HOST/PORT, WEB_ORIGIN, POLICY_VERSION,
+  PAYMENT_PROVIDER=razorpay, MOCK_PAYMENT_PROVIDER=false, RAZORPAY_API_BASE_URL,
+  RAZORPAY_REQUEST_TIMEOUT_SECONDS=10, RAZORPAY_WEBHOOK_PATH, empty PUBLIC_URL).
+  The three human Razorpay values were preserved byte-for-byte without display.
+- `.env.example`: Phase-2 section with BLANK secret placeholders + comments.
+
+### Validation commands + results
+```text
+git check-ignore -v .env                        → ignored (.gitignore:6)
+awk key-names only                              → 3 secret lines present, untouched
+ruff/mypy                                       → clean
+pytest tests/test_settings_phase2.py            → 6 passed
+pytest (full)                                   → 231 passed
+make security-check                             → PASS, no blocking findings
+```
+
+### Real Razorpay interaction
+- NONE.
+
+### Next
+- M09 — Razorpay Test-Mode Fail-Safe.

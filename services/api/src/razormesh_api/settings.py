@@ -1,7 +1,9 @@
-"""Application settings (local, credential-free in Phase 1)."""
+"""Typed application settings (local-first; Razorpay Test Mode in Phase 2)."""
 
 from functools import lru_cache
+from typing import Literal
 
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +19,27 @@ class Settings(BaseSettings):
     mock_payment_provider: bool = True
     dev_ticket_private_key_path: str = "./infra/keys/dev_ticket_ed25519_private.pem"
     dev_ticket_public_key_path: str = "./infra/keys/dev_ticket_ed25519_public.pem"
+
+    # ------------------------------------------------------------------
+    # Payment provider selection (Phase 2)
+    # ------------------------------------------------------------------
+    # Canonical selector; mock stays available for CI/fault injection (P2-S20).
+    payment_provider: Literal["mock", "razorpay"] = "mock"
+
+    # Razorpay Test Mode configuration. Secrets are SecretStr so accidental
+    # repr/logging of the settings object never leaks them (P2-S03/S04).
+    razorpay_mode: Literal["test"] = "test"
+    razorpay_key_id: str = ""
+    razorpay_key_secret: SecretStr = SecretStr("")
+    razorpay_webhook_secret: SecretStr = SecretStr("")
+    razorpay_api_base_url: str = "https://api.razorpay.com/v1"
+    razorpay_request_timeout_seconds: float = Field(default=10.0, gt=0, le=60)
+    razorpay_webhook_path: str = "/api/v1/webhooks/razorpay"
+    razorpay_webhook_public_url: str = ""
+
+    @property
+    def razorpay_credentials_present(self) -> bool:
+        return bool(self.razorpay_key_id) and bool(self.razorpay_key_secret.get_secret_value())
 
 
 @lru_cache
