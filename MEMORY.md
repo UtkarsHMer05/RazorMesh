@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M43 — Adversarial Evaluation Runner (next)  
-**Milestones passed:** M01–M42  
+**Current milestone:** M44 — Safe/Unsafe Paired Benchmark (next)  
+**Milestones passed:** M01–M43  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 43 files clean, pytest 190/190
+**Gate:** ruff clean, mypy 44 files clean, pytest 195/195
 
 ---
 
@@ -111,6 +111,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Untrusted boundary: hostile text inert end-to-end; authority slots protected (M40)
 - Semantic seam: Null + deterministic keyword verifier; UNDECIDED fail-closed (M41)
 - Scenarios: 7 families schema-validated; expected labels isolated (M42)
+- Runner: all 7 real-pipeline scenarios pass; authorize() now binds durable budgets (M43)
 
 ---
 
@@ -141,7 +142,7 @@ None yet; do not invent.
 
 # Next action
 
-M43 — Adversarial Runner: execute scenarios through real pipeline; never leak labels.
+M44 — Paired Benchmark: TP/FP/TN/FN, precision/recall/F1, synthetic GMV metrics.
 
 ---
 

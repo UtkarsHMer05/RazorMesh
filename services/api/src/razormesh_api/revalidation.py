@@ -170,7 +170,14 @@ class Revalidator:
             )
 
         # 3. Rebuild + recompute the canonical authorization hash.
-        rebuilt = self.rebuild_envelope(row)
+        try:
+            rebuilt = self.rebuild_envelope(row)
+        except Exception as exc:  # noqa: BLE001 - undecodable row == drifted row
+            return Verdict(
+                False,
+                "STALE_CHECKOUT",
+                f"durable checkout no longer rebuilds: {type(exc).__name__}",
+            )
         fresh_hash = checkout_authorization_hash(rebuilt)
         if fresh_hash != expected_checkout_hash:
             return Verdict(

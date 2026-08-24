@@ -50,7 +50,7 @@
 | M40 | Untrusted Content Boundary | PASS | Hostile payloads (SQLi/prompt-injection/forged authority JSON) stored verbatim as UNTRUSTED_CONTENT; authorization hashes + decisions unaffected; smuggled policy/nonce strings stay inert; authority-slot attempt -> TrustViolation; ledger chain intact with hostile rows; 5 tests PASS |
 | M41 | Future SemanticVerifier Interface | PASS | Protocol + NullSemanticVerifier (UNDECIDED default) + DeterministicKeywordVerifier test double; rule adapter maps SAFE/UNSAFE/UNDECIDED -> PASS/FAIL/UNKNOWN fail-closed; zero ML deps asserted; 6 tests PASS |
 | M42 | Attack Scenario Specification | PASS | Pydantic-validated ScenarioSpec (id pattern, family-specific invariants: swap/replay>=2/drift-field/split>=2); registry covers all 7 required families exactly once; expected labels isolated from decision inputs; 5 tests PASS |
-| M43 | Adversarial Evaluation Runner | NOT_STARTED | — |
+| M43 | Adversarial Evaluation Runner | PASS | All 7 scenarios executed through REAL pipeline (service+engine+ledger+ticket+nonce+executor+mock): expected==actual for every family incl. split prevention via durable aggregate budget and provider-unknown no-fresh-op; labels never enter decision inputs; 5 tests PASS |
 | M44 | Safe/Unsafe Paired Benchmark | NOT_STARTED | — |
 | M45 | Buyer Experience UI | NOT_STARTED | — |
 | M46 | Security Lab UI | NOT_STARTED | — |
@@ -303,6 +303,12 @@ M03 — Project Charter.
 - `scenarios.py`: `ScenarioSpec` (pydantic, frozen) with family-specific invariants (CONTEXT_SWAP needs swap_principal_to; REPLAY needs replay_count>=2; CHECKOUT_DRIFT needs drift_field; APPROVAL_SPLIT needs split_parts>=2); `ExpectedOutcome` enum keeps EXPECTED labels separate from runner inputs.
 - Registry: 7 scenarios covering every required family exactly once — safe baseline, context swap, 5x replay, checkout drift, 3-way approval split, provider-unknown retry, expired authorization. `validate_registry()` guards duplicates + coverage.
 - Validation: ruff clean; mypy strict 43 files clean; pytest 190/190.
+
+## M43 — Adversarial Evaluation Runner — PASS
+- `evaluation.py`: `AdversarialRunner` wipes+seeds per scenario, wires the full stack (CheckoutService + 17-rule DecisionEngine + EvidenceLedger + TicketIssuer + Redis nonce + TrustedPaymentExecutor + MockPaymentProvider), applies only structured spec mutations, records ACTUAL outcomes; expected labels used solely for post-hoc scoring.
+- Key hardening discovered by the runner: `authorize()` now reads durable committed/reserved spend into the rule context, so aggregate budgets bind across checkouts (approval-split defense is enforced at authorization time once part 1 has committed).
+- Results: safe→ALLOW_EXECUTE_ONCE; context swap→PRINCIPAL_MISMATCH rejection; 5x replay→SINGLE_EFFECT_ONLY (4 nonce rejections); drift→STALE_DETECTED; split→parts 2-3 BLOCK BUDGET_EXCEEDED; provider-unknown retry→same attempt reused (1 provider call); expired→BLOCK.
+- Validation: ruff clean; mypy strict 44 files clean; pytest 195/195.
 
 ---
 

@@ -54,6 +54,7 @@ class MockPaymentProvider:
     mode: MockMode = MockMode.SUCCESS
     failure_code: str = "CARD_DECLINED"
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
+    calls: int = 0
     _seq: int = 0
     # provider-side truth: attempt_id -> reference for EFFECTUATED payments
     _effects: dict[str, str] = field(default_factory=dict)
@@ -78,6 +79,7 @@ class MockPaymentProvider:
         return f"mock_{command.execution_attempt_id}_{command.nonce[:8]}"
 
     def charge(self, command: ChargeCommand) -> ChargeResult:
+        self.calls += 1
         ref = self._reference(command)
 
         if self.mode == MockMode.SUCCESS:

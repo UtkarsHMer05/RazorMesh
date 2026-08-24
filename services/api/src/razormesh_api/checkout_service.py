@@ -62,7 +62,12 @@ from razormesh_api.persistence.models import (
 )
 from razormesh_api.persistence.repositories import Repositories
 from razormesh_api.rules.engine import EvaluationContext, ProductFacts
-from razormesh_api.tickets import ExecutionTicketClaims, TicketIssuer
+from razormesh_api.tickets import (
+    CurrentBinding,
+    ExecutionTicketClaims,
+    SignedTicket,
+    TicketIssuer,
+)
 
 
 class CheckoutError(Exception):
@@ -108,6 +113,8 @@ class AuthorizationResult:
     outcome: DecisionOutcome
     decision_id: DecisionId
     ticket_json: str | None = None  # canonical signed claims (ALLOW only)
+    signed_ticket: SignedTicket | None = None  # ALLOW only
+    binding: CurrentBinding | None = None  # ALLOW only
 
 
 def _untrusted_name(text: str) -> Provenanced[BoundedText]:
@@ -291,12 +298,31 @@ class CheckoutService:
             if row is not None:
                 facts[item.product_id.value] = ProductFacts(brand=row.brand, category=row.category)
 
+        # Durable aggregate usage binds authorization decisions across checkouts.
+        spend_row = None
+        from sqlalchemy import select
+
+        from razormesh_api.persistence.models import AuthorizationSpend
+
+        with self._repos.factory() as session:
+            spend_row = (
+                session.execute(
+                    select(AuthorizationSpend).where(
+                        AuthorizationSpend.intent_id == str(intent_id)
+                    )
+                )
+                .scalars()
+                .first()
+            )
+
         outcome = self._engine.decide(
             intent=contract,
             checkout=env,
             ctx=EvaluationContext(
                 intent=contract,
                 checkout=env,
+                committed_minor=spend_row.committed_minor if spend_row else 0,
+                reserved_minor=spend_row.reserved_minor if spend_row else 0,
                 now_utc=now,
                 product_facts=facts,
             ),
@@ -387,4 +413,23 @@ class CheckoutService:
             ticket_id=str(claims.ticket_id),
             payload={"amount_minor": claims.amount_minor},
         )
-        return AuthorizationResult(outcome, decision_id, ticket_json=signed.claims_json)
+        binding = CurrentBinding(
+            principal_id=str(claims.principal_id),
+            agent_id=str(claims.agent_id),
+            intent_id=str(claims.intent_id),
+            intent_hash=claims.intent_hash,
+            authorization_generation=claims.authorization_generation,
+            checkout_id=str(claims.checkout_id),
+            checkout_hash=claims.checkout_hash,
+            checkout_revision=claims.checkout_revision,
+            merchant_id=str(claims.merchant_id),
+            amount_minor=claims.amount_minor,
+            currency=str(claims.currency),
+        )
+        return AuthorizationResult(
+            outcome,
+            decision_id,
+            ticket_json=signed.claims_json,
+            signed_ticket=signed,
+            binding=binding,
+        )
