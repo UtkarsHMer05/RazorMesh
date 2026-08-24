@@ -544,3 +544,12 @@ def verify_checkout_signature(
         hashlib.sha256,
     ).hexdigest()
     return _hmac.compare_digest(expected, signature_hex.lower())
+
+
+def verify_webhook_signature(*, raw_body: bytes, signature: str, webhook_secret: str) -> bool:
+    """Official formula (R-014): HMAC_SHA256(raw_body, webhook_secret) hex compare."""
+    import hashlib
+    import hmac as _hmac
+
+    expected = _hmac.new(webhook_secret.encode(), raw_body, hashlib.sha256).hexdigest()
+    return _hmac.compare_digest(expected, signature.strip().lower())

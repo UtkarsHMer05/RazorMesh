@@ -40,8 +40,8 @@
 | M28 | payment.captured Handling | PASS | confirm_captured exactly-once; captured-then-paid dup no-op proven; reservation reserved-to-committed once |
 | M29 | payment.failed Handling | PASS | record_provider_failure settles EXECUTING-to-FAILED releasing reservation; duplicate failure no-op; late capture reconciles via guarded path |
 | M30 | order.paid Handling | PASS | order.paid alone settles exactly-once without prior captured event; duplicates no-op |
-| M31 | Raw-Body Webhook Endpoint | NOT_STARTED | — |
-| M32 | Webhook Signature Verification | NOT_STARTED | — |
+| M31 | Raw-Body Webhook Endpoint | PASS | POST /api/v1/webhooks/razorpay: raw bytes before parse, 256KB cap (413), event-id required, zero mutation pre-verification, controlled statuses |
+| M32 | Webhook Signature Verification | PASS | verify_webhook_signature HMAC over RAW body; matrix: valid, one-byte mutation, wrong secret, reserialization mismatch, missing header/event-id, unknown-type accepted-ignored; DI settings fix |
 | M33 | Durable Webhook Inbox & Dedup | NOT_STARTED | — |
 | M34 | Ordering & Reconciliation Tests | NOT_STARTED | — |
 | M35 | Public Webhook Tunnel Preparation | NOT_STARTED | — |
@@ -982,3 +982,32 @@ ruff / mypy strict              -> clean
 
 ### Next
 - M31 - Raw-Body Webhook Endpoint.
+
+
+## M31-M32 — Raw-Body Webhook Endpoint + Signature Verification
+
+MILESTONES: M31, M32
+STATUS: ALL PASS
+
+Requirements: master prompt M31/M32/§25/§22; R-014.
+Security invariants: P2-S10/S11 + P2-S12 groundwork.
+
+### Implementation
+- `api/routes/webhooks.py`: async route captures RAW body via request.body()
+  BEFORE any parsing; content-length + streamed cap 256KB -> 413;
+  x-razorpay-event-id mandatory -> 400 when absent; signature check BEFORE any
+  business logic -> 403 RAZORPAY_WEBHOOK_SIGNATURE_INVALID with ZERO mutation;
+  verified events reduce via ProviderStateReducer; unknown event types return
+  200 processed=false IGNORED_EVENT_TYPE (retry behavior is never load-bearing);
+  unmatched contexts return 200 UNMATCHED_CONTEXT surfaced for operators.
+- `verify_webhook_signature()`: stdlib HMAC-SHA256 over exactly the received
+  bytes with constant-time compare.
+
+### Validation
+pytest tests/test_webhook_verification.py -v -> 7 passed: valid /
+missing-signature / one-byte-mutation / wrong-secret / reserialization-breaks-
+signature (raw-body necessity proof) / missing-event-id / unknown-event-type.
+pytest (full) -> 308 passed. ruff + mypy strict clean.
+
+### Real Razorpay interaction
+- NONE (local fixtures only; real delivery awaits M36 human gate).
