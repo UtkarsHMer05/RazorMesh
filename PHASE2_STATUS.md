@@ -20,7 +20,7 @@
 | M08 | Root `.env` / Typed Config Reconciliation | PASS | .env reconciled (14 nonsecret keys appended; 3 secrets untouched/never printed); typed Settings w/ SecretStr + Literal guards; 6 new tests; suite 231/231; secret scan clean |
 | M09 | Razorpay Test-Mode Fail-Safe | PASS | validate_payment_provider_config(): live prefix rejected in any mode; real provider requires test+3 creds (names only, never values); mock needs nothing; 5 new tests; suite 236/236 |
 | M10 | Phase-2 Governance Transition | PASS | PHASES marked ACTIVE; PRD §11 PRD-RZP-001..012; ARCHITECTURE §14 provider flow + state dimensions; SECURITY P2-S01..S24 + T19..T24; TESTING §13 gates; D-030; R-013..R-015 |
-| M11 | Razorpay Provider Skeleton | NOT_STARTED | — |
+| M11 | Razorpay Provider Skeleton | PASS | providers/razorpay.py: typed client+errors (auth/rejection/unknown/config), order create/fetch, no-retry proven via MockTransport call counts; DI factory keeps mock default; buyer layer untouched; 9 tests; suite 245/245 |
 | M12 | Safe Auth Diagnostic | NOT_STARTED | — |
 | M13 | DB Schema for Razorpay Correlation | NOT_STARTED | — |
 | M14 | Internal→Razorpay Order Mapping | NOT_STARTED | — |
@@ -434,3 +434,44 @@ Requirements: master prompt §13/M10 — full governance sync without erasing Ph
 
 ### Next
 - M11 — Razorpay Provider Skeleton.
+
+
+## M11 — Razorpay Provider Skeleton
+
+MILESTONE: M11
+STATUS: PASS
+
+Requirements: master prompt M11/§8/§10; D-030.
+Security invariants: SEC-001, P2-S05/S06 groundwork, P2-S17..S21.
+
+### Implementation
+- `providers/razorpay.py`:
+  - `RazorpayClient` — single httpx wrapper (Basic auth, bounded timeout,
+    optional MockTransport seam). Error mapping per M16 taxonomy:
+    401/403→AUTH_FAILED; 400/404/422→ORDER_CREATE_REJECTED (definitive);
+    timeouts/connect errors/5xx/malformed→UNKNOWN (truth not disproven).
+  - `RazorpayPaymentProvider` — order lifecycle (create_order/fetch_order) with
+    `from_settings` guard (requires PAYMENT_PROVIDER=razorpay + test mode);
+    Standard Checkout is an async-confirmation model so the provider exposes the
+    order lifecycle rather than a synchronous charge(); executor authority over
+    attempt/reservation state is unchanged.
+  - `build_payment_provider(settings)` DI factory: mock default credential-free;
+    razorpay construction runs fail-safe guard; NO silent fallback to mock (P2-S21).
+- Buyer/agent layers unchanged; they still construct only through trusted paths.
+
+### Validation commands + results
+```text
+pytest tests/test_provider_razorpay.py -v → 9 passed
+pytest (full)                             → 245 passed
+ruff / mypy strict (49 files)             → clean
+```
+Fault-injection proofs: timeout → UNKNOWN + calls==1 (no transport retry);
+503 → UNKNOWN + calls==1; 400 → definitive rejection; 401 → auth error;
+malformed JSON → unknown; Basic auth header present; request body carries exactly
+the server-authoritative amount.
+
+### Real Razorpay interaction
+- NONE (MockTransport only).
+
+### Next
+- M12 — Safe Razorpay Authentication Diagnostic (first permitted real interaction).
