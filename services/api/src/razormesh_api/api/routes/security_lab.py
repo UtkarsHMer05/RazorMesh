@@ -6,7 +6,7 @@ the "attacks" are the same structured scenario mutations used for the M43/M44
 evaluation, replayed for interactive inspection with their evidence.
 """
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
 
@@ -31,7 +31,7 @@ def _repos(runner: AdversarialRunner) -> Repositories:
 
 
 @router.get("/scenarios")
-def list_scenarios() -> dict:
+def list_scenarios() -> dict[str, Any]:
     return {
         "count": len(SCENARIOS),
         "note": "Synthetic local scenarios only; executed against the mock provider.",
@@ -47,7 +47,7 @@ def list_scenarios() -> dict:
 
 
 @router.post("/run")
-def run_suite(runner: Annotated[AdversarialRunner, Depends(_runner)]) -> dict:
+def run_suite(runner: Annotated[AdversarialRunner, Depends(_runner)]) -> dict[str, Any]:
     """Seed isolated synthetic fixtures and execute the suite through the real pipeline."""
     results = []
     for res in runner.run_all():

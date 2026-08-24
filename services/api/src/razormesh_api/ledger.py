@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from razormesh_api.domain.evidence import (
     GENESIS_HASH,
@@ -33,7 +33,7 @@ class ChainReport:
 
 class EvidenceLedger:
     def __init__(self, repos: Repositories) -> None:
-        self._factory: sessionmaker = repos.factory
+        self._factory: sessionmaker[Session] = repos.factory
 
     def append(
         self,

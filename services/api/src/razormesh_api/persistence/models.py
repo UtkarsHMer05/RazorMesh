@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
@@ -67,11 +68,17 @@ class IntentContract(Base):
     agent_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     authorization_generation: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="AUTHORIZED")
-    allowed_merchant_ids: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
-    allowed_product_ids: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
-    allowed_categories: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
-    brand_restriction: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    condition_restriction: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    allowed_merchant_ids: Mapped[dict[str, Any] | list[Any] | None] = mapped_column(
+        JSONB, nullable=True
+    )
+    allowed_product_ids: Mapped[dict[str, Any] | list[Any] | None] = mapped_column(
+        JSONB, nullable=True
+    )
+    allowed_categories: Mapped[dict[str, Any] | list[Any] | None] = mapped_column(
+        JSONB, nullable=True
+    )
+    brand_restriction: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    condition_restriction: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     currency: Mapped[str] = mapped_column(String(8), nullable=False)
     max_total_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     aggregate_budget_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
@@ -92,14 +99,14 @@ class Checkout(Base):
     checkout_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     merchant_id: Mapped[str] = mapped_column(String(64), ForeignKey("merchants.id"), nullable=False)
-    line_items: Mapped[dict | list] = mapped_column(JSONB, nullable=False)
+    line_items: Mapped[dict[str, Any] | list[Any]] = mapped_column(JSONB, nullable=False)
     tax_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     shipping_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     fees_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     provided_total_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     computed_total_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(String(8), nullable=False)
-    subscription_terms: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    subscription_terms: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
@@ -122,8 +129,8 @@ class Decision(Base):
     checkout_hash: Mapped[str] = mapped_column(String(128), nullable=False)
     policy_version: Mapped[str] = mapped_column(String(64), nullable=False)
     decision: Mapped[str] = mapped_column(String(16), nullable=False)
-    reason_codes: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
-    rule_results: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
+    reason_codes: Mapped[dict[str, Any] | list[Any] | None] = mapped_column(JSONB, nullable=True)
+    rule_results: Mapped[dict[str, Any] | list[Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
@@ -201,7 +208,7 @@ class ExecutionAttempt(Base):
     state: Mapped[str] = mapped_column(String(32), nullable=False, default="CREATED")
     provider_reference: Mapped[str | None] = mapped_column(String(128), nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    provider_event: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    provider_event: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
@@ -276,8 +283,8 @@ class AuditEvent(Base):
     ticket_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     intent_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
     checkout_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    reason_codes: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
+    reason_codes: Mapped[dict[str, Any] | list[Any] | None] = mapped_column(JSONB, nullable=True)
     previous_event_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
     current_event_hash: Mapped[str] = mapped_column(String(128), nullable=False)
-    metadata_json: Mapped[dict | None] = mapped_column("metadata", JSONB, nullable=True)
+    metadata_json: Mapped[dict[str, Any] | None] = mapped_column("metadata", JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -15,6 +15,7 @@ projection and therefore never cause false invalidation.
 """
 
 from datetime import UTC, datetime
+from typing import Any, cast
 
 from razormesh_api.domain.authz_hash import (
     checkout_authorization_hash,
@@ -119,7 +120,7 @@ class Revalidator:
     def rebuild_envelope(self, row: RowCheckout) -> CheckoutEnvelope:
         """Rebuild the envelope EXACTLY from durable authorization-relevant fields."""
 
-        def _line(d: dict) -> LineItem:
+        def _line(d: dict[str, Any]) -> LineItem:
             return LineItem(
                 product_id=ProductId(str(d["product_id"])),
                 display_name=_placeholder_name(),
@@ -128,7 +129,7 @@ class Revalidator:
                 condition=d.get("condition") or None,
             )
 
-        items = tuple(_line(d) for d in row.line_items)
+        items = tuple(_line(dict(cast("dict[str, Any]", d))) for d in row.line_items)
         zero = Money.zero(row.currency)
         total = zero
         for i in items:

@@ -24,7 +24,7 @@
 | M12 | Safe Auth Diagnostic | PASS | scripts/rzp_auth_check.py vs REAL Test keys: read-only GET /orders?count=1 → 200 OK, credentials accepted, 677ms; zero secrets printed; mock-transport tests for ok/401/timeout; suite 246/246 |
 | M13 | DB Schema for Razorpay Correlation | PASS | migration a93c7d5e21f0: 8 correlation columns on attempts + partial unique idx (order/payment id) + provider_events inbox (event_id PK, verified, payload_sha256); up/down round-trip; dedup tests; suite 248/248 |
 | M14 | Internal→Razorpay Order Mapping | PASS | build_order_correlation(): receipt=r_{attempt_id} (≤40), notes=4 opaque refs+generation (≤15×256), no PII/secrets; parse_order_correlation() round-trip; 4 tests; suite 252/252 |
-| M15 | Server-Side Order Creation | NOT_STARTED | — |
+| M15 | Server-Side Order Creation | PASS | executor Razorpay path: order created via trusted prelude, correlation persisted, attempt EXECUTING; timeout→UNKNOWN+REQUIRED+reservation held; 400→FAILED+release; idempotent re-entry (1 call); strict-mypy config gap found & closed (30 latent errors fixed); suite 255/255 |
 | M16 | Razorpay Error Taxonomy | NOT_STARTED | — |
 | M17 | First Real Test Order | NOT_STARTED | — |
 | M18 | Order Fetch & Reconciliation | NOT_STARTED | — |
@@ -584,3 +584,50 @@ ruff / mypy strict                      → clean
 
 ### Next
 - M15 — Server-Side Razorpay Order Creation.
+
+
+## M15 — Server-Side Razorpay Order Creation
+
+MILESTONE: M15
+STATUS: PASS
+
+Requirements: master prompt M15 — trusted-path order creation only; server-authoritative
+amount/currency; unknown mapping; durable correlation; audit.
+Security invariants: SEC-001/S14/S15 preserved; P2-S05/S06/S17/S18/S19 proven.
+
+### Implementation
+- `executor.py`: provider-type branch after the existing trust prelude
+  (ticket verify → durable revalidation D-027 → nonce → reservation D-028).
+  `_execute_razorpay_order()`:
+    - builds bounded receipt/notes (M14) and calls create_order with amounts taken
+      ONLY from verified durable claims;
+    - success → attempt stays EXECUTING, razorpay_order_id/status persisted under
+      partial-unique claim, RAZORPAY_ORDER_CREATED ledger event;
+    - UNKNOWN (timeout/connect/5xx/malformed) → PROVIDER_UNKNOWN +
+      reconcile_state=REQUIRED + reservation KEPT + RAZORPAY_ORDER_UNKNOWN event;
+    - definitive rejection/auth failure → FAILED via atomic settle (reservation
+      released) + RAZORPAY_ORDER_REJECTED event.
+  - Re-entry remains ticket-derived idempotent: same attempt returned, no second
+    order call (proven by transport call-count == 1).
+
+### Gate strengthening discovered & repaired
+`make typecheck` ran `mypy -p razormesh_api` from repo ROOT where pyproject's
+[tool.mypy] strict section is NOT discovered — so earlier "strict clean" claims were
+effectively default-config runs. Fixed at the source: made the package genuinely
+clean under TRUE strict settings (parameterized JSONB generics in models.py, typed
+route returns, removed a dead-unreachable branch in settings guard) — verified clean
+from BOTH root and services/api. Suite count grew 252→255 with new tests.
+
+### Validation commands + results
+```text
+pytest tests/test_executor_razorpay.py -v   → 3 passed (created/unknown/rejected paths)
+pytest (full)                               → 255 passed
+ruff check .                                → clean
+mypy -p razormesh_api (from BOTH dirs)      → Success: no issues in 49 source files
+```
+
+### Real Razorpay interaction
+- NONE (MockTransport fault injection).
+
+### Next
+- M16 — Razorpay Error Taxonomy (largely realized in skeleton; formalize remaining mappings).

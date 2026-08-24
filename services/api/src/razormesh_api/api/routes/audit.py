@@ -1,6 +1,6 @@
 """M47: audit dashboard API — timeline, chain verification, states, tamper simulation."""
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -36,7 +36,7 @@ def _ledger(repos: Annotated[Repositories, Depends(_repos)]) -> EvidenceLedger:
 def timeline(
     repos: Annotated[Repositories, Depends(_repos)],
     limit: int = 50,
-) -> dict:
+) -> dict[str, Any]:
     limit = max(1, min(limit, 200))
     events = repos.audit.list_recent(limit)
     return {
@@ -62,7 +62,7 @@ def timeline(
 
 
 @router.get("/verify")
-def verify_chain(ledger: Annotated[EvidenceLedger, Depends(_ledger)]) -> dict:
+def verify_chain(ledger: Annotated[EvidenceLedger, Depends(_ledger)]) -> dict[str, Any]:
     report = ledger.verify()
     return {
         "valid": report.valid,
@@ -76,7 +76,7 @@ def verify_chain(ledger: Annotated[EvidenceLedger, Depends(_ledger)]) -> dict:
 def authorization_state(
     intent_id: str,
     repos: Annotated[Repositories, Depends(_repos)],
-) -> dict:
+) -> dict[str, Any]:
     try:
         key = IntentId(intent_id)
     except Exception as exc:
@@ -102,7 +102,7 @@ def authorization_state(
     if intent is None:
         raise HTTPException(status_code=404, detail="unknown intent")
 
-    def _money_view(spend_row: AuthorizationSpend | None) -> dict | None:
+    def _money_view(spend_row: AuthorizationSpend | None) -> dict[str, Any] | None:
         if spend_row is None:
             return None
         return {
@@ -151,7 +151,7 @@ def authorization_state(
 
 
 @router.post("/tamper-test")
-def tamper_test(repos: Annotated[Repositories, Depends(_repos)]) -> dict:
+def tamper_test(repos: Annotated[Repositories, Depends(_repos)]) -> dict[str, Any]:
     """Prove a hypothetical mutation breaks the hash without mutating the ledger.
 
     Real UPDATE/DELETE operations remain unavailable at the application layer;

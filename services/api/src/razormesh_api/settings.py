@@ -63,9 +63,6 @@ def validate_payment_provider_config(settings: Settings) -> None:
     """
     problems: list[str] = []
 
-    if settings.razorpay_mode != "test":  # defensive; Literal already blocks
-        problems.append("RAZORPAY_MODE must be 'test'")
-
     if settings.razorpay_key_id.startswith("rzp_live_"):
         problems.append(
             "RAZORPAY_LIVE_KEY_REJECTED: RAZORPAY_KEY_ID has a live-mode prefix; "

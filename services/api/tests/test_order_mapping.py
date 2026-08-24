@@ -20,7 +20,7 @@ def _ids() -> dict[str, str]:
 
 
 def test_receipt_within_official_limit_and_traceable() -> None:
-    receipt, notes = build_order_correlation(**_ids(), authorization_generation=1)
+    receipt, _notes = build_order_correlation(**_ids(), authorization_generation=1)
     # official Orders limit: receipt <= 40 chars (R-013)
     assert len(receipt) <= 40
     assert receipt == f"r_{_ids()['execution_attempt_id']}"

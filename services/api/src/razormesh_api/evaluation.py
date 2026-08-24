@@ -15,6 +15,7 @@ they are never visible to any decision component.
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -311,7 +312,9 @@ class AdversarialRunner:
         with self.repositories.transaction() as session:
             row = session.get(RowCheckout, cid)
             assert row is not None
-            lines = [dict(item) for item in row.line_items]
+            lines: list[dict[str, Any]] = [
+                dict(cast("dict[str, Any]", item)) for item in row.line_items
+            ]
             if spec.drift_field == "unit_price_minor":
                 lines[0]["unit_price_minor"] += 1
                 row.line_items = lines

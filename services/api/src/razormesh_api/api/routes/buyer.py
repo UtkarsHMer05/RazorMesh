@@ -7,7 +7,7 @@ without a valid ticket; no client field influences totals.
 """
 
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -99,7 +99,7 @@ class ExecutionBody(BaseModel):
 
 
 @router.post("/buyer/fixture-intent")
-def create_fixture_intent(repos: Annotated[Repositories, Depends(_repos)]) -> dict:
+def create_fixture_intent(repos: Annotated[Repositories, Depends(_repos)]) -> dict[str, Any]:
     """Phase-1 fixture authorization: a permissive demo intent (no real money)."""
     iid = IntentId.generate()
     now = datetime.now(UTC)

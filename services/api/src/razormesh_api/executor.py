@@ -30,6 +30,12 @@ from razormesh_api.ledger import EvidenceLedger
 from razormesh_api.nonce import NonceRegistry
 from razormesh_api.persistence.models import AuthorizationSpend, ExecutionAttempt
 from razormesh_api.persistence.repositories import Repositories
+from razormesh_api.providers.razorpay import (
+    RazorpayError,
+    RazorpayPaymentProvider,
+    RazorpayUnknownOutcomeError,
+    build_order_correlation,
+)
 from razormesh_api.spend import SpendManager
 from razormesh_api.tickets import (
     CurrentBinding,
@@ -200,6 +206,13 @@ class TrustedPaymentExecutor:
 
         # 4. Mark EXECUTING durably, then call the provider once.
         self._transition(attempt, AttemptState.EXECUTING, now)
+
+        # Phase-2 real-provider path (P2-M15): Standard Checkout replaces the
+        # synchronous charge with a server-created order; the attempt stays
+        # EXECUTING until verified captured/paid evidence arrives.
+        if isinstance(self._provider, RazorpayPaymentProvider):
+            return self._execute_razorpay_order(attempt, claims, now)
+
         command = ChargeCommand(
             execution_attempt_id=attempt.execution_attempt_id,
             intent_id=str(intent_id),
@@ -234,6 +247,105 @@ class TrustedPaymentExecutor:
             )
         # Provider-unknown: reservation intentionally KEPT (no release).
         return self._settle(attempt.execution_attempt_id, AttemptState.PROVIDER_UNKNOWN, now)
+
+    def _execute_razorpay_order(
+        self,
+        attempt: ExecutionAttempt,
+        claims: ExecutionTicketClaims,
+        now: datetime,
+    ) -> ExecutionAttempt:
+        """Create the server-authoritative Razorpay order for this execution.
+
+        Amount/currency come exclusively from the verified durable claims — the
+        browser never supplies them (P2-S05/S06). Outcome mapping (P2-S17..S19):
+        - definitive rejection/auth failure -> FAILED, reservation released;
+        - timeout/5xx/malformed            -> PROVIDER_UNKNOWN, reservation KEPT,
+          reconcile_state=REQUIRED; never retried as a fresh order;
+        - success                          -> attempt stays EXECUTING with the
+          razorpay_order_id durably correlated until capture evidence arrives.
+        """
+        assert isinstance(self._provider, RazorpayPaymentProvider)
+        receipt, notes = build_order_correlation(
+            execution_attempt_id=attempt.execution_attempt_id,
+            intent_id=str(claims.intent_id),
+            checkout_id=str(claims.checkout_id),
+            decision_id=str(claims.decision_id),
+            ticket_id=str(claims.ticket_id),
+            authorization_generation=claims.authorization_generation,
+        )
+        try:
+            order = self._provider.create_order(
+                amount_minor=attempt.amount_minor,
+                currency=attempt.currency,
+                receipt=receipt,
+                notes=notes,
+            )
+        except RazorpayUnknownOutcomeError as exc:
+            settled = self._settle(
+                attempt.execution_attempt_id,
+                AttemptState.PROVIDER_UNKNOWN,
+                now,
+                error_code=exc.code,
+                reconcile_state="REQUIRED",
+            )
+            EvidenceLedger(self._repos).append(
+                event_type="RAZORPAY_ORDER_UNKNOWN",
+                actor="trusted-payment-executor",
+                intent_id=settled.intent_id,
+                checkout_id=settled.checkout_id,
+                ticket_id=settled.ticket_id,
+                payload={
+                    "execution_attempt_id": settled.execution_attempt_id,
+                    "reason_code": exc.code,
+                },
+            )
+            return settled
+        except RazorpayError as exc:
+            settled = self._settle(
+                attempt.execution_attempt_id,
+                AttemptState.FAILED,
+                now,
+                error_code=exc.code,
+            )
+            EvidenceLedger(self._repos).append(
+                event_type="RAZORPAY_ORDER_REJECTED",
+                actor="trusted-payment-executor",
+                intent_id=settled.intent_id,
+                checkout_id=settled.checkout_id,
+                ticket_id=settled.ticket_id,
+                payload={
+                    "execution_attempt_id": settled.execution_attempt_id,
+                    "reason_code": exc.code,
+                },
+            )
+            return settled
+
+        with self._repos.transaction() as session:
+            row = session.get(ExecutionAttempt, attempt.execution_attempt_id, with_for_update=True)
+            if row is None:
+                raise ValueError(f"attempt vanished: {attempt.execution_attempt_id}")
+            if row.razorpay_order_id not in (None, order.order_id):
+                raise ValueError("attempt already claims a different provider order")
+            row.razorpay_order_id = order.order_id
+            row.razorpay_order_status = order.status
+            row.provider_reference = order.order_id
+            row.updated_at = now
+
+        EvidenceLedger(self._repos).append(
+            event_type="RAZORPAY_ORDER_CREATED",
+            actor="trusted-payment-executor",
+            intent_id=str(claims.intent_id),
+            checkout_id=str(claims.checkout_id),
+            ticket_id=str(claims.ticket_id),
+            payload={
+                "execution_attempt_id": attempt.execution_attempt_id,
+                "razorpay_order_id": order.order_id,
+                "receipt": receipt,
+                "amount_minor": attempt.amount_minor,
+                "currency": attempt.currency,
+            },
+        )
+        return self._refresh_by_id(attempt.execution_attempt_id)
 
     def _abort_created_attempt(
         self,
@@ -377,6 +489,7 @@ class TrustedPaymentExecutor:
         *,
         provider_reference: str | None = None,
         error_code: str | None = None,
+        reconcile_state: str | None = None,
     ) -> ExecutionAttempt:
         """Atomically settle attempt state and its reservation in PostgreSQL."""
         with self._repos.transaction() as session:
@@ -402,6 +515,8 @@ class TrustedPaymentExecutor:
                 {"reference": provider_reference} if provider_reference is not None else None
             )
             attempt.error_code = error_code
+            if reconcile_state is not None:
+                attempt.reconcile_state = reconcile_state
             attempt.updated_at = now
         settled = self._refresh_by_id(attempt_id)
         EvidenceLedger(self._repos).append(
