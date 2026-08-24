@@ -47,7 +47,7 @@
 | M37 | Mock Payment Provider | PASS | 7 modes (success/failure/timeout-before/timeout-after-success/duplicate/delayed/out-of-order) driving REAL executor: provider-side effects ledger proves money-moved-vs-not; unknown+reconciliation resolves to SUCCEEDED; duplicate delivery keeps 1 effect; 7 tests PASS |
 | M38 | Checkout Service | PASS | Server recomputes ALL amounts from trusted catalog (client total mismatch rejected loudly); blocked intents refused pre-rules; propose persists checkout + ledger event; authorize runs full rule set -> durable decision + hashes; ALLOW-only ticket issuance; 7 tests PASS |
 | M39 | Live Checkout Revalidation | PASS | Revalidator re-reads durable checkout, rebuilds exact authz projection (condition/currency persisted), recomputes hash: relevant drift -> STALE_CHECKOUT; generation/status drift -> AUTHORIZATION_SUPERSEDED/STALE; untrusted title changes proven NOT to invalidate; 5 tests PASS |
-| M40 | Untrusted Content Boundary | NOT_STARTED | — |
+| M40 | Untrusted Content Boundary | PASS | Hostile payloads (SQLi/prompt-injection/forged authority JSON) stored verbatim as UNTRUSTED_CONTENT; authorization hashes + decisions unaffected; smuggled policy/nonce strings stay inert; authority-slot attempt -> TrustViolation; ledger chain intact with hostile rows; 5 tests PASS |
 | M41 | Future SemanticVerifier Interface | NOT_STARTED | — |
 | M42 | Attack Scenario Specification | NOT_STARTED | — |
 | M43 | Adversarial Evaluation Runner | NOT_STARTED | — |
@@ -284,6 +284,15 @@ M03 — Project Charter.
 - Verdicts: STALE_CHECKOUT (hash or revision drift), AUTHORIZATION_SUPERSEDED (generation), AUTHORIZATION_STALE (status/terms), CHECKOUT_MISSING, AUTHORIZATION_MISSING.
 - Proven both ways: server-side quantity drift invalidates; untrusted catalog title/image changes do NOT invalidate.
 - Validation: ruff clean; mypy strict 41 files clean; pytest 171/171.
+
+## M40 — Untrusted Content Boundary — PASS
+- Poisoned every product title + merchant description with hostile payloads (SQL injection, prompt injection, forged policy_version/decision/nonce/ticket JSON) and proved end-to-end:
+  1. Storage keeps text VERBATIM (no interpretation);
+  2. Different hostile texts → identical intent hashes and identical ALLOW decisions;
+  3. Durable decision row carries only OUR policy version; forged nonce string absent from issued tickets;
+  4. Untrusted content attempting an authority slot raises TrustViolation;
+  5. Evidence ledger chain verifies with hostile rows stored.
+- Validation: ruff clean; mypy strict 41 files clean; pytest 176/176.
 
 ---
 

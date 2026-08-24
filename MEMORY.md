@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M40 — Untrusted Content Boundary (next)  
-**Milestones passed:** M01–M39  
+**Current milestone:** M41 — SemanticVerifier Interface (next)  
+**Milestones passed:** M01–M40  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 41 files clean, pytest 171/171
+**Gate:** ruff clean, mypy 41 files clean, pytest 176/176
 
 ---
 
@@ -108,6 +108,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Mock provider: 7 scripted modes incl. timeout-after-success + event replay (M37)
 - Checkout service: server-authoritative totals; propose+authorize+ticket flow (M38)
 - Revalidation: rebuild hash from DB pre-execution; drift blocks, cosmetics don't (M39)
+- Untrusted boundary: hostile text inert end-to-end; authority slots protected (M40)
 
 ---
 
@@ -138,7 +139,7 @@ None yet; do not invent.
 
 # Next action
 
-M40 — Untrusted Content Boundary: malicious merchant text cannot mutate authority/execution.
+M41 — SemanticVerifier interface (Null + deterministic impl only, no Transformer dep).
 
 ---
 
