@@ -57,7 +57,7 @@
 | M45 | Buyer UI Trust-State Polish | PASS | TEST MODE banner + no-real-money messaging; VERIFYING/CAPTURED-PAID/FAILED/PROVIDER_UNKNOWN states with aria-live; PROVIDER_UNKNOWN now offers NO payment action (same-order re-open removed on unknown; refresh only); authorization-binding explanation rendered at decision time; prefers-reduced-motion + <=640px responsive guards added; vitest 11/11 incl. 2 new M45 regressions; tsc/eslint/build/Playwright green |
 | M46 | Automated E2E w/ External Checkout Boundary | PASS | e2e/checkout.spec.ts: checkout.js replaced by deterministic in-browser stub + API boundary route-mocked; 3 paths proven (success handler->CAPTURED/PAID with server-issued fields only; FAILED note + no payment actions; network-fail -> PROVIDER_UNKNOWN refresh-only); DOM+request secret scan (key_secret/webhook_secret fixtures never appear); Playwright 5/5 |
 | M47 | Phase-2 Performance & Network Baseline | PASS | docs/PHASE2_PERFORMANCE.json (scripts/rzp_perf_phase2.py): LOCAL trusted executor path p50 58.5ms incl. DB; callback HMAC verify p50 0.002ms; webhook HMAC+inbox+reducer+settle end-to-end p50 67.6ms; REAL Test Mode create_order mean 188.8ms / fetch_order mean 475.8ms (n=5, order entities only, disposable); local vs network clearly separated; human wall-time labeled non-system; artifact structure gate test added; suite 353/353 |
-| M48 | Full Phase-2 Security & Dependency Gate | NOT_STARTED | — |
+| M48 | Full Phase-2 Security & Dependency Gate | PASS | ALL GATES GREEN: ruff clean; mypy strict 54 files BOTH roots; pytest 353/353 (incl. hypothesis stateful, concurrency, signature/dedup/order/provider-unknown, Live-key refusal); frontend lint+tsc+vitest 11+build+Playwright 5/5 w/ DOM+wire secret scans; make security-check PASS (secret scan 0, pip-audit clean, pnpm audit clean); REAL auth diagnostic OK (read-only, 986ms); .env ignored (gitignore:6) untracked; rzp_live_ grep = guard itself + pyc only |
 | M49 | Phase-2 Clean-Room Acceptance | NOT_STARTED | — |
 | M50 | Completion Report & STOP | NOT_STARTED | — |
 
@@ -1821,3 +1821,44 @@ make security-check                        -> PASS
 ### Real Razorpay interaction
 - TEST_ORDER (bounded): 5 disposable order entities created + fetched; no
   checkout/payment performed.
+
+
+## M48 — Full Phase-2 Security & Dependency Gate
+
+MILESTONE: M48
+STATUS: PASS
+
+Requirements: master prompt M48 — run the complete gate battery; classify
+findings; exploitable critical issues block exit.
+
+### Gate results (all recorded this session)
+| Gate | Command | Result |
+|---|---|---|
+| Format/lint | `ruff check .` | clean |
+| Type safety | `mypy -p razormesh_api` from ROOT and services/api | Success, 54 files each |
+| Full suite incl. Hypothesis stateful + money/canonicalization | `pytest` | 353 passed |
+| Concurrency & replay regression (20-worker races, storms) | tests/test_concurrency_phase2.py | all pass |
+| Signature matrices (callback HMAC server-order binding, webhook raw-body HMAC, mutation/reserialization/wrong-secret) | test_callback_verification / test_webhook_verification | all pass |
+| Durable dedup & ordering (inbox PK, permutation matrix) | test_webhook_verification / reducer suites | all pass |
+| Provider adapter + taxonomy (no-retry proofs, calls==1) | test_provider_razorpay / error taxonomy | all pass |
+| Provider-unknown semantics (hold identity+reservation, reconcile once) | test_executor_razorpay / test_reconciliation | all pass |
+| LIVE MODE rejection | test_settings_phase2 (live prefix rejected in ANY mode; Literal['test'] type-level) | pass |
+| Frontend quality | eslint / tsc / vitest / next build | clean / clean / 11 passed / OK |
+| Browser E2E + secret scans | Playwright 5/5 (DOM content + every request line scanned against fixture secret values) | pass |
+| Secret scan | `make security-check` [1/3] | 0 findings |
+| Python dependency audit | pip-audit [2/3] | 0 findings |
+| Frontend dependency audit | pnpm audit production [3/3] | 0 findings |
+| Real credential diagnostic | scripts/rzp_auth_check.py (READ_ONLY) | ok=True, mode=test guard passed, latency 986ms |
+| .env hygiene | git check-ignore (.gitignore:6), untracked, mode 600 | verified |
+| Live-key grep | rzp_live_ across src | only the settings.py REJECTION GUARD + its .pyc bytecode |
+
+### Classification
+No exploitable findings. No blocking issues. Findings count requiring
+remediation: 0. (Development-time lessons already remediated in M41/M43:
+fixed synthetic identifiers vs durable uniqueness constraints.)
+
+### Real Razorpay interaction
+- READ_ONLY auth diagnostic (no order created).
+
+### Next
+- M49 — Phase-2 Clean-Room Acceptance.

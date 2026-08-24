@@ -155,11 +155,11 @@ GET /buyer/status — browser is never a source of payment truth).
 
 # Next action
 
-M48 (Full Phase-2 Security & Dependency Gate): run EVERYTHING — ruff/mypy/pytest/
-Hypothesis stateful/concurrency/frontend lint+typecheck+build/vitest/playwright/
-secret scan/pip audit/pnpm audit/provider adapter tests/real auth diagnostic/
-callback+webhook signature tests/dedup+order tests/provider-unknown tests/Live
-refusal/browser secret checks/.env ignore. Classify findings; critical blocks.
+M49 (Clean-Room Acceptance): docker compose down -v -> up; migrations; seed;
+provider selector; mock suite green; Razorpay Test AUTH diagnostic; ONE safe
+Test Order create/fetch if appropriate; local webhook fixture verification;
+E2E stubs; Live-key refusal. NO extra human payments (reuse M38/M40 evidence).
+M48 done: full gate battery green, zero findings (see PHASE2_STATUS M48 table).
 M47 done: PHASE2_PERFORMANCE.json — local path p50 58.5ms vs create 111-497ms /
 fetch 430-537ms network (separated); callback HMAC 2us; webhook e2e 67.6ms.
 M46 done: e2e/checkout.spec.ts stubs checkout.js +
