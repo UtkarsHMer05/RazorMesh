@@ -56,7 +56,7 @@
 | M44 | Audit & Evidence Ledger Upgrade | PASS | 3 new hash-chained events: RAZORPAY_CALLBACK_VERIFIED (exactly-once; duplicates/forgery grow nothing), RAZORPAY_WEBHOOK_INGESTED (winner-only + best-effort attempt/intent correlation), RAZORPAY_RECONCILIATION_RUN (ops pass w/ before/after+reconcile_state+reservation note); payloads carry safe identifiers only (secret-scan asserted); chain verify() green after mixed Phase-1/2 evidence; suite 352/352 |
 | M45 | Buyer UI Trust-State Polish | PASS | TEST MODE banner + no-real-money messaging; VERIFYING/CAPTURED-PAID/FAILED/PROVIDER_UNKNOWN states with aria-live; PROVIDER_UNKNOWN now offers NO payment action (same-order re-open removed on unknown; refresh only); authorization-binding explanation rendered at decision time; prefers-reduced-motion + <=640px responsive guards added; vitest 11/11 incl. 2 new M45 regressions; tsc/eslint/build/Playwright green |
 | M46 | Automated E2E w/ External Checkout Boundary | PASS | e2e/checkout.spec.ts: checkout.js replaced by deterministic in-browser stub + API boundary route-mocked; 3 paths proven (success handler->CAPTURED/PAID with server-issued fields only; FAILED note + no payment actions; network-fail -> PROVIDER_UNKNOWN refresh-only); DOM+request secret scan (key_secret/webhook_secret fixtures never appear); Playwright 5/5 |
-| M47 | Phase-2 Performance & Network Baseline | NOT_STARTED | — |
+| M47 | Phase-2 Performance & Network Baseline | PASS | docs/PHASE2_PERFORMANCE.json (scripts/rzp_perf_phase2.py): LOCAL trusted executor path p50 58.5ms incl. DB; callback HMAC verify p50 0.002ms; webhook HMAC+inbox+reducer+settle end-to-end p50 67.6ms; REAL Test Mode create_order mean 188.8ms / fetch_order mean 475.8ms (n=5, order entities only, disposable); local vs network clearly separated; human wall-time labeled non-system; artifact structure gate test added; suite 353/353 |
 | M48 | Full Phase-2 Security & Dependency Gate | NOT_STARTED | — |
 | M49 | Phase-2 Clean-Room Acceptance | NOT_STARTED | — |
 | M50 | Completion Report & STOP | NOT_STARTED | — |
@@ -1779,3 +1779,45 @@ pnpm test               -> 11 passed
 
 ### Next
 - M47 — Phase-2 Performance & Network Baseline.
+
+
+## M47 — Phase-2 Performance & Network Baseline
+
+MILESTONE: M47
+STATUS: PASS
+
+Requirements: master prompt M47 — measure local RazorGuard/ticket latency,
+real Test Mode create-order/fetch latency, callback verification, webhook
+processing; separate local compute from provider/network/human time; record
+sample sizes, hardware, Test Mode caveats.
+Security invariants: none weakened; no secrets in artifact or logs.
+
+### Implementation + evidence (docs/PHASE2_PERFORMANCE.json)
+| Measurement | n | p50 | Notes |
+|---|---|---|---|
+| Trusted executor path (mock charge, full RazorGuard+tickets+reservation+DB) | 50 | 58.5 ms | includes authorization chain build per iteration |
+| Callback HMAC verify | 3000 | 0.002 ms | pure compute |
+| Webhook ingest end-to-end (HMAC + durable inbox claim + reducer settle + commit) | 50 | 67.6 ms | real dev PostgreSQL |
+| PROVIDER create_order (REAL Test Mode) | 5 | 111.3 ms (mean 188.8) | order entities only, disposable receipts |
+| PROVIDER fetch_order (REAL Test Mode) | 5 | 454.0 ms (mean 475.8) | read-only |
+
+Separation honesty: provider network time is ~2-10x the ENTIRE local trusted
+path — local compute is not the bottleneck. Human-in-the-loop wall times are
+recorded as references only and labeled non-system. Hardware/platform captured;
+Test Mode caveat recorded (not representative of Live Mode).
+
+New permanent gate: tests/test_perf_baseline.py asserts the artifact exists,
+keeps sections separated, records sample sizes and caveats (no numeric asserts).
+
+### Validation commands + results
+```text
+uv run python scripts/rzp_perf_phase2.py   -> artifact written
+ruff check .                               -> clean
+pytest (full)                              -> 353 passed
+mypy -p razormesh_api                      -> Success, 54 files
+make security-check                        -> PASS
+```
+
+### Real Razorpay interaction
+- TEST_ORDER (bounded): 5 disposable order entities created + fetched; no
+  checkout/payment performed.

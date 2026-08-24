@@ -1,0 +1,63 @@
+{
+  "context": {
+    "label": "Phase-2 baseline: local compute vs provider/network separation; NOT production capacity",
+    "platform": "Darwin-25.5.0-arm64",
+    "machine": "arm64",
+    "cpu": "arm",
+    "python_version": "3.13.15",
+    "payment_provider_selector": "razorpay",
+    "test_mode_caveat": "Razorpay Test Mode latency is NOT representative of Live Mode production traffic"
+  },
+  "local": {
+    "executor_trusted_path_mock": {
+      "n": 50,
+      "mean_ms": 69.0949,
+      "p50_ms": 58.5465,
+      "p95_ms": 108.6904,
+      "min_ms": 51.628,
+      "max_ms": 368.949
+    },
+    "callback_hmac_verify": {
+      "n": 3000,
+      "mean_ms": 0.0022,
+      "p50_ms": 0.002,
+      "p95_ms": 0.004,
+      "min_ms": 0.001,
+      "max_ms": 0.019
+    },
+    "webhook_ingest_end_to_end_db": {
+      "n": 50,
+      "mean_ms": 69.3937,
+      "p50_ms": 67.5855,
+      "p95_ms": 83.5705,
+      "min_ms": 64.457,
+      "max_ms": 93.705
+    }
+  },
+  "provider": {
+    "mode": "REAL_RAZORPAY_TEST_MODE",
+    "note": "order entities only; no checkout/payment performed; ids are disposable",
+    "create_order": {
+      "n": 5,
+      "mean_ms": 188.752,
+      "p50_ms": 111.31,
+      "p95_ms": 147.645,
+      "min_ms": 92.254,
+      "max_ms": 496.593
+    },
+    "fetch_order": {
+      "n": 5,
+      "mean_ms": 475.7858,
+      "p50_ms": 454.002,
+      "p95_ms": 528.605,
+      "min_ms": 428.561,
+      "max_ms": 536.769
+    },
+    "sample_n": 5
+  },
+  "human_reference": {
+    "source": "docs/PHASE2_STATUS.md M38/M40 evidence (recorded live sessions)",
+    "caveat": "human-in-the-loop wall time dominates live flows and is NOT system performance"
+  },
+  "generated_at_utc": "2026-08-24T21:42:19.832211+00:00"
+}

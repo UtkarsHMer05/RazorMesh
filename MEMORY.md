@@ -155,10 +155,14 @@ GET /buyer/status — browser is never a source of payment truth).
 
 # Next action
 
-M47 (Performance & Network Baseline): measure local RazorGuard/ticket latency +
-real Test create-order/fetch latency + callback verify + webhook processing;
-SEPARATE local compute from provider/network/human time; record sample sizes,
-hardware, Test Mode caveats. M46 done: e2e/checkout.spec.ts stubs checkout.js +
+M48 (Full Phase-2 Security & Dependency Gate): run EVERYTHING — ruff/mypy/pytest/
+Hypothesis stateful/concurrency/frontend lint+typecheck+build/vitest/playwright/
+secret scan/pip audit/pnpm audit/provider adapter tests/real auth diagnostic/
+callback+webhook signature tests/dedup+order tests/provider-unknown tests/Live
+refusal/browser secret checks/.env ignore. Classify findings; critical blocks.
+M47 done: PHASE2_PERFORMANCE.json — local path p50 58.5ms vs create 111-497ms /
+fetch 430-537ms network (separated); callback HMAC 2us; webhook e2e 67.6ms.
+M46 done: e2e/checkout.spec.ts stubs checkout.js +
 API boundary; success/failure/unknown paths; DOM+wire secret scans; PW 5/5.
 M45 done: unknown offers NO
 payment action (refresh only), authorization-binding explanation, aria-live,
