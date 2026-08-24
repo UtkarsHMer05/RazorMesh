@@ -10,6 +10,7 @@ from redis import Redis
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
+from razormesh_api.api.routes.buyer import router as buyer_router
 from razormesh_api.api.routes.catalog import router as catalog_router
 from razormesh_api.settings import Settings, get_settings
 
@@ -20,6 +21,7 @@ app = FastAPI(
 )
 
 app.include_router(catalog_router)
+app.include_router(buyer_router)
 
 settings_dep = Annotated[Settings, Depends(get_settings)]
 
@@ -27,7 +29,7 @@ settings_dep = Annotated[Settings, Depends(get_settings)]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[get_settings().web_origin],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 

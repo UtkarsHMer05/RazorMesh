@@ -52,7 +52,7 @@
 | M42 | Attack Scenario Specification | PASS | Pydantic-validated ScenarioSpec (id pattern, family-specific invariants: swap/replay>=2/drift-field/split>=2); registry covers all 7 required families exactly once; expected labels isolated from decision inputs; 5 tests PASS |
 | M43 | Adversarial Evaluation Runner | PASS | All 7 scenarios executed through REAL pipeline (service+engine+ledger+ticket+nonce+executor+mock): expected==actual for every family incl. split prevention via durable aggregate budget and provider-unknown no-fresh-op; labels never enter decision inputs; 5 tests PASS |
 | M44 | Safe/Unsafe Paired Benchmark | PASS | 6 attack/safe-twin pairs through real pipeline: TP=6 FP=0 TN=6 FN=0, P=R=F1=1.0, false-block 0%, safe-completion 100%; synthetic GMV completed 389340 + protected 324450 minor units (explicitly labelled); artifact docs/PHASE1_BENCHMARK.json; 4 tests PASS |
-| M45 | Buyer Experience UI | NOT_STARTED | — |
+| M45 | Buyer Experience UI | PASS | 4-step buyer flow (fixture authz -> catalog -> propose/decision -> mock execution) on real backend endpoints POST /buyer/*; live E2E: ALLOW->SUCCEEDED; forged signature 403 SIGNATURE_INVALID; replay collapses to same attempt (1 effect); CORS now GET+POST; tsc+build+vitest clean |
 | M46 | Security Lab UI | NOT_STARTED | — |
 | M47 | Audit Dashboard | NOT_STARTED | — |
 | M48 | Deep Test and Security Gate | NOT_STARTED | — |
@@ -314,6 +314,12 @@ M03 — Project Charter.
 - `benchmark.py`: `build_pairs()` creates a SAFE control twin per attack family (differs only by the malicious dimension); `PairedBenchmark.run()` classifies via ground-truth pair labels vs system behaviour (money moved?); confusion matrix + precision/recall/F1/false-block/safe-completion; GMV figures explicitly labelled SYNTHETIC and exported to `docs/PHASE1_BENCHMARK.json`.
 - Current-pipeline result: TP=6, FP=0, TN=6, FN=0 → P=R=F1=1.0, false-block 0%, safe-completion 100%. Synthetic completed GMV 389340 minor; protected (stopped fraud) 324340+minor as recorded in artifact. NO production claims — fixture prices only.
 - Validation: ruff clean; mypy strict 45 files clean; pytest 199/199.
+
+## M45 — Buyer Experience UI — PASS
+- Backend: `api/routes/buyer.py` — POST /buyer/fixture-intent (permissive demo authorization), POST /buyer/propose (server-authoritative totals -> full RazorGuard decision -> ticket on ALLOW), POST /buyer/execute (rebuilds binding ONLY from durable rows, full ticket verification, nonce claim, executor). CORS updated to GET+POST.
+- Frontend: `buyer/page.tsx` 4-step flow with decision banner (ALLOW/CHALLENGE/BLOCK + reason codes) and execution state; UI holds no privileges — bypass note explains backend re-verification.
+- Live E2E: fixture intent → propose → ALLOW (total 64890 minor) → execute SUCCEEDED; forged signature → 403 SIGNATURE_INVALID; replay → collapses to SAME durable attempt (exactly 1 effect; provider called once) — idempotent by design.
+- Validation: ruff clean; mypy strict 46 files clean; pytest 204/204; tsc clean; next build OK; vitest 3/3.
 
 ---
 

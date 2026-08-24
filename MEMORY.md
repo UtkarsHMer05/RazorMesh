@@ -30,10 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust  
 **Active phase:** Phase 1 — Local Trust Core  
-**Current milestone:** M45 — Buyer Experience UI (next)  
-**Milestones passed:** M01–M44  
+**Current milestone:** M46 — Security Lab UI (next)  
+**Milestones passed:** M01–M45  
 **Last updated:** 2026-08-24
-**Gate:** ruff clean, mypy 45 files clean, pytest 199/199; benchmark artifact docs/PHASE1_BENCHMARK.json (P=R=F1=1.0 synthetic)
+**Gate:** ruff clean, mypy 46 files clean, pytest 204/204 + vitest 3/3; benchmark artifact docs/PHASE1_BENCHMARK.json
 
 ---
 
@@ -113,6 +113,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Scenarios: 7 families schema-validated; expected labels isolated (M42)
 - Runner: all 7 real-pipeline scenarios pass; authorize() now binds durable budgets (M43)
 - Benchmark: 6 pairs TP6 FP0 TN6 FN0 P=R=F1=1.0 synthetic GMV labelled (M44)
+- Buyer API/UI: POST /buyer/* flow live-E2E verified; replay collapses idempotently (M45)
 
 ---
 
@@ -143,7 +144,7 @@ None yet; do not invent.
 
 # Next action
 
-M45 — Buyer UI: fixture authorization -> catalog -> checkout -> decision -> ticket/execution states.
+M46 — Security Lab UI: backend-executed synthetic scenarios with evidence.
 
 ---
 

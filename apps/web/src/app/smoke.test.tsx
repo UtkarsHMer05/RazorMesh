@@ -15,9 +15,10 @@ describe("smoke: core pages render", () => {
     expect(screen.getByText("The trusted executor executes")).toBeInTheDocument();
   });
 
-  it("buyer page marks itself as placeholder until M45", () => {
+  it("buyer page renders the four-step flow shell", () => {
     render(<BuyerPage />);
-    expect(screen.getByTestId("placeholder-note")).toBeInTheDocument();
+    expect(screen.getByTestId("step-authorization")).toBeInTheDocument();
+    expect(screen.getByTestId("bypass-note")).toBeInTheDocument();
   });
 
   it("security lab is labeled as synthetic attack simulation", () => {
