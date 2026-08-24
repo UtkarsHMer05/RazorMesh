@@ -18,7 +18,7 @@
 | M06 | Live Razorpay Documentation Research | PASS | R-013/R-014/R-015 appended to RESEARCH.md: Orders limits (receipt≤40, notes≤15×256), checkout.js handler contract, HMAC formulas (callback uses SERVER-stored order id; webhook over RAW body), x-razorpay-event-id dedup, ordering not guaranteed, failed→captured expected, captured+order.paid both fire once, zrok guidance, OTP 754081, SDK razorpay 2.0.1 |
 | M07 | Provider Client & Dependency Decision | PASS | D-030: one thin httpx 0.28.1 wrapper (latest stable, 0 advisories, already locked); razorpay SDK 2.0.1 declined (Beta classifier, opt-in auto-retry foot-gun, extra requests dep); HMAC via stdlib |
 | M08 | Root `.env` / Typed Config Reconciliation | PASS | .env reconciled (14 nonsecret keys appended; 3 secrets untouched/never printed); typed Settings w/ SecretStr + Literal guards; 6 new tests; suite 231/231; secret scan clean |
-| M09 | Razorpay Test-Mode Fail-Safe | NOT_STARTED | — |
+| M09 | Razorpay Test-Mode Fail-Safe | PASS | validate_payment_provider_config(): live prefix rejected in any mode; real provider requires test+3 creds (names only, never values); mock needs nothing; 5 new tests; suite 236/236 |
 | M10 | Phase-2 Governance Transition | NOT_STARTED | — |
 | M11 | Razorpay Provider Skeleton | NOT_STARTED | — |
 | M12 | Safe Auth Diagnostic | NOT_STARTED | — |
@@ -371,3 +371,38 @@ make security-check                             → PASS, no blocking findings
 
 ### Next
 - M09 — Razorpay Test-Mode Fail-Safe.
+
+
+## M09 — Razorpay Test-Mode Fail-Safe
+
+MILESTONE: M09
+STATUS: PASS
+
+Requirements: master prompt M09/§7 — require test mode, reject live keys, refuse
+real-provider start without credentials, keep mock credential-free, name-only errors.
+Security invariants: P2-S01, P2-S02, P2-S03 (groundwork), P2-S20, P2-S21.
+
+### Implementation
+- `settings.py`: `ProviderConfigError` + `validate_payment_provider_config()`.
+  - `rzp_live_` prefix → `RAZORPAY_LIVE_KEY_REJECTED` in ANY provider mode.
+  - `PAYMENT_PROVIDER=razorpay` requires RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET +
+    RAZORPAY_WEBHOOK_SECRET; missing vars reported by NAME only.
+  - `RAZORPAY_MODE` is a Literal['test'] at the type level — 'live' cannot even
+    construct Settings; defensive runtime check retained.
+  - Mock mode requires no Razorpay credentials (P2-S20).
+
+### Validation commands + results
+```text
+pytest tests/test_settings_phase2.py -q   → 11 passed (5 new fail-safe tests)
+pytest (full)                             → 236 passed
+ruff/mypy strict                          → clean
+```
+Tests prove: mock-without-creds OK; real-provider-missing names all three variables;
+live prefix rejected even under mock; valid test config passes guard; secret VALUES
+never appear in error strings.
+
+### Real Razorpay interaction
+- NONE.
+
+### Next
+- M10 — Phase-2 Governance Transition.

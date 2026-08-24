@@ -42,6 +42,48 @@ class Settings(BaseSettings):
         return bool(self.razorpay_key_id) and bool(self.razorpay_key_secret.get_secret_value())
 
 
+class ProviderConfigError(Exception):
+    """Raised when the selected provider configuration is unsafe/incomplete.
+
+    Messages name the offending ENV VARIABLE only — never any value.
+    """
+
+    def __init__(self, problems: list[str]) -> None:
+        self.problems = problems
+        super().__init__("; ".join(problems))
+
+
+def validate_payment_provider_config(settings: Settings) -> None:
+    """Fail-safe guard for real-provider use (P2-S01..S03, P2-S20, P2-S21).
+
+    - Live key prefixes are rejected outright, in ANY provider mode.
+    - Real-provider execution requires RAZORPAY_MODE=test and all three
+      credentials; missing entries are reported by variable NAME.
+    - Mock mode requires no Razorpay credentials at all.
+    """
+    problems: list[str] = []
+
+    if settings.razorpay_mode != "test":  # defensive; Literal already blocks
+        problems.append("RAZORPAY_MODE must be 'test'")
+
+    if settings.razorpay_key_id.startswith("rzp_live_"):
+        problems.append(
+            "RAZORPAY_LIVE_KEY_REJECTED: RAZORPAY_KEY_ID has a live-mode prefix; "
+            "RazorMesh Phase 2 permits TEST MODE only"
+        )
+
+    if settings.payment_provider == "razorpay":
+        if not settings.razorpay_key_id:
+            problems.append("RAZORPAY_KEY_ID is required when PAYMENT_PROVIDER=razorpay")
+        if not settings.razorpay_key_secret.get_secret_value():
+            problems.append("RAZORPAY_KEY_SECRET is required when PAYMENT_PROVIDER=razorpay")
+        if not settings.razorpay_webhook_secret.get_secret_value():
+            problems.append("RAZORPAY_WEBHOOK_SECRET is required when PAYMENT_PROVIDER=razorpay")
+
+    if problems:
+        raise ProviderConfigError(problems)
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

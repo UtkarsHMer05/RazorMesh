@@ -54,3 +54,63 @@ def test_credentials_present_helper(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RAZORPAY_KEY_SECRET", "s")
     s = Settings(_env_file=None)
     assert s.razorpay_credentials_present is True
+
+
+def _cfg(**kw: object) -> Settings:
+    return Settings(_env_file=None, **kw)  # type: ignore[arg-type]
+
+
+def test_mock_mode_needs_no_razorpay_credentials() -> None:
+    from razormesh_api.settings import validate_payment_provider_config
+
+    validate_payment_provider_config(_cfg())  # must not raise
+
+
+def test_real_provider_without_credentials_names_missing_vars_only() -> None:
+    from razormesh_api.settings import ProviderConfigError, validate_payment_provider_config
+
+    with pytest.raises(ProviderConfigError) as exc:
+        validate_payment_provider_config(_cfg(payment_provider="razorpay"))
+    joined = "; ".join(exc.value.problems)
+    assert "RAZORPAY_KEY_ID" in joined
+    assert "RAZORPAY_KEY_SECRET" in joined
+    assert "RAZORPAY_WEBHOOK_SECRET" in joined
+    # no values are ever echoed
+    assert "=" not in joined.replace("PAYMENT_PROVIDER=razorpay", "")
+
+
+def test_live_key_prefix_rejected_even_in_mock_mode() -> None:
+    from razormesh_api.settings import ProviderConfigError, validate_payment_provider_config
+
+    with pytest.raises(ProviderConfigError) as exc:
+        validate_payment_provider_config(
+            _cfg(
+                razorpay_key_id="rzp_live_CkYzExample",
+                razorpay_key_secret="whatever",
+            )
+        )
+    assert any("RAZORPAY_LIVE_KEY_REJECTED" in p for p in exc.value.problems)
+
+
+def test_test_prefix_with_all_credentials_passes_guard() -> None:
+    from razormesh_api.settings import validate_payment_provider_config
+
+    validate_payment_provider_config(
+        _cfg(
+            payment_provider="razorpay",
+            razorpay_key_id="rzp_test_ok",
+            razorpay_key_secret="s3cret-value",
+            razorpay_webhook_secret="hook-value",
+        )
+    )
+
+
+def test_error_message_never_contains_secret_values() -> None:
+    from razormesh_api.settings import ProviderConfigError, validate_payment_provider_config
+
+    secret_value = "super-secret-do-not-leak"
+    with pytest.raises(ProviderConfigError) as exc:
+        validate_payment_provider_config(
+            _cfg(payment_provider="razorpay", razorpay_webhook_secret=secret_value)
+        )
+    assert secret_value not in str(exc.value)
