@@ -812,3 +812,16 @@ make security-check                         -> PASS
 
 ### Next
 - M20 — Qwen candidate generator (volume per overnight policy D-043).
+
+
+### M20 note — generator launched (IN_PROGRESS)
+
+`scripts/rzp_generate_candidates.py` is running against the live free tier
+with the full overnight-policy control set: request-hash cache (idempotent
+restarts), immediate persistence, Retry-After respect, bounded exp backoff +
+jitter, dead-window circuit breaker (10 consecutive failures -> clean exit,
+resumable), exact-normalized near-dup guard at generation time, provisional
+labels only. Volume target 650 with a 300-minute wall budget; partial counts
+are recorded honestly in `data/phase3/dataset/candidates/last_run.json`.
+M21 validator (`dataset_quality.py`, 5 tests) landed first so every produced
+candidate can be gated as it arrives.
