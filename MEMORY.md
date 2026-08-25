@@ -163,8 +163,9 @@ truth corrections F1 rupee→INR + F13-002 recurring removed, sha256 9164f04c).
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M17** (human confirmation UI: draft review page wired to /buyer drafts API; no secrets in browser).
-CONFIRMED creates/supersedes an authorization; bypass/stale/replay/idempotency
+PHASE 3 RUNNING — next milestone: **P3-M19** (deterministic seed dataset from compiler golden cases -> AgentPay-IR records).
+P3-M18 done: AgentPay-IR v0.1 schema w/ provenance + content-hash integrity; 10 tests.
+P3-M16 hardening committed (identity-map FOR UPDATE bypass was the flake root).
 tests; compiler output stays inert until human confirmation). Read DESIGN.md
 before M17 (UI).
 

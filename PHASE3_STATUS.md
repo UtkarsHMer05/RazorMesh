@@ -29,7 +29,7 @@
 | M15 | Real compiler evaluation | PASS | REAL Qwen run on stratified **N=90/307** sample (D-041 human-approved scope; full-307 = pre-M48 obligation). Schema validity 90/90=100%; bounded repair 7/90 all repaired to valid; **case pass 71/90=78.9%** (easy 77.5/medium 90.9/hard 71.4); field recall brands/merchants/quantity 1.0, currency 0.96, semantic 0.9706, recurring_forbidden 0.9231, max_amount_minor 0.8533; **money precision 1.0, 0 mismatches, 0 invented amounts** (all money errors are fail-closed omissions); ambiguity 6/6; injection 2/3 (one warranty semantic leak). Prompt v1→v2 (v1 long-form made the thinking model hit finish=length w/ empty content at 4000 tokens; v2 schema-forward compiles reliably). Two golden-truth defects fixed transparently (F1 rupee→INR pre-measurement; F13-002 recurring_forbidden removed post-measurement + re-measured, sha256 eef70c9c→9164f04c, stale rows preserved). Budget-2000 harness contamination discarded + re-measured at 4000 (F10-001/003 then passed). Provider-noise rows retried, never counted. Docs: docs/PHASE3_INTENT_COMPILER_EVAL.md |
 | M16 | Human confirmation domain flow | PASS | domain/confirmation.py (DraftState DRAFT/NEEDS_CLARIFICATION/CONFIRMED/REJECTED; fail-closed build_confirmed_contract: no-stated-money -> DRAFT_MISSING_MONEY, conservative terms aggregate=threshold=cap, quantity default 1, recurring forbidden unless explicit) + confirmation_service.py (advisory lineage locks, compile supersession, idempotent same-nonce replay, replay-mismatch rejection, NEEDS_CLARIFICATION unconfirmable, generation bump reusing intent_id w/ DRAFT_BELOW_COMMITTED_SPEND capacity guard, INTENT_COMPILED/CONFIRMED/REJECTED/SUPERSEDED/COMPILE_FAILED ledger events); migration e7a1c4f9b2d5; raw human text never stored (sha256 only); 17 tests incl. 8-thread concurrent single-authority proof; suite 449/449; D-042 |
 | M17 | Human confirmation UI | NOT_STARTED | — |
-| M18 | AgentPay-IR taxonomy/schema | NOT_STARTED | — |
+| M18 | AgentPay-IR taxonomy/schema | PASS | agentpay_ir.py v0.1: fixed NLI orientation (premise=trusted evidence, hypothesis=confirmed-authorization statement), 18 semantic families, label/source/difficulty vocabularies, Provenance+Review blocks, content_sha256 integrity binding (any mutation detected), split reserved for M23; 10 tests incl. tamper-detection + vocabulary enforcement; suite 463/463 |
 | M19 | Deterministic seed dataset | NOT_STARTED | — |
 | M20 | Qwen candidate generator | NOT_STARTED | — |
 | M21 | Candidate validation | NOT_STARTED | — |
@@ -752,3 +752,30 @@ exists to prevent. Fixes:
    IntegrityError into either an honest replay (identical nonce re-read of the
    committed winner) or CONFIRMATION_REPLAY_MISMATCH.
 Validation: module green 4/4 consecutive rounds + full suite 463/463 twice.
+
+
+## M18 — AgentPay-IR Taxonomy/Schema
+
+MILESTONE: M18
+STATUS: PASS
+
+Requirements: master prompt M18 — versioned IR schema with provenance;
+orientation rule fixed project-wide.
+Security invariants: P3-S09/S12 groundwork.
+
+### Implementation
+- `agentpay_ir.py`: AgentPayIRRecord (frozen, extra-forbidden) with
+  premise/hypothesis bounds, NliLabel/LabelSource/Difficulty Literals,
+  FAMILIES tuple (18 families covering budget/currency/quantity/brand/
+  condition/merchant/recurring/trial/membership/bundle/shipping/delivery/
+  returns/warranty/variant/alias/safe-lookalike/injection),
+  compute_content_sha256 over canonical JSON triple,
+  make_record() factory so callers cannot omit integrity hash,
+  Review block defaulting reviewed_by_human=False (P3-S12 honesty).
+
+### Validation commands + results
+```text
+ruff check . / mypy strict (63 files)   -> clean
+pytest tests/test_agentpay_ir.py        -> 10 passed
+pytest (full)                           -> 463 passed
+```
