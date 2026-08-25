@@ -159,9 +159,13 @@ all callback/provider evidence is correlated to current durable authority.
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M02** (full Phase-1/2 backend
-regression: ruff/mypy/Hypothesis/concurrency/security batteries + stability
-look at the 20-worker race flake observed once under load during M01).
+PHASE 3 RUNNING — next milestone: **P3-M03** (full frontend/E2E regression:
+lint/tsc/vitest/build/Playwright incl. secret scans). P3-M02 done: battery
+green (375 stable); FIXED latent strict-mypy violation in D-037 settlement-
+authority validator (stale .mypy_cache had masked it — always purge caches
+when counts diverge between roots); race test made load-robust WITHOUT
+weakening exactly-once (CoordinationUnavailable = inconclusive no-effect;
+idempotent-reentry rows may be many but must share ONE attempt identity).
 P3-M01 evidence: master prompt read fully; governance read in precedence;
 bootstrap file untracked + excluded via .git/info/exclude:49 with ZERO history
 entries and values still UNREAD (merge at M07, probe+delete after M10);

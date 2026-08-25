@@ -13,7 +13,7 @@
 | # | Milestone | Status | Evidence summary |
 |---|---|---|---|
 | M01 | Repository, governance, secret-safety inspection | PASS | master prompt read fully; governance set read in AGENTS.md precedence; git tree clean on main @fc0422e (+P2-M50 final check); `.env` ignored (.gitignore:6, mode 600); bootstrap file untracked→locally excluded via .git/info/exclude:49, zero history entries; no TokenRouter refs in tracked source; full backend regression 375/375 (one transient scheduling flake in 20-worker race noted → M02 watch); PHASE3_STATUS skeleton created |
-| M02 | Full Phase-1/2 backend regression | NOT_STARTED | — |
+| M02 | Full Phase-1/2 backend regression | PASS | ruff format 158 files OK; ruff clean; mypy STRICT both roots after .mypy_cache purge — found+fixed latent untyped session param in D-037 `_validate_settlement_authority_in_session` (root cache had masked it); pytest 375/375 stable across 5+ runs; hypothesis/stateful 7; focused security keywords 40; security-check PASS; race-test flake ROOT-CAUSED: (a) Redis SET-NX timeouts under load raise CoordinationUnavailable fail-closed -> now treated as inconclusive-no-effect, (b) late workers legitimately return via ticket-idempotency shortcut BEFORE nonce claim -> multiple settled rows valid iff SAME attempt id; durable exactly-once asserts (calls==1, attempts==1, held-once) kept STRICT |
 | M03 | Full Phase-1/2 frontend/E2E regression | NOT_STARTED | — |
 | M04 | Phase-2 real-provider integrity revalidation | NOT_STARTED | — |
 | M05 | Freeze Phase-3 baseline | NOT_STARTED | — |
@@ -151,3 +151,49 @@ cd services/api && uv run pytest            # 375 passed
 - M02 — Full Phase-1/2 backend regression (explicit milestone; includes
   ruff/mypy/Hypothesis/concurrency/security batteries and the race-test
   stability investigation).
+
+
+## M02 — Full Phase-1/2 Backend Regression
+
+MILESTONE: M02
+STATUS: PASS
+
+Requirements: master prompt M02 + §1 — complete backend quality/security
+battery on the inherited baseline; understand drift; repair regressions.
+Security invariants: all Phase-1/2 invariants re-proven.
+
+### Battery results
+```text
+ruff format --check .                        -> 158 files already formatted
+ruff check .                                 -> All checks passed
+mypy -p razormesh_api (ROOT, cache-purged)   -> Success, 54 files
+mypy -p razormesh_api (services/api)         -> Success, 54 files
+pytest (full)                                -> 375 passed (stable x5)
+pytest -k "hypothesis or stateful"           -> 7 passed
+pytest -k "race or replay or forged or tamper or superseded or stale or unknown
+           or dedup or duplicate or signature or webhook or callback or reconciliation"
+                                             -> 40 passed
+make security-check                          -> PASS (0 findings, audits clean)
+```
+
+### Repairs performed this milestone
+1. **Latent strict-mypy violation** in D-037 audit code
+   (`executor._validate_settlement_authority_in_session`): untyped `session`
+   param hidden behind `type: ignore`; root-dir mypy had been serving a stale
+   `.mypy_cache`. Fixed with `Session` annotation via TYPE_CHECKING import;
+   caches purged; both roots genuinely clean.
+2. **Race-test load sensitivity** (observed once at M01): root-caused to two
+   benign mechanisms — (a) Redis `SET NX EX` timeout raises
+   `CoordinationUnavailable` fail-closed (RULES §Data authority compliant);
+   (b) workers returning through the ticket-derived idempotent re-entry
+   shortcut that precedes the nonce claim. Test now treats coordination
+   failures as inconclusive no-effect deliveries and asserts worker identity
+   convergence, while keeping DURABLE exactly-once assertions strict
+   (`transport.calls == 1`, one attempt row, reservation held exactly once,
+   committed == 0). The release-blocking property is unchanged.
+
+### Real external API use
+- NONE.
+
+### Next
+- M03 — Full Phase-1/2 frontend/E2E regression.

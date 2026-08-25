@@ -18,7 +18,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from razormesh_api.domain.authz_hash import (
     checkout_authorization_hash,
@@ -40,6 +40,9 @@ from razormesh_api.providers.razorpay import (
     validate_order_authority,
 )
 from razormesh_api.spend import SpendManager
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 from razormesh_api.tickets import (
     CurrentBinding,
     ExecutionTicketClaims,
@@ -549,8 +552,8 @@ class TrustedPaymentExecutor:
 
     @staticmethod
     def _validate_settlement_authority_in_session(
-        session, attempt: ExecutionAttempt, *, now: datetime
-    ) -> None:  # type: ignore[no-untyped-def]
+        session: "Session", attempt: ExecutionAttempt, *, now: datetime
+    ) -> None:
         """Validate and lock all settlement authority in one DB transaction."""
         from razormesh_api.persistence.models import Checkout, Decision, ExecutionTicket
         from razormesh_api.persistence.models import IntentContract as RowIntent
