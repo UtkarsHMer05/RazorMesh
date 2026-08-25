@@ -17,7 +17,7 @@
 | M03 | Full Phase-1/2 frontend/E2E regression | PASS | eslint clean; tsc clean; vitest 11/11 (3 files); next production build OK (static prerender); Playwright 5/5 incl. stubbed-checkout success/failure/unknown paths + DOM/network secret scans; grep over src+e2e+.next/static for rzp_live_/TOKENROUTER/tokenrouter = 0; all four baseline surfaces exercised by smoke spec |
 | M04 | Phase-2 real-provider integrity revalidation | PASS | focused suites 47+20 pass (settings fail-safe/provider/taxonomy/callback/webhook/reducer/reconciliation/executor-rz/schema/spend/executor/ledger); runtime live-key probe -> RAZORPAY_LIVE_KEY_REJECTED; real EvidenceLedger.verify() on dev DB valid=True; REAL read-only auth diagnostic ok=True mode=test guard passed (864ms); NO new payment created |
 | M05 | Freeze Phase-3 baseline | PASS | docs/PHASE3_BASELINE.md frozen at HEAD d457661: 375 backend tests, benchmark 20 pairs F1=1.0 regenerated, migration head a93c7d5e21f0, full gate table, runtime versions, Phase-2 references, explicit NO-PHASE-3-AI-ACTIVE statement, bootstrap values still unread |
-| M06 | Live AI/ML research and version manifest | NOT_STARTED | — |
+| M06 | Live AI/ML research and version manifest | PASS | R-019 TokenRouter reality (documented base URL api.tokenrouter.io/v1 vs prompt's .com; tr_ keys; OpenAI-compatible + JSON mode; model id to be proven live at M10); R-020 both DeBERTa cards (licenses MIT/Apache-2.0; CRITICAL label-map divergence A=[E,N,C] vs B=[C,E,N]; B ships ONNX); R-021 stack stables (transformers 5.15.1, datasets >=5.0.1 w/ PYSEC-2026-3716 floor, accelerate 1.14.0, onnxruntime 1.29.0); VERSION_MANIFEST rows added with planned-install milestones |
 | M07 | Private TokenRouter credential injection | NOT_STARTED | — |
 | M08 | Phase-3 governance transition | NOT_STARTED | — |
 | M09 | TokenRouter client abstraction | NOT_STARTED | — |
@@ -268,3 +268,38 @@ STATUS: PASS
   versions, Phase-2 references, watch items, and the explicit statement that
   no Phase-3 AI component exists yet.
 - MEMORY now records Phase 3 as ACTIVE (permitted after M01–M04 PASS).
+
+
+## M06 — Live AI/ML Research and Version Manifest
+
+MILESTONE: M06
+STATUS: PASS
+
+Requirements: master prompt M06/§4 — verify current sources live; record in
+RESEARCH.md + VERSION_MANIFEST.md; never trust remembered versions.
+
+### Key findings (full detail in RESEARCH.md R-019..R-021)
+1. **TokenRouter**: official docs say base URL `https://api.tokenrouter.io/v1`
+   (master prompt wrote `.com`). Keys `tr_...`; OpenAI-compatible chat
+   completions incl. JSON mode; `/v1/models`. Resolution policy recorded:
+   bootstrap BASE_URL probed first at M10; documented .io is a config
+   correction (same provider), never a silent switch.
+2. **Baseline label maps differ** — A (MoritzLaurer): 0=entailment,
+   1=neutral, 2=contradiction; B (cross-encoder): 0=contradiction,
+   1=entailment, 2=neutral. Both will be pinned + unit-tested in M28/M29.
+   Licenses MIT / Apache-2.0. B has official ONNX exports (useful for M47).
+3. **Stack stables**: transformers 5.15.1; datasets >=5.0.1 (PYSEC-2026-3716
+   fixed in 5.0.1 → advisory floor); accelerate 1.14.0; huggingface-hub 1.28.0;
+   onnxruntime 1.29.0; torch exact pin deferred to M31/M32 bundle build with
+   pip-audit on the generated lock.
+
+### Validation
+```text
+Live fetches: tokenrouter.io/docs/{chat-completions,models,from-openai,python},
+huggingface.co/MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli,
+huggingface.co/cross-encoder/nli-deberta-v3-base, PyPI transformers/datasets/
+accelerate/onnxruntime/huggingface-hub pages. All dated 2026-08-25.
+```
+
+### Next
+- M07 — Private TokenRouter credential injection.

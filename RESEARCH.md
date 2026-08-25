@@ -432,3 +432,67 @@ exact order/payment correlation, and Dashboard delivery logs (human-observed
 for accounts where the endpoint is available.
 
 Confidence: High for the observed 404s; interpretation is best-effort.
+
+## R-019 — TokenRouter API reality (base URL, auth shape, JSON mode)
+
+Date checked: 2026-08-25 (Phase 3 M06)
+Sources (official):
+- https://www.tokenrouter.io/docs/chat-completions
+- https://www.tokenrouter.io/docs/models
+- https://www.tokenrouter.io/docs/from-openai
+- https://www.tokenrouter.io/docs/python
+
+Findings:
+- Documented base URL is **https://api.tokenrouter.io/v1** — the Phase-3
+  master prompt's `api.tokenrouter.com` appears outdated. Resolution order at
+  M10: probe the bootstrap file's TOKENROUTER_BASE_URL first; if it fails,
+  the documented .io URL is a configuration CORRECTION (same provider), not a
+  silent provider switch; any change is recorded here and in DECISIONS.
+- Gateway keys are `tr_...`, sent as `Authorization: Bearer`.
+- `POST /v1/chat/completions` is OpenAI-compatible drop-in; supports JSON mode
+  per migration doc; `/v1/models` lists key-visible models; auto-routing is
+  plan-gated (Free plan requires explicit model id).
+- Model addressing is `provider/model` (e.g. `qwen/qwen3-max` family naming);
+  the exact free-model id `qwen/qwen3.8-max-free` will be verified against
+  `GET /v1/models` with the real key at M10.
+
+Confidence: High for docs; model-id availability to be proven live (M10).
+
+## R-020 — NLI baseline candidates: cards, licenses, label maps
+
+Date checked: 2026-08-25 (Phase 3 M06)
+Sources (official HF model cards, fetched live):
+
+A. MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli
+- License MIT; safetensors; ~0.2B params.
+- Trained MNLI + FEVER-NLI + ANLI (763,913 pairs); mnli-m acc 0.903.
+- **Label id order: 0=entailment, 1=neutral, 2=contradiction**
+  (explicit in card's NLI example).
+
+B. cross-encoder/nli-deberta-v3-base
+- License apache-2.0; safetensors AND official ONNX files present.
+- Trained SNLI + MultiNLI only; SNLI-test acc 92.38 / MNLI-mm 90.04.
+- **Label id order: 0=contradiction, 1=entailment, 2=neutral**
+  (DIFFERENT from A — mapping bugs are a concrete risk; both mappings get
+  pinned in config and unit-tested in M28/M29).
+
+Impact: frozen harness must normalize BOTH models to the project label space
+{entailment, neutral, contradiction} via per-model declared mappings.
+
+## R-021 — Current ML stack stables + advisory note
+
+Date checked: 2026-08-25 (Phase 3 M06; re-verify at install milestones)
+Sources: PyPI project pages (live).
+
+- transformers **5.15.1** (current stable line; torch>=2.5; py>=3.10).
+- datasets **5.0.1** — PYSEC-2026-3716 fixed IN 5.0.1 ⇒ pin >=5.0.1 (advisory-
+  driven floor, not just "latest").
+- accelerate **1.14.0** (torch>=2.0); huggingface-hub **1.28.0**.
+- onnxruntime **1.29.0** (py>=3.11) — relevant only at M47 optimization.
+- torch: current stable line ≥2.8 per ecosystem constraints; the EXACT pin is
+  resolved at M31/M32 bundle build via pip-audit on the generated requirements
+  lock (Colab side installs pinned versions from that manifest).
+- Colab guidance: standard GPU runtime; notebook self-installs exact pinned
+  deps (master prompt §10) so host-side Colab image drift is bounded.
+
+Confidence: High for versions as of date; advisories re-checked at install.

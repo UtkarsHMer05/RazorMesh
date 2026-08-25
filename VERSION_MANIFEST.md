@@ -89,6 +89,12 @@ Decision reference:
 
 | Date | Milestone | Component | Old | New | Reason |
 |---|---|---|---|---|---|
+| 2026-08-25 | P3-M06 (planned; install at M28+/M31) | transformers | — | 5.15.1 | current stable live-resolved from PyPI; DeBERTa-v3 supported since 4.13+ per model card |
+| 2026-08-25 | P3-M06 (planned; install at M19+) | datasets | — | >=5.0.1 | current stable; PYSEC-2026-3716 fixed in 5.0.1 → advisory-driven floor |
+| 2026-08-25 | P3-M06 (planned; notebook bundle M31/M32) | accelerate | — | 1.14.0 | current stable, HF Trainer backend |
+| 2026-08-25 | P3-M06 (planned; notebook bundle M31/M32) | torch | — | >=2.8 line, exact pin at bundle build | transformers 5.x requires >=2.5; datasets dev uses >=2.8; pip-audit gates the generated lock |
+| 2026-08-25 | P3-M06 (planned; optional M47) | onnxruntime | — | 1.29.0 | current stable; py>=3.11 OK |
+| 2026-08-25 | P3-M06 | TokenRouter base URL | master prompt: api.tokenrouter.com | documented: api.tokenrouter.io/v1 (R-019) | official docs live-checked; final authority = bootstrap value + M10 probe |
 | 2026-08-24 | M48 | pip-audit | — (dev group) | 2.10.1 | TESTING.md §10 dependency-audit gate; latest stable live-resolved from PyPI; advisory DB clean at gate time |
 | 2026-08-24 | Phase-1 validation | httpx2 | — (dev group) | 2.12.0 | Starlette 1.6 explicitly prefers httpx2; removes deprecated TestClient fallback warning; stable/Python 3.13 compatible per PyPI |
 | 2026-08-24 | Phase-1 validation | Python | unpinned local 3.13.11 | uv-managed 3.13.15 | Align declared and executed runtime; `.python-version` added and full gates rerun |
