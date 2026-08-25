@@ -16,7 +16,7 @@
 | M02 | Full Phase-1/2 backend regression | PASS | ruff format 158 files OK; ruff clean; mypy STRICT both roots after .mypy_cache purge — found+fixed latent untyped session param in D-037 `_validate_settlement_authority_in_session` (root cache had masked it); pytest 375/375 stable across 5+ runs; hypothesis/stateful 7; focused security keywords 40; security-check PASS; race-test flake ROOT-CAUSED: (a) Redis SET-NX timeouts under load raise CoordinationUnavailable fail-closed -> now treated as inconclusive-no-effect, (b) late workers legitimately return via ticket-idempotency shortcut BEFORE nonce claim -> multiple settled rows valid iff SAME attempt id; durable exactly-once asserts (calls==1, attempts==1, held-once) kept STRICT |
 | M03 | Full Phase-1/2 frontend/E2E regression | PASS | eslint clean; tsc clean; vitest 11/11 (3 files); next production build OK (static prerender); Playwright 5/5 incl. stubbed-checkout success/failure/unknown paths + DOM/network secret scans; grep over src+e2e+.next/static for rzp_live_/TOKENROUTER/tokenrouter = 0; all four baseline surfaces exercised by smoke spec |
 | M04 | Phase-2 real-provider integrity revalidation | PASS | focused suites 47+20 pass (settings fail-safe/provider/taxonomy/callback/webhook/reducer/reconciliation/executor-rz/schema/spend/executor/ledger); runtime live-key probe -> RAZORPAY_LIVE_KEY_REJECTED; real EvidenceLedger.verify() on dev DB valid=True; REAL read-only auth diagnostic ok=True mode=test guard passed (864ms); NO new payment created |
-| M05 | Freeze Phase-3 baseline | NOT_STARTED | — |
+| M05 | Freeze Phase-3 baseline | PASS | docs/PHASE3_BASELINE.md frozen at HEAD d457661: 375 backend tests, benchmark 20 pairs F1=1.0 regenerated, migration head a93c7d5e21f0, full gate table, runtime versions, Phase-2 references, explicit NO-PHASE-3-AI-ACTIVE statement, bootstrap values still unread |
 | M06 | Live AI/ML research and version manifest | NOT_STARTED | — |
 | M07 | Private TokenRouter credential injection | NOT_STARTED | — |
 | M08 | Phase-3 governance transition | NOT_STARTED | — |
@@ -256,3 +256,15 @@ No order/payment was created this milestone.
 
 ### Next
 - M05 — Freeze Phase-3 baseline.
+
+
+## M05 — Freeze Phase-3 Baseline
+
+MILESTONE: M05
+STATUS: PASS
+
+- `docs/PHASE3_BASELINE.md` created and frozen: HEAD d457661, migration head
+  a93c7d5e21f0, 375-test battery, benchmark regenerated live (20 pairs F1=1.0),
+  versions, Phase-2 references, watch items, and the explicit statement that
+  no Phase-3 AI component exists yet.
+- MEMORY now records Phase 3 as ACTIVE (permitted after M01–M04 PASS).

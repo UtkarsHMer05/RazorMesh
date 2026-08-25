@@ -159,8 +159,11 @@ all callback/provider evidence is correlated to current durable authority.
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M05** (freeze Phase-3 baseline doc;
-MEMORY goes Phase-3-active only after M05 per master prompt M05 wording).
+PHASE 3 RUNNING — next milestone: **P3-M06** (live AI/ML research + VERSION_MANIFEST:
+TokenRouter model/API docs, both DeBERTa model cards/licenses/revisions,
+PyTorch/Transformers/Datasets/Accelerate/ONNX current stables, Colab guidance,
+security advisories — record sources+dates in RESEARCH.md). P3-M05 done:
+baseline frozen at d457661 in docs/PHASE3_BASELINE.md.
 P3-M04 done: phase-2 integrity re-proven (focused suites 67, live-key
 rejection runtime-proven, dev audit chain valid=True, read-only diagnostic OK,
 no new payments). P3-M03 done: frontend battery
