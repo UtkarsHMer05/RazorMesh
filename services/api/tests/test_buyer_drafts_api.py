@@ -1,4 +1,3 @@
-import json
 """P3-M17: human confirmation API surface.
 
 The compile endpoint is exercised with a STUBBED TokenRouter client (no real
@@ -6,6 +5,7 @@ Qwen in CI); confirm/reject/replay/stale paths run against the REAL
 HumanConfirmationService + dev PostgreSQL. No secrets reach responses.
 """
 
+import json
 from datetime import UTC, datetime
 
 import pytest
@@ -13,9 +13,9 @@ from fastapi.testclient import TestClient
 
 from razormesh_api.api.main import app
 from razormesh_api.api.routes import buyer_drafts as drafts_route
+from razormesh_api.domain.ids import PrincipalId, new_ulid
 from razormesh_api.intent_compiler import TokenRouterClient
 from razormesh_api.intent_compiler_prompt import TrustedHumanAuthorization
-from razormesh_api.domain.ids import PrincipalId, new_ulid
 from razormesh_api.settings import Settings, get_settings
 
 SECRET = "tr_test_key_placeholder"

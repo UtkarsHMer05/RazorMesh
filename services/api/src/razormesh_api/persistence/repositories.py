@@ -193,7 +193,22 @@ class IntentDraftRepository:
             return s.get(IntentDraftRecord, str(draft_id))
 
     def get_for_update(self, draft_id: DraftId, session: Session) -> IntentDraftRecord | None:
-        return session.get(IntentDraftRecord, str(draft_id), with_for_update=True)
+        """SELECT ... FOR UPDATE that BYPASSES the identity map.
+
+        session.get() would return an already-loaded (unlocked, possibly
+        stale) instance; the explicit locking SELECT forces PostgreSQL to
+        serialize concurrent confirmations on the live row.
+        """
+        return (
+            session.execute(
+                select(IntentDraftRecord)
+                .where(IntentDraftRecord.draft_id == str(draft_id))
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            .scalars()
+            .first()
+        )
 
     def open_for_update(
         self, principal_id: str, agent_id: str, session: Session

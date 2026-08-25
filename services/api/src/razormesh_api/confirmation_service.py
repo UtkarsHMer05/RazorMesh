@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from razormesh_api.clock import Clock
@@ -198,7 +199,44 @@ class HumanConfirmationService:
     def confirm_draft(
         self, *, draft_id: DraftId, confirmation_nonce: str, actor: str
     ) -> ConfirmationResult:
-        """The single authority-creating transition (P3-S03)."""
+        """The single authority-creating transition (P3-S03).
+
+        Exactly-once is enforced by the DATABASE, not by optimistic code paths:
+        ``uq_draft_confirmation_nonce`` admits exactly one confirming UPDATE per
+        draft. Under a same-nonce race the losing transaction receives an
+        IntegrityError and re-reads the winner's durable result (honest
+        replay); a DIFFERENT nonce surfacing the same conflict raises
+        CONFIRMATION_REPLAY_MISMATCH.
+        """
+        try:
+            return self._confirm_draft_inner(
+                draft_id=draft_id,
+                confirmation_nonce=confirmation_nonce,
+                actor=actor,
+            )
+        except IntegrityError as exc:
+            final = self.get_draft(draft_id)
+            if (
+                final is not None
+                and final.state == DraftState.CONFIRMED.value
+                and final.confirmation_nonce == confirmation_nonce
+                and final.intent_id is not None
+                and final.confirmed_generation is not None
+            ):
+                return ConfirmationResult(
+                    draft_id=draft_id,
+                    intent_id=IntentId(final.intent_id),
+                    generation=final.confirmed_generation,
+                    replayed=True,
+                )
+            raise ConfirmationError(
+                "CONFIRMATION_REPLAY_MISMATCH",
+                "confirmation lost a durability race",
+            ) from exc
+
+    def _confirm_draft_inner(
+        self, *, draft_id: DraftId, confirmation_nonce: str, actor: str
+    ) -> ConfirmationResult:
         if not confirmation_nonce or len(confirmation_nonce) > _MAX_NONCE_LEN:
             raise ConfirmationError("INVALID_NONCE", "confirmation nonce missing or oversized")
 

@@ -735,3 +735,20 @@ make security-check              -> PASS
 
 ### Next
 - M17 — Human confirmation UI.
+
+
+### M16 addendum — durability race hardening (post-commit review)
+
+Full-suite load exposed that `session.get(..., with_for_update=True)` can be
+served from the SQLAlchemy IDENTITY MAP, silently skipping the row lock after
+an earlier unlocked probe read. Under an 8-thread same-nonce race this allowed
+generation bumps 1→2→3→4 with replayed=False — exactly the class of defect M16
+exists to prevent. Fixes:
+1. `IntentDraftRepository.get_for_update` now issues a real
+   `SELECT ... WHERE draft_id=... FOR UPDATE` with
+   `populate_existing=True` (bypasses identity map).
+2. Belt-and-braces: the confirming UPDATE is additionally arbitrated by the
+   durable `uq_draft_confirmation_nonce` unique index; a race loser converts
+   IntegrityError into either an honest replay (identical nonce re-read of the
+   committed winner) or CONFIRMATION_REPLAY_MISMATCH.
+Validation: module green 4/4 consecutive rounds + full suite 463/463 twice.

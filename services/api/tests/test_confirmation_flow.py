@@ -445,11 +445,7 @@ def test_concurrent_same_nonce_confirm_yields_single_authority(conf_env) -> None
     with ThreadPoolExecutor(max_workers=8) as pool:
         results = list(pool.map(worker, range(8)))
 
-    successes = (
-        [r for r in results if isinstance(r, tuple(type(r) for r in []))]
-        if False
-        else [r for r in results if not isinstance(r, ConfirmationError)]
-    )
+    successes = [r for r in results if not isinstance(r, ConfirmationError)]
     errors = [r for r in results if isinstance(r, ConfirmationError)]
     assert len(successes) >= 1
     ids = {(r.intent_id, r.generation) for r in successes}
