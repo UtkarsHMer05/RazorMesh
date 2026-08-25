@@ -22,7 +22,7 @@
 | M08 | Phase-3 governance transition | PASS | PHASES Phase-3 ACTIVE; PRD §12 PRD-P3-001..014; SECURITY §16 P3-S01..S20 + T25+ families; TESTING §15 ten phase-3 gates; DECISIONS D-038 (architecture/no-Qwen-finetune) D-039 (fusion release-blocking) D-040 (data/gold/training/inference policy); ARCHITECTURE §15; PHASE3_MILESTONES.md created |
 | M09 | TokenRouter client abstraction | PASS | intent_compiler.py: backend-only httpx client (Bearer from SecretStr, bounded timeout, X-Request-Id ULID correlation); taxonomy AUTH/REJECTED/UNKNOWN mirroring D-030 with calls==1 no-retry proofs; malformed-payload matrix; response_format passthrough; /models probe method; DI factory naming TOKENROUTER_API_KEY only; settings fields added (SecretStr key, documented .io default URL, planner model, timeout<=120); 13 MockTransport tests; suite 388/388 |
 | M10 | TokenRouter auth + capability probe | PASS | REAL probe: AUTH ok on api.tokenrouter.com (bootstrap URL validated; R-019 corrected); planner qwen/qwen3.8-max-free visible+usable (reported internally as qwen3.8-max-pd); Qwen3.8 is a THINKING model -> reasoning_content/reasoning_tokens captured in client; empty content at tiny max_tokens proven; JSON-by-instruction parseable {max_price_minor:499999,currency:INR} 11.8s; response_format json_object ACCEPTED parseable (68s); failure shape = transient 503 hard_concurrency_limit windows -> taxonomy UNKNOWN + probe-only bounded backoff; PRIVATE FILE DELETED, zero history/tracked exposure re-proven |
-| M11 | IntentDraft schema | NOT_STARTED | — |
+| M11 | IntentDraft schema | PASS | domain/intent_draft.py: versioned agentpay-intent-draft-v1; CompilerIntentPayload (hard/semantic/ambiguities/unspecified) + server-identity IntentDraft wrapper (drf_ ULID, source hash, created_at); StrictInt minor-unit money w/ explicit ISO currency (float/bool/<=0 rejected), extra=forbid (hallucinated keys fail), ALL defaults None (no invented currency/condition/recurring), bounded texts(280)/lists(8..12)/items(120); 14 negative+property tests incl. Hypothesis round-trips; suite 404/404 |
 | M12 | Compiler prompt & isolation contract | NOT_STARTED | — |
 | M13 | Strict validation + bounded repair | NOT_STARTED | — |
 | M14 | Compiler golden evaluation set | NOT_STARTED | — |
@@ -435,3 +435,40 @@ tested). Suite remains green (13 client tests).
 
 ### Next
 - M11 — IntentDraft schema.
+
+
+## M11 — IntentDraft Schema
+
+MILESTONE: M11
+STATUS: PASS
+
+Requirements: master prompt M11 — versioned Pydantic/domain IntentDraft
+separating hard constraints, semantic constraints, ambiguities, unspecified
+fields; integer minor-unit money; explicit currency; no invented defaults;
+bounded sizes; property/negative tests.
+Security invariants: P3-S03 (proposal-not-authority — identity generated
+server-side only), P3-S12 groundwork.
+
+### Implementation
+- `domain/intent_draft.py`: `CompilerIntentPayload` (LLM-facing; frozen,
+  extra=forbid) with HardConstraints / SemanticConstraint / Ambiguity /
+  UnspecifiedField; `IntentDraft` adds draft_id (drf_+ULID pattern),
+  source_text_sha256, created_at. Schema pinned via
+  Literal["agentpay-intent-draft-v1"].
+- MoneyBound uses StrictInt (rejects 500.0 AND True) with ge=1 and an explicit
+  ^[A-Z]{3}$ currency. Every optional field defaults to None/() — the type
+  level cannot invent "INR" or "new".
+- Identity is NOT part of compiler output: raw LLM payloads cannot construct
+  a durable IntentDraft without server-generated id/hash/time.
+
+### Validation commands + results
+```text
+ruff check .                                  -> clean
+mypy -p razormesh_api (strict)                -> Success, 56 files
+pytest tests/test_intent_draft.py             -> 16 passed (negatives +
+                                                 Hypothesis round-trip props)
+pytest (full)                                 -> 404 passed
+```
+
+### Next
+- M12 — Qwen compiler prompt & isolation contract.

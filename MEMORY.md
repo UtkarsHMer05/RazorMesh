@@ -159,9 +159,11 @@ all callback/provider evidence is correlated to current durable authority.
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M11** (IntentDraft versioned Pydantic schema:
-hard/semantic constraints + ambiguities + unspecified; integer minor-unit
-money; no invented defaults; property/negative tests). P3-M10 done: REAL
+PHASE 3 RUNNING — next milestone: **P3-M12** (versioned+hashed compiler system prompt;
+input=trusted human text ONLY; isolation tests proving merchant/untrusted
+cannot enter compiler path). P3-M11 done: domain/intent_draft.py v1 schema
+(StrictInt money, forbid-extra, None-defaults, bounds, server-side identity
+wrapper); 16 tests; suite 404. P3-M10 done: REAL
 probe PASS — auth ok on api.tokenrouter.com (R-019 corrected), planner model
 visible, THINKING MODEL reality captured (reasoning_content; generous
 max_tokens required or content empty at finish=length), instruction-JSON AND
