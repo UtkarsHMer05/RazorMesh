@@ -24,7 +24,7 @@
 | M10 | TokenRouter auth + capability probe | PASS | REAL probe: AUTH ok on api.tokenrouter.com (bootstrap URL validated; R-019 corrected); planner qwen/qwen3.8-max-free visible+usable (reported internally as qwen3.8-max-pd); Qwen3.8 is a THINKING model -> reasoning_content/reasoning_tokens captured in client; empty content at tiny max_tokens proven; JSON-by-instruction parseable {max_price_minor:499999,currency:INR} 11.8s; response_format json_object ACCEPTED parseable (68s); failure shape = transient 503 hard_concurrency_limit windows -> taxonomy UNKNOWN + probe-only bounded backoff; PRIVATE FILE DELETED, zero history/tracked exposure re-proven |
 | M11 | IntentDraft schema | PASS | domain/intent_draft.py: versioned agentpay-intent-draft-v1; CompilerIntentPayload (hard/semantic/ambiguities/unspecified) + server-identity IntentDraft wrapper (drf_ ULID, source hash, created_at); StrictInt minor-unit money w/ explicit ISO currency (float/bool/<=0 rejected), extra=forbid (hallucinated keys fail), ALL defaults None (no invented currency/condition/recurring), bounded texts(280)/lists(8..12)/items(120); 14 negative+property tests incl. Hypothesis round-trips; suite 404/404 |
 | M12 | Compiler prompt & isolation contract | PASS | intent_compiler_prompt.py: COMPILER_SYSTEM_PROMPT v1 encoding all §12 rules (no-invention, hard-vs-semantic split, ambiguities, minor-unit money, negation preservation, sole-source authority); prompt_sha256 audit binding; TrustedHumanAuthorization value object (3..2000 chars, control-char rejection); build_compiler_messages single choke point with NO context parameter (structural isolation — signature-level test + module-surface scan proving no str inlet exists); hostile-text inertness test; suite 411/411 |
-| M13 | Strict validation + bounded repair | NOT_STARTED | — |
+| M13 | Strict validation + bounded repair | PASS | intent_compilation_service.py: extract_json_object (bare/fenced/wrapped) -> CompilerIntentPayload strict parse (20k char cap) -> ONE repair w/ validation feedback + response_format json_object -> fail closed; CompilerOutcome OK/FAILED(+NEEDS_CLARIFICATION ready for M16) carries attempts/error_code/request_ids; provider failures fail-closed with exact call-count proofs (1 on first-failure, 2 max total); malicious prose inert; 9 tests; suite 420/420 |
 | M14 | Compiler golden evaluation set | NOT_STARTED | — |
 | M15 | Real compiler evaluation | NOT_STARTED | — |
 | M16 | Human confirmation domain flow | NOT_STARTED | — |
@@ -517,3 +517,45 @@ pytest (full)                    -> 411 passed
 
 ### Next
 - M13 — Strict output validation and bounded repair.
+
+
+## M13 — Strict Output Validation & Bounded Repair
+
+MILESTONE: M13
+STATUS: PASS
+
+Requirements: master prompt M13 — Qwen output → strict JSON extraction →
+Pydantic/domain validation → ONE bounded repair → fail closed/clarify.
+Adversarial matrix: invalid JSON/types/floats/extra keys/missing currency/
+oversized/malicious prose. Security invariants: P3-S03/S08/S12.
+
+### Implementation
+- `intent_compilation_service.py`:
+  - `extract_json_object`: bare / ```json fenced / prose-wrapped objects;
+  - `parse_compiler_output`: strict domain validation, 20k-char output cap;
+  - `IntentCompilationService.compile()`: attempt 1 with the versioned prompt
+    → on any schema failure exactly ONE repair call carrying a truncated
+    validation summary + response_format json_object → still invalid ⇒
+    FAILED(SCHEMA_INVALID_AFTER_REPAIR); provider errors ⇒ FAILED(
+    COMPILER_UNAVAILABLE) with NO automatic retries;
+  - `CompilerOutcome` is inert data: it can never create authority.
+
+### Evidence (tests/test_intent_compilation_service.py)
+- bare/fenced/wrapped JSON accepted; no-JSON and >20k outputs refused;
+- float money / extra hallucinated keys / wrong schema_version rejected;
+- invalid→repair→OK path: exactly 2 calls, repair carries feedback +
+  response_format; still-invalid path fails closed after exactly 2 calls;
+- 503 on first call: FAILED after EXACTLY 1 call (no auto-retry);
+- 500 during repair: FAILED(repair:) after exactly 2 calls;
+- malicious prose produces no authority candidate.
+
+### Validation commands + results
+```text
+ruff check .                     -> clean
+mypy -p razormesh_api (strict)   -> Success, 58 files
+pytest tests/test_intent_compilation_service.py -> 9 passed
+pytest (full)                    -> 420 passed
+```
+
+### Next
+- M14 — Intent compiler golden evaluation set.
