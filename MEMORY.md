@@ -159,8 +159,9 @@ all callback/provider evidence is correlated to current durable authority.
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M03** (full frontend/E2E regression:
-lint/tsc/vitest/build/Playwright incl. secret scans). P3-M02 done: battery
+PHASE 3 RUNNING — next milestone: **P3-M04** (Phase-2 real-provider integrity
+revalidation via safe/read-only/mock methods). P3-M03 done: frontend battery
+green — lint/tsc/vitest 11/build/Playwright 5; zero secret refs in src/e2e/.next. P3-M02 done: battery
 green (375 stable); FIXED latent strict-mypy violation in D-037 settlement-
 authority validator (stale .mypy_cache had masked it — always purge caches
 when counts diverge between roots); race test made load-robust WITHOUT

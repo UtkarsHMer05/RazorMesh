@@ -14,7 +14,7 @@
 |---|---|---|---|
 | M01 | Repository, governance, secret-safety inspection | PASS | master prompt read fully; governance set read in AGENTS.md precedence; git tree clean on main @fc0422e (+P2-M50 final check); `.env` ignored (.gitignore:6, mode 600); bootstrap file untracked→locally excluded via .git/info/exclude:49, zero history entries; no TokenRouter refs in tracked source; full backend regression 375/375 (one transient scheduling flake in 20-worker race noted → M02 watch); PHASE3_STATUS skeleton created |
 | M02 | Full Phase-1/2 backend regression | PASS | ruff format 158 files OK; ruff clean; mypy STRICT both roots after .mypy_cache purge — found+fixed latent untyped session param in D-037 `_validate_settlement_authority_in_session` (root cache had masked it); pytest 375/375 stable across 5+ runs; hypothesis/stateful 7; focused security keywords 40; security-check PASS; race-test flake ROOT-CAUSED: (a) Redis SET-NX timeouts under load raise CoordinationUnavailable fail-closed -> now treated as inconclusive-no-effect, (b) late workers legitimately return via ticket-idempotency shortcut BEFORE nonce claim -> multiple settled rows valid iff SAME attempt id; durable exactly-once asserts (calls==1, attempts==1, held-once) kept STRICT |
-| M03 | Full Phase-1/2 frontend/E2E regression | NOT_STARTED | — |
+| M03 | Full Phase-1/2 frontend/E2E regression | PASS | eslint clean; tsc clean; vitest 11/11 (3 files); next production build OK (static prerender); Playwright 5/5 incl. stubbed-checkout success/failure/unknown paths + DOM/network secret scans; grep over src+e2e+.next/static for rzp_live_/TOKENROUTER/tokenrouter = 0; all four baseline surfaces exercised by smoke spec |
 | M04 | Phase-2 real-provider integrity revalidation | NOT_STARTED | — |
 | M05 | Freeze Phase-3 baseline | NOT_STARTED | — |
 | M06 | Live AI/ML research and version manifest | NOT_STARTED | — |
@@ -197,3 +197,33 @@ make security-check                          -> PASS (0 findings, audits clean)
 
 ### Next
 - M03 — Full Phase-1/2 frontend/E2E regression.
+
+
+## M03 — Full Phase-1/2 Frontend/E2E Regression
+
+MILESTONE: M03
+STATUS: PASS
+
+Requirements: master prompt M03 — full frontend battery green BEFORE any AI
+change; buyer/merchant/security-lab/audit baselines verified.
+Security invariants: P2-S03/S04 (no secret to browser), UI truth rules.
+
+### Battery results
+```text
+pnpm lint          -> eslint clean
+pnpm typecheck     -> tsc --noEmit clean
+pnpm test          -> 3 files, 11 tests passed
+pnpm build         -> OK, static prerender
+npx playwright test-> 5 passed (nav smoke x2 + stubbed-checkout x3 with
+                      DOM-content and per-request-line secret scans)
+grep rzp_live_|TOKENROUTER|tokenrouter across src/, e2e/, .next/static -> 0 hits
+```
+
+Baseline surfaces verified by the smoke spec: home trust-core banner, Buyer,
+Merchant, Security Lab, Audit headings reachable.
+
+### Real external API use
+- NONE.
+
+### Next
+- M04 — Phase-2 real-provider integrity revalidation.
