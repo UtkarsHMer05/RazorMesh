@@ -33,7 +33,7 @@
 | M19 | Deterministic seed dataset | PASS | data/phase3/dataset/seed: 915 AgentPay-IR records (307 golden cases × entailment/contradiction/neutral templates; content-dedup 921→915); labels balanced within 5%; all 18 families covered; deterministic regeneration byte-identical (fixed provenance ts + derived record ids); label_source=template_truth throughout; 6 tests incl. ≥600 floor + manifest-hash binding; suite 469/469 |
 | M20 | Qwen candidate generator | NOT_STARTED | — |
 | M21 | Candidate validation | NOT_STARTED | — |
-| M22 | Dedup / near-duplicate detection | NOT_STARTED | — |
+| M22 | Dedup / near-duplicate detection | PASS | dataset_dedup.py: exact dups via content hash; near-dups via token-Jaccard >=0.90 WITHIN (family,label) classes; union-find clusters w/ deterministic smallest-id canonical; cross-class collisions reported separately as suspected mislabels (never merged); 5 tests incl. determinism + ordering; generator also applies exact-normalized guard at generation time |
 | M23 | Leakage-safe split builder | NOT_STARTED | — |
 | M24 | Adversarial dataset expansion | NOT_STARTED | — |
 | M25 | Gold review pack generation | NOT_STARTED | — |
