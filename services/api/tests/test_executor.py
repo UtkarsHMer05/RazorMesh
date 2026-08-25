@@ -52,6 +52,13 @@ from razormesh_api.tickets import (
 NOW = datetime.now(UTC)
 
 
+def FRESH_NOW():
+    """P3-M17: long suites outlive test_executor's import-time NOW; tickets
+    minted by _make_ticket must carry wall-clock-fresh timestamps or they are
+    born past the verifier's 60s TTL."""
+    return datetime.now(UTC)
+
+
 def _redis() -> NonceRegistry:
     import os
 
@@ -252,8 +259,8 @@ def _make_ticket(keys, repos):  # type: ignore[no-untyped-def]
         currency="INR",
         policy_version="razormesh-phase1-policy-v1",
         nonce=f"nonce-{new_ulid()}{new_ulid()}",
-        issued_at=NOW,
-        expires_at=NOW + timedelta(seconds=60),
+        issued_at=FRESH_NOW(),
+        expires_at=FRESH_NOW() + timedelta(seconds=60),
     )
     signed = TicketIssuer(keys).issue(claims)
     binding = CurrentBinding(

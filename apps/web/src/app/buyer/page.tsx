@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { IntentDraftPanel } from "./IntentDraftPanel";
 import { loadRazorpayCheckout } from "@/lib/razorpay";
 
 type Product = {
@@ -275,6 +276,7 @@ export default function BuyerPage() {
 
   return (
     <section aria-labelledby="buyer-title">
+      <IntentDraftPanel />
       <h1 className="page-title" id="buyer-title">
         Buyer experience
       </h1>

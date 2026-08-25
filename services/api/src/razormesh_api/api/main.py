@@ -12,6 +12,7 @@ from sqlalchemy.engine import Engine
 
 from razormesh_api.api.routes.audit import router as audit_router
 from razormesh_api.api.routes.buyer import router as buyer_router
+from razormesh_api.api.routes.buyer_drafts import router as buyer_drafts_router
 from razormesh_api.api.routes.catalog import router as catalog_router
 from razormesh_api.api.routes.ops import router as ops_router
 from razormesh_api.api.routes.security_lab import router as security_lab_router
@@ -30,6 +31,7 @@ app = FastAPI(
 app.include_router(catalog_router)
 app.include_router(webhooks_router)
 app.include_router(buyer_router)
+app.include_router(buyer_drafts_router)
 app.include_router(audit_router)
 app.include_router(security_lab_router)
 app.include_router(ops_router)
