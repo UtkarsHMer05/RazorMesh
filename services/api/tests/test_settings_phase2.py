@@ -105,6 +105,34 @@ def test_test_prefix_with_all_credentials_passes_guard() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("key_id", "base_url"),
+    [
+        ("not_a_test_key", "https://api.razorpay.com/v1"),
+        ("rzp_test_ok", "http://api.razorpay.com/v1"),
+        ("rzp_test_ok", "https://example.invalid/v1"),
+    ],
+)
+def test_real_provider_rejects_non_test_key_or_nonofficial_api_endpoint(
+    key_id: str, base_url: str
+) -> None:
+    from razormesh_api.settings import ProviderConfigError, validate_payment_provider_config
+
+    with pytest.raises(ProviderConfigError) as exc:
+        validate_payment_provider_config(
+            _cfg(
+                payment_provider="razorpay",
+                razorpay_key_id=key_id,
+                razorpay_key_secret="secret",
+                razorpay_webhook_secret="hook",
+                razorpay_api_base_url=base_url,
+            )
+        )
+    assert "RAZORPAY_TEST_MODE_REQUIRED" in str(exc.value)
+    assert "secret" not in str(exc.value)
+    assert "hook" not in str(exc.value)
+
+
 def test_error_message_never_contains_secret_values() -> None:
     from razormesh_api.settings import ProviderConfigError, validate_payment_provider_config
 

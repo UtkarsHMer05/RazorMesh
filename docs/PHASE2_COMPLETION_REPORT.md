@@ -17,15 +17,17 @@ only in the gitignored root `.env` (mode 600).
 
 Phase-2 additions proven LIVE and in CI:
 - Server-authoritative amounts only; the browser supplies zero pricing data.
-- Callback signatures verify against the SERVER-stored order id (P2-S08).
+- Callback signatures verify against the SERVER-stored order id and the exact
+  server-issued execution attempt (P2-S08/D-037).
 - Webhooks verify HMAC over RAW bytes before any parse; rejections mutate
   nothing (proven by pre/post mutation counts, M31/M32).
 - Durable event-id dedup at the database level; duplicates never double-commit
   (M33/M42 storm tests).
 - Delivery order is never assumed; every permutation converges to one effect
   (M34 matrix + concurrent mixed-event storms, M42).
-- `payment.failed` → `payment.captured` reconciles exactly-once with a capacity
-  guard and loud audit (documented Razorpay behavior; M29/M43).
+- `payment.failed` → `payment.captured` reconciles exactly-once from the
+  retained reservation, preventing interim authorization-capacity reuse
+  (documented Razorpay behavior; D-037).
 - Timeout/5xx after send ⇒ PROVIDER_UNKNOWN: identity + reservation held, no
   blind retry as a fresh payment; receipt-based discovery recovers correlation
   only through authority validation (M41/D-036).
@@ -43,11 +45,13 @@ No Razorpay call of any kind occurred before M12.
 ```
 RazorGuard ALLOW → reservation → ExecutionTicket → durable ExecutionAttempt
     → executor.create_order (server-authoritative amount/currency)
+        → validate returned id/amount/currency/receipt/status
         ├─ definitive rejection/auth → FAILED + release
         └─ timeout/5xx/malformed     → PROVIDER_UNKNOWN + REQUIRED + HELD
-    → launch payload (PUBLIC key_id + order_id + amount/currency) → browser
-    → Standard Checkout (handler flow) → callback {payment_id, order_id, sig}
-        → HMAC-SHA256(SERVER order|payment) → captured evidence gate (fetch)
+    → launch payload (PUBLIC key_id + attempt/order/context) → browser
+    → Standard Checkout → callback {attempt_id, payment_id, order_id, sig}
+        → exact context + HMAC(SERVER order|payment) + provider fetch
+        → current authorization/checkout revalidation before settlement
     → verified webhooks (raw-body HMAC) + x-razorpay-event-id inbox dedup
     → ONE provider-state reducer (callback | webhook | fetch | discovery)
         → exactly-once reservation commit / guarded late-capture reconcile
@@ -79,14 +83,14 @@ M48 (see `VERSION_MANIFEST.md`).
 
 | Area | Implementation |
 |---|---|
-| Orders | server-side create; receipt=`r_{attempt_id}` ≤40; notes=5 opaque refs ≤15×256 |
+| Orders | server-side create; receipt=`r_{attempt_id}` ≤40; notes=5 opaque refs ≤15×256; create/fetch response id, amount, currency and receipt validated |
 | Checkout | official v1 script loaded once; launch payload public-only; same-order re-open only pre-outcome |
-| Callback verify | HMAC-SHA256(server-stored order\|payment, key_secret), constant-time |
-| Webhooks | raw-body HMAC before parse; event-id required; size cap 413; error precedence pinned (413→400 EVENT_UNKNOWN→403 SIG) |
+| Callback verify | exact execution-attempt/intent/checkout/order binding; HMAC-SHA256(server-stored order\|payment, key_secret), constant-time; current authority revalidated before capture commit |
+| Webhooks | raw-body HMAC before parse; event-id required; financial amount/currency correlated to durable attempt; size cap 413; error precedence pinned (413→400 EVENT_UNKNOWN→403 SIG) |
 | Dedup | provider_events PK claim; DB-level concurrency safe |
 | Ordering | not assumed; permutation + concurrent-storm convergence proven |
 | authorized | informative-only (D-031); cannot regress SUCCEEDED nor fulfil EXECUTING |
-| failed→captured | guarded FAILED→SUCCEEDED reconcile (capacity-checked, loudly audited) |
+| failed→captured | FAILED retains reservation/REQUIRED; verified capture converts the same hold to committed exactly once and is loudly audited |
 
 ## 6. Real Test Mode evidence (human-gated)
 
@@ -102,6 +106,9 @@ M48 (see `VERSION_MANIFEST.md`).
   ensure→reserve→release), committed unchanged, PAYMENT_FAILED audited (chain
   valid, 13 events), provider fetch matches, callback_verified_at NULL correct.
   UI propagation lag fixed via read-only `/buyer/status` re-sync (D-035).
+  This is preserved historical evidence: D-037 subsequently superseded the
+  release-on-provider-failure policy with a conservative hold because the same
+  transaction may later capture.
 - **M49 clean-room**: fresh disposable instance — safe Test Order
   (order_TTlJ8vS3wCvEnp) created/fetched; LIVE signed captured-webhook settled
   it exactly once (reserved=0, committed=64890 minor, duplicate inert).
@@ -120,9 +127,17 @@ post-claim webhooks correlate normally; fetched "paid" reduces through the ONE
 reducer to an exactly-once settlement that marks RESOLVED. Ops surface is
 read-only listing + single safe pass (404/409 controlled).
 
-## 8. Tests & quality gates (final state)
+## 8. Independent exit audit and final quality gates
 
-- Backend pytest **353 passed** (unit/integration/security/Hypothesis stateful/
+The post-completion master-prompt audit found and repaired missing negative
+proofs despite the historical suite being green: provider response authority,
+exact callback attempt/cross-principal-session binding, stale authority at
+settlement, webhook amount/currency correlation, failed-payment capacity reuse,
+signed malformed webhook handling, and permissive non-test configuration.
+D-037 and the final PHASE2_STATUS
+addendum contain the full rationale and evidence.
+
+- Backend pytest **375 passed** (unit/integration/security/Hypothesis stateful/
   concurrency/permutation/lab/benchmark/artifact gates).
 - mypy strict clean from repo root AND services/api (54 files) — the earlier
   config-discovery gap was closed permanently in M15.
@@ -158,6 +173,14 @@ excluded (recorded separately as non-system reference).
    resets component state; backend stays authoritative).
 8. One ERROR row in the durable inbox from M38 diagnosis retained deliberately
    as operational history.
+9. This is still a local prototype without production identity/session
+   infrastructure. Cross-principal callback isolation is proven through
+   ticket-bound attempts and provider order signatures; production auth is a
+   later-phase/deployment concern and must not be inferred from this prototype.
+10. A failed provider payment now conservatively retains its reservation while
+    late capture remains possible. Phase 2 does not automate a timeout-based
+    release because elapsed time alone is not provider truth; an explicit
+    operator terminal-release workflow remains later work.
 
 ## 11. Human gates exercised
 
@@ -182,7 +205,7 @@ used the human-provided Test keys from `.env`.
 docker compose down -v && docker compose up -d
 make migrate && make seed
 make test-db                      # provision razormesh_test for the suite (P2-M38 isolation)
-uv run --project services/api pytest            # 353 passed
+uv run --project services/api pytest            # 375 passed
 cd apps/web && pnpm i && pnpm test && npx playwright test
 make security-check && make benchmark
 # live-mode legs (require .env Test credentials):
@@ -193,9 +216,11 @@ uv run --project services/api python scripts/rzp_first_order.py
 
 ## 14. Commit ledger
 
-91 total commits; Phase-2 milestone commits `P2-M01 … P2-M49` are individual,
-gated, local-only (never pushed). Final HEAD: `659f9b5` (see `git log --oneline
-| grep 'P2-M'`). Phase-1 history untouched.
+92 committed revisions currently exist; Phase-2 milestone commits
+`P2-M01 … P2-M50` are individual, gated and local-only (never pushed).
+Committed completion HEAD: `3e63bcb`. The independent exit-audit repairs and
+evidence are intentionally uncommitted pending current human authorization.
+Phase-1 history is untouched.
 
 ---
 
@@ -234,4 +259,4 @@ attach without redesigning the trust core.
 **STOP.** Per the master prompt, Phase 3 begins only upon explicit human
 approval. Approved completion phrase applies to Phase 2:
 
-> **Phase-2 local prototype complete.**
+> **Phase-2 Razorpay Test Mode integration complete.**

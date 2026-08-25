@@ -307,9 +307,7 @@ def test_authority_mismatch_mutates_nothing(rec_env) -> None:  # type: ignore[no
         _service(
             repos,
             _client_for(_CountingTransport(_orders_transport(attempt, "paid", currency="USD"))),
-        ).reconcile(
-            attempt.execution_attempt_id
-        )
+        ).reconcile(attempt.execution_attempt_id)
     assert cur_exc.value.code == "RAZORPAY_CURRENCY_MISMATCH"
 
 
@@ -343,7 +341,7 @@ def test_unknown_attempt_raises_valueerror(rec_env) -> None:  # type: ignore[no-
         )
 
 
-def test_webhook_failure_resolution_marks_resolved(rec_env) -> None:  # type: ignore[no-untyped-def]
+def test_webhook_failure_keeps_reconciliation_required(rec_env) -> None:  # type: ignore[no-untyped-def]
     repos, keys, spend = rec_env
     attempt, _signed, _binding, _contract = _unknown_attempt(repos, keys, spend)
 
@@ -363,10 +361,12 @@ def test_webhook_failure_resolution_marks_resolved(rec_env) -> None:  # type: ig
     with repos.transaction() as s:
         refreshed = s.get(ExecutionAttempt, attempt.execution_attempt_id)
         assert refreshed is not None
-        assert refreshed.reconcile_state == "RESOLVED"  # M41 fix: never stranded REQUIRED
-    row = _spend_row(repos, attempt.intent_id)
-    assert row.reserved_minor == 0
-    assert row.committed_minor == 0
+        # Razorpay documents failed->captured for the same transaction, so a
+        # failure observation retains the reservation and remains reconcilable.
+        assert refreshed.reconcile_state == "REQUIRED"
+    spend_row = _spend_row(repos, attempt.intent_id)
+    assert spend_row.reserved_minor == attempt.amount_minor
+    assert spend_row.committed_minor == 0
 
 
 # ---------------------------------------------------------------------------

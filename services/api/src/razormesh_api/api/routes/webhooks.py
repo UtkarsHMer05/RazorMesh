@@ -105,9 +105,21 @@ async def razorpay_webhook(
         return {"received": True, "processed": False, "reason": "UNKNOWN_EVENT"}
 
     event_type = payload["event"]
-    entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
-    order_id = entity.get("order_id")
-    payment_id = entity.get("id")
+    provider_payload = payload.get("payload", {})
+    if not isinstance(provider_payload, dict):
+        return {"received": True, "processed": False, "reason": "UNKNOWN_EVENT_PAYLOAD"}
+    payment_wrapper = provider_payload.get("payment", {})
+    order_wrapper = provider_payload.get("order", {})
+    payment_entity = payment_wrapper.get("entity", {}) if isinstance(payment_wrapper, dict) else {}
+    order_entity = order_wrapper.get("entity", {}) if isinstance(order_wrapper, dict) else {}
+    if not isinstance(payment_entity, dict):
+        payment_entity = {}
+    if not isinstance(order_entity, dict):
+        order_entity = {}
+    order_id = payment_entity.get("order_id") or order_entity.get("id")
+    payment_id = payment_entity.get("id")
+    amount_minor = payment_entity.get("amount", order_entity.get("amount"))
+    currency = payment_entity.get("currency", order_entity.get("currency"))
 
     from razormesh_api.webhook_inbox import ingest_verified_event
 
@@ -116,7 +128,6 @@ async def razorpay_webhook(
     import hashlib as _hl
 
     payload_sha256 = _hl.sha256(raw).hexdigest()
-    payment_entity = payload.get("payload", {}).get("payment", {}).get("entity", {})
     rid = payment_entity.get("id") if isinstance(payment_entity, dict) else None
 
     def _apply() -> None:
@@ -126,11 +137,25 @@ async def razorpay_webhook(
             "payment.failed",
             "payment.authorized",
         ) and isinstance(order_id, str):
+            from razormesh_api.providers.razorpay import RazorpayProviderStateConflict
+
+            if not isinstance(amount_minor, int) or amount_minor <= 0:
+                raise RazorpayProviderStateConflict(
+                    "RAZORPAY_AMOUNT_MISMATCH",
+                    "verified provider event omitted a valid integer amount",
+                )
+            if not isinstance(currency, str) or len(currency) != 3:
+                raise RazorpayProviderStateConflict(
+                    "RAZORPAY_CURRENCY_MISMATCH",
+                    "verified provider event omitted a valid currency",
+                )
             reducer.apply_event(
                 VerifiedProviderEvent(
                     kind=event_type,
                     razorpay_order_id=order_id,
                     razorpay_payment_id=payment_id if isinstance(payment_id, str) else None,
+                    amount_minor=amount_minor,
+                    currency=currency,
                 )
             )
 

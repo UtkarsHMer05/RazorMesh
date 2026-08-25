@@ -15,7 +15,9 @@ Semantics (D-036):
    mismatches raise loudly and mutate nothing (P2-S06).
 3. Fetched "paid"  -> capture evidence reduced as order.paid: exactly-once
    settlement from EXECUTING/PROVIDER_UNKNOWN, guarded path from FAILED.
-   Every terminal settlement marks reconcile_state=RESOLVED.
+   Successful settlement marks reconcile_state=RESOLVED. A provider failure
+   stays REQUIRED with its reservation held because a later capture remains a
+   documented possibility.
 4. Any other status -> snapshot only: keep waiting for outcome evidence
    (webhook/callback). No guess, no transition. Once the order id is claimed,
    later webhooks for that order correlate normally.

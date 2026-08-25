@@ -28,6 +28,10 @@ class _Transport(httpx.BaseTransport):
         self._payload = payload
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            import json
+
+            self._payload["receipt"] = json.loads(request.content)["receipt"]
         return httpx.Response(200, json=self._payload)
 
 
@@ -155,6 +159,57 @@ def test_receipt_context_mismatch_conflicts(env) -> None:  # type: ignore[no-unt
         reconcile_attempt(
             repos=repos,
             provider=RazorpayPaymentProvider(client),
+            attempt_id=attempt_id,
+            now=datetime.now(UTC),
+        )
+    assert exc.value.code == "RAZORPAY_ORDER_CONTEXT_MISMATCH"
+
+
+def test_missing_receipt_context_conflicts(env, _order_payload: dict) -> None:  # type: ignore[no-untyped-def]
+    """A response that omits the requested receipt has not proven correlation."""
+    repos, provider, _executor, _spend, _keys = env
+    attempt_id = _make_attempt(env)
+    _order_payload.pop("receipt")
+
+    with pytest.raises(RazorpayProviderStateConflict) as exc:
+        reconcile_attempt(
+            repos=repos,
+            provider=provider,
+            attempt_id=attempt_id,
+            now=datetime.now(UTC),
+        )
+
+    assert exc.value.code == "RAZORPAY_ORDER_CONTEXT_MISMATCH"
+
+
+def test_fetch_returning_a_different_order_identity_conflicts(env) -> None:  # type: ignore[no-untyped-def]
+    repos, _provider, _executor, _spend, _keys = env
+    attempt_id = _make_attempt(env)
+
+    def wrong_identity(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "order_not_the_requested_order",
+                "status": "paid",
+                "amount": 100000,
+                "currency": "INR",
+            },
+        )
+
+    provider = RazorpayPaymentProvider(
+        RazorpayClient(
+            key_id="rzp_test_k",
+            key_secret="s",
+            base_url=get_settings().razorpay_api_base_url,
+            timeout_seconds=5,
+            transport=httpx.MockTransport(wrong_identity),
+        )
+    )
+    with pytest.raises(RazorpayProviderStateConflict) as exc:
+        reconcile_attempt(
+            repos=repos,
+            provider=provider,
             attempt_id=attempt_id,
             now=datetime.now(UTC),
         )

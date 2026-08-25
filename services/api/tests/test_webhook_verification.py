@@ -24,7 +24,15 @@ def _payload(event: str = "payment.captured", order_id: str = "order_w1") -> byt
             "entity": "event",
             "event": event,
             "payload": {
-                "payment": {"entity": {"id": "pay_w1", "order_id": order_id, "status": "captured"}}
+                "payment": {
+                    "entity": {
+                        "id": "pay_w1",
+                        "order_id": order_id,
+                        "status": "captured",
+                        "amount": 100000,
+                        "currency": "INR",
+                    }
+                }
             },
         }
     ).encode()
@@ -194,6 +202,24 @@ def test_unknown_event_type_accepted_ignored(hook_client: TestClient) -> None:
     assert res.status_code == 200
     body = res.json()
     assert body["processed"] is False and body["reason"] == "IGNORED_EVENT_TYPE"
+
+
+@pytest.mark.parametrize("provider_payload", [[], {"payment": []}, {"order": []}])
+def test_signed_malformed_event_envelope_is_controlled_noop(
+    hook_client: TestClient, provider_payload: object
+) -> None:
+    raw = json.dumps({"event": "payment.captured", "payload": provider_payload}).encode()
+    res = hook_client.post(
+        "/api/v1/webhooks/razorpay",
+        content=raw,
+        headers={
+            "X-Razorpay-Signature": _sign(raw),
+            "x-razorpay-event-id": f"evt_malformed_{uuid.uuid4()}",
+        },
+    )
+
+    assert res.status_code == 200
+    assert res.json()["processed"] is False
 
 
 # ---------------------------------------------------------------------------

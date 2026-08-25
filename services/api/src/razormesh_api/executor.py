@@ -34,8 +34,10 @@ from razormesh_api.persistence.repositories import Repositories
 from razormesh_api.providers.razorpay import (
     RazorpayError,
     RazorpayPaymentProvider,
+    RazorpayProviderStateConflict,
     RazorpayUnknownOutcomeError,
     build_order_correlation,
+    validate_order_authority,
 )
 from razormesh_api.spend import SpendManager
 from razormesh_api.tickets import (
@@ -333,6 +335,64 @@ class TrustedPaymentExecutor:
             )
             return settled
 
+        try:
+            validate_order_authority(
+                order,
+                amount_minor=attempt.amount_minor,
+                currency=attempt.currency,
+                receipt=receipt,
+            )
+            if order.status != "created":
+                raise RazorpayProviderStateConflict(
+                    "RAZORPAY_PROVIDER_STATE_CONFLICT",
+                    f"new provider order returned unexpected status {order.status!r}",
+                )
+        except RazorpayProviderStateConflict as exc:
+            # The provider created an order, but its returned authority does
+            # not match the exact transaction we authorized. Preserve the
+            # known provider identity and reservation for reconciliation; the
+            # mismatched order is never exposed to Checkout (P2-S05/S06).
+            from sqlalchemy.exc import IntegrityError
+
+            try:
+                with self._repos.transaction() as session:
+                    row = session.get(
+                        ExecutionAttempt, attempt.execution_attempt_id, with_for_update=True
+                    )
+                    if row is None:
+                        raise ValueError(
+                            f"attempt vanished: {attempt.execution_attempt_id}"
+                        ) from exc
+                    row.razorpay_order_id = order.order_id
+                    row.razorpay_order_status = order.status
+                    row.updated_at = now
+            except IntegrityError:
+                # A contradictory response may name an order already claimed
+                # by another execution. Keep the returned id as non-authority
+                # evidence only; the unique durable correlation must not move.
+                pass
+            settled = self._settle(
+                attempt.execution_attempt_id,
+                AttemptState.PROVIDER_UNKNOWN,
+                now,
+                provider_reference=order.order_id,
+                error_code=exc.code,
+                reconcile_state="REQUIRED",
+            )
+            EvidenceLedger(self._repos).append(
+                event_type="RAZORPAY_ORDER_AUTHORITY_CONFLICT",
+                actor="trusted-payment-executor",
+                intent_id=settled.intent_id,
+                checkout_id=settled.checkout_id,
+                ticket_id=settled.ticket_id,
+                payload={
+                    "execution_attempt_id": settled.execution_attempt_id,
+                    "razorpay_order_id": order.order_id,
+                    "reason_code": exc.code,
+                },
+            )
+            return settled
+
         with self._repos.transaction() as session:
             row = session.get(ExecutionAttempt, attempt.execution_attempt_id, with_for_update=True)
             if row is None:
@@ -404,13 +464,23 @@ class TrustedPaymentExecutor:
         attempt = self._repos.attempts.get(ExecutionAttemptId(attempt_id))
         if attempt is None:
             raise ValueError(f"unknown attempt {attempt_id}")
-        settled = self._settle(
-            attempt_id,
-            AttemptState.SUCCEEDED,
-            now,
-            provider_reference=provider_payment_id,
-            apply_in_lock=lambda row: _apply_capture(row, provider_payment_id),
-        )
+        try:
+            self.validate_settlement_authority(attempt_id, now=now)
+            settled = self._settle(
+                attempt_id,
+                AttemptState.SUCCEEDED,
+                now,
+                provider_reference=provider_payment_id,
+                apply_in_lock=lambda row: _apply_capture(row, provider_payment_id),
+            )
+        except RazorpayProviderStateConflict as exc:
+            self.record_capture_authority_conflict(
+                attempt_id,
+                provider_payment_id=provider_payment_id,
+                error=exc,
+                now=now,
+            )
+            raise
         EvidenceLedger(self._repos).append(
             event_type="RAZORPAY_PAYMENT_VERIFIED",
             actor="trusted-payment-executor",
@@ -424,6 +494,123 @@ class TrustedPaymentExecutor:
             },
         )
         return settled
+
+    def record_capture_authority_conflict(
+        self,
+        attempt_id: str,
+        *,
+        provider_payment_id: str,
+        error: RazorpayProviderStateConflict,
+        now: datetime,
+    ) -> None:
+        """Persist captured provider truth without granting stale fulfilment."""
+        attempt = self._repos.attempts.get(ExecutionAttemptId(attempt_id))
+        if attempt is None:
+            raise ValueError(f"attempt vanished: {attempt_id}") from error
+        with self._repos.transaction() as session:
+            row = session.get(ExecutionAttempt, attempt_id, with_for_update=True)
+            if row is None:
+                raise ValueError(f"attempt vanished: {attempt_id}") from error
+            row.razorpay_payment_id = provider_payment_id
+            row.razorpay_payment_status = "captured"
+            row.reconcile_state = "REQUIRED"
+            row.error_code = error.code
+            row.updated_at = now
+        EvidenceLedger(self._repos).append(
+            event_type="RAZORPAY_CAPTURE_AUTHORITY_CONFLICT",
+            actor="trusted-payment-executor",
+            intent_id=attempt.intent_id,
+            checkout_id=attempt.checkout_id,
+            ticket_id=attempt.ticket_id,
+            payload={
+                "execution_attempt_id": attempt_id,
+                "razorpay_payment_id": provider_payment_id,
+                "reason_code": error.code,
+            },
+        )
+
+    def validate_settlement_authority(
+        self, attempt_id: str, *, now: datetime | None = None
+    ) -> None:
+        """Revalidate the ticket-bound durable context before fulfilment.
+
+        Order creation already passed the provider-boundary gate, but the
+        browser remains untrusted and time can pass before callback/webhook
+        evidence arrives. A superseded intent or authorization-relevant
+        checkout drift must not become fulfilment authority (master M24).
+        """
+        with self._repos.transaction() as session:
+            attempt = session.get(ExecutionAttempt, attempt_id, with_for_update=True)
+            if attempt is None:
+                raise ValueError(f"unknown attempt {attempt_id}")
+            self._validate_settlement_authority_in_session(
+                session, attempt, now=now or datetime.now(UTC)
+            )
+
+    @staticmethod
+    def _validate_settlement_authority_in_session(
+        session, attempt: ExecutionAttempt, *, now: datetime
+    ) -> None:  # type: ignore[no-untyped-def]
+        """Validate and lock all settlement authority in one DB transaction."""
+        from razormesh_api.persistence.models import Checkout, Decision, ExecutionTicket
+        from razormesh_api.persistence.models import IntentContract as RowIntent
+        from razormesh_api.revalidation import Revalidator, domain_intent_from_row
+
+        ticket = session.get(ExecutionTicket, attempt.ticket_id, with_for_update=True)
+        decision = (
+            session.get(Decision, ticket.decision_id, with_for_update=True)
+            if ticket is not None
+            else None
+        )
+        intent = session.get(RowIntent, attempt.intent_id, with_for_update=True)
+        checkout = session.get(Checkout, attempt.checkout_id, with_for_update=True)
+        if ticket is None or decision is None or intent is None or checkout is None:
+            raise RazorpayProviderStateConflict(
+                "RAZORPAY_PAYMENT_CONTEXT_MISMATCH",
+                "ticket-bound durable settlement authority is missing",
+            )
+        if (
+            ticket.intent_id != attempt.intent_id
+            or decision.intent_id != attempt.intent_id
+            or decision.checkout_id != attempt.checkout_id
+            or decision.decision != "ALLOW"
+            or decision.intent_generation != ticket.authorization_generation
+            or decision.checkout_hash != ticket.checkout_hash
+            or decision.policy_version != ticket.policy_version
+            or ticket.amount_minor != attempt.amount_minor
+            or ticket.currency != attempt.currency
+        ):
+            raise RazorpayProviderStateConflict(
+                "RAZORPAY_PAYMENT_CONTEXT_MISMATCH",
+                "execution attempt no longer matches its durable ticket",
+            )
+        if (
+            intent.status != IntentStatus.AUTHORIZED.value
+            or intent.authorization_generation != ticket.authorization_generation
+            or now >= intent.expires_at
+            or intent_authorization_hash(domain_intent_from_row(intent)) != ticket.intent_hash
+        ):
+            raise RazorpayProviderStateConflict(
+                "RAZORPAY_PAYMENT_CONTEXT_MISMATCH",
+                "current authorization rejected capture settlement",
+            )
+        if checkout.revision != ticket.checkout_revision:
+            raise RazorpayProviderStateConflict(
+                "RAZORPAY_PAYMENT_CONTEXT_MISMATCH",
+                "current checkout revision rejected capture settlement",
+            )
+        try:
+            checkout_hash = checkout_authorization_hash(Revalidator.rebuild_envelope(checkout))
+        except Exception as exc:
+            raise RazorpayProviderStateConflict(
+                "RAZORPAY_PAYMENT_CONTEXT_MISMATCH",
+                "current checkout cannot be rebuilt for capture settlement",
+            ) from exc
+        if checkout_hash != ticket.checkout_hash:
+            raise RazorpayProviderStateConflict(
+                "RAZORPAY_PAYMENT_CONTEXT_MISMATCH",
+                "current checkout rejected capture settlement",
+            )
 
     def resolve_unknown(
         self,
@@ -548,6 +735,7 @@ class TrustedPaymentExecutor:
         error_code: str | None = None,
         reconcile_state: str | None = None,
         apply_in_lock: Callable[[ExecutionAttempt], None] | None = None,
+        release_reservation_on_failure: bool = True,
     ) -> ExecutionAttempt:
         """Atomically settle attempt state and its reservation in PostgreSQL."""
         with self._repos.transaction() as session:
@@ -555,11 +743,16 @@ class TrustedPaymentExecutor:
             if attempt is None:
                 raise ValueError(f"attempt vanished: {attempt_id}")
             require_transition(attempt.state, target.value)
+            if target is AttemptState.SUCCEEDED:
+                self._validate_settlement_authority_in_session(session, attempt, now=now)
             if self._spend is not None:
                 spend = session.get(AuthorizationSpend, attempt.intent_id, with_for_update=True)
                 if spend is None:
                     raise ValueError(f"reservation vanished for {attempt.intent_id}")
-                if target in (AttemptState.SUCCEEDED, AttemptState.FAILED):
+                settles_spend = target is AttemptState.SUCCEEDED or (
+                    target is AttemptState.FAILED and release_reservation_on_failure
+                )
+                if settles_spend:
                     if spend.reserved_minor < attempt.amount_minor:
                         raise ValueError("reservation is smaller than the execution attempt")
                     spend.reserved_minor -= attempt.amount_minor
@@ -622,13 +815,49 @@ class TrustedPaymentExecutor:
         *,
         error_code: str,
         now: datetime,
+        release_reservation: bool = False,
     ) -> ExecutionAttempt:
-        """Settle EXECUTING -> FAILED on a definitive provider failure event.
+        """Record provider failure while retaining capacity by default.
 
-        Atomic settlement releases the reservation (D-028). Late capture may
-        still reconcile via reconcile_failed_to_succeeded (P2-S16).
+        Razorpay documents a failed payment that later becomes captured. The
+        hold therefore remains until capture or an explicit terminal operator
+        resolution proves release is safe. Pre-provider failures use the
+        separate compensation path and continue to release immediately.
         """
-        return self._settle(attempt_id, AttemptState.FAILED, now, error_code=error_code)
+        return self._settle(
+            attempt_id,
+            AttemptState.FAILED,
+            now,
+            error_code=error_code,
+            reconcile_state="REQUIRED" if not release_reservation else None,
+            release_reservation_on_failure=release_reservation,
+        )
+
+    def record_provider_unknown(
+        self,
+        attempt_id: str,
+        *,
+        error_code: str,
+        now: datetime,
+    ) -> ExecutionAttempt:
+        """Persist uncertainty discovered after order creation/callback.
+
+        The reservation remains held and reconciliation is required. Re-entry
+        cannot create a fresh order because the ticket-derived attempt identity
+        already exists (P2-S17..S19).
+        """
+        attempt = self._repos.attempts.get(ExecutionAttemptId(attempt_id))
+        if attempt is None:
+            raise ValueError(f"unknown attempt {attempt_id}")
+        if attempt.state == AttemptState.PROVIDER_UNKNOWN.value:
+            return attempt
+        return self._settle(
+            attempt_id,
+            AttemptState.PROVIDER_UNKNOWN,
+            now,
+            error_code=error_code,
+            reconcile_state="REQUIRED",
+        )
 
     def reconcile_failed_to_succeeded(
         self,
@@ -655,14 +884,27 @@ class TrustedPaymentExecutor:
             row = session.get(ExecutionAttempt, attempt_id, with_for_update=True)
             if row is None or row.state != AttemptState.FAILED.value:
                 raise IllegalAttemptTransition("attempt changed during reconciliation")
+            self._validate_settlement_authority_in_session(session, row, now=now)
             spend_row = session.get(AuthorizationSpend, row.intent_id, with_for_update=True)
             if spend_row is None:
                 raise ValueError(f"authorization capacity missing for {row.intent_id}")
-            room = spend_row.authorized_minor - spend_row.reserved_minor - spend_row.committed_minor
-            if room < row.amount_minor:
-                raise IllegalAttemptTransition(
-                    "insufficient authorization capacity for late-capture reconciliation"
+            if spend_row.reserved_minor >= row.amount_minor:
+                # Current Razorpay failure handling retains the original hold:
+                # documented failed->captured delivery cannot race a fresh use
+                # of the same authorization capacity (P2-S16/P2-S24).
+                spend_row.reserved_minor -= row.amount_minor
+            else:
+                # Backward-compatible recovery for historical rows created
+                # before the conservative hold was introduced.
+                room = (
+                    spend_row.authorized_minor
+                    - spend_row.reserved_minor
+                    - spend_row.committed_minor
                 )
+                if room < row.amount_minor:
+                    raise IllegalAttemptTransition(
+                        "insufficient authorization capacity for late-capture reconciliation"
+                    )
             spend_row.committed_minor += row.amount_minor
             spend_row.version += 1
             spend_row.updated_at = now

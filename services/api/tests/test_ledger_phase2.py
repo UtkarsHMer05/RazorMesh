@@ -187,6 +187,7 @@ def test_callback_verified_appends_exactly_once(m44_env, api_client) -> None:  #
     order_id = _order(repos, attempt_id)
 
     body = {
+        "execution_attempt_id": attempt_id,
         "intent_id": intent_id,
         "checkout_id": checkout_id,
         "razorpay_payment_id": "pay_m44_cb",
@@ -219,6 +220,7 @@ def test_forged_callback_grows_nothing(m44_env, api_client) -> None:  # type: ig
     res = api_client.post(
         "/buyer/callback",
         json={
+            "execution_attempt_id": attempt_id,
             "intent_id": intent_id,
             "checkout_id": checkout_id,
             "razorpay_payment_id": "pay_forged",
@@ -278,7 +280,7 @@ def test_webhook_ingested_event_winner_only(m44_env, wh_client) -> None:  # type
 
     body = (
         '{"event":"payment.captured","payload":{"payment":{"entity":'
-        '{"id":"pay_m44_wh","order_id":"' + order_id + '"}}}}'
+        '{"id":"pay_m44_wh","order_id":"' + order_id + '","amount":100000,"currency":"INR"}}}}'
     ).encode()
     # Event ids are unique PER RUN: the durable inbox persists across pytest
     # sessions and would classify a repeated id as DUPLICATE by design.

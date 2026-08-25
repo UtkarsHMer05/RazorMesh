@@ -263,19 +263,27 @@ The final Phase-1 gate must also prove:
 
 Release-blocking additions on top of all Phase-1 gates:
 
-1. Config guards: live-key rejection; missing-credential refusal naming variables
-   only; mock mode credential-free.
-2. Order creation: server-authoritative amount/currency; correlation persisted;
-   provider-unknown mapping on timeout-before-response and timeout-after-send.
-3. Callback verification: valid, forged, mutated payment id, wrong order context,
-   replayed, superseded authorization, stale checkout, duplicate → only the first
-   legitimate verified callback may commit.
+1. Config guards: live-key rejection; only `rzp_test_` key ids and the official
+   HTTPS API base URL accepted for Razorpay execution; missing-credential refusal
+   names variables only; mock mode remains credential-free.
+2. Order creation: server-authoritative amount/currency; returned id, amount,
+   currency, receipt and create status validated before launch; correlation
+   persisted; mismatched response and timeouts map to provider-unknown with the
+   reservation held.
+3. Callback verification: exact server-issued execution-attempt binding; valid,
+   forged, mutated payment id, wrong intent/checkout/order context, replayed,
+   superseded authorization, stale checkout, duplicate → only a current,
+   legitimately correlated callback may commit.
 4. Webhook: raw-body HMAC tests (valid, one-byte mutation, reserialization
    mismatch, wrong secret, missing header); durable event-id dedup under
-   concurrency; unknown event types handled safely.
-5. Reducer permutations: authorized→captured, captured→authorized,
+   concurrency; unknown event types and signed malformed envelopes handled as
+   controlled no-ops.
+5. Reducer permutations: event amount/currency must match durable authority;
+   authorized→captured, captured→authorized,
    failed→captured, order.paid→captured, captured→order.paid, duplicates,
-   delayed events → converge with exactly one commit/fulfilment effect.
+   delayed events → converge with exactly one commit/fulfilment effect. A
+   failed payment retains its hold, blocks authorization-capacity reuse, and a
+   later capture converts that hold to committed exactly once.
 6. Provider-unknown: fault injection proves identity + reservation retention and
    reconciliation (never blind retry).
 7. Concurrency regression WITH the real-provider adapter present (mock transport
@@ -294,7 +302,7 @@ Release-blocking additions on top of all Phase-1 gates:
     read-only and mirrors the authoritative attempt state (EXECUTING→FAILED
     transition visible; no secrets; unknown context → controlled
     `NO_ATTEMPT`); a verified failure settlement leaves a later browser
-    callback inert (FAILED preserved, release intact, no re-reserve/commit,
+    callback inert (FAILED preserved, reservation hold intact, no commit,
     NOT_ELIGIBLE); the callback's not-captured response reports the CURRENT
     state even when a webhook settles mid-request; the frontend re-syncs on
     modal dismiss, hides Re-open on FAILED, and renders SUCCEEDED as

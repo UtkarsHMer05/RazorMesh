@@ -117,7 +117,8 @@ class Revalidator:
     def __init__(self, repos: Repositories) -> None:
         self._repos = repos
 
-    def rebuild_envelope(self, row: RowCheckout) -> CheckoutEnvelope:
+    @staticmethod
+    def rebuild_envelope(row: RowCheckout) -> CheckoutEnvelope:
         """Rebuild the envelope EXACTLY from durable authorization-relevant fields."""
 
         def _line(d: dict[str, Any]) -> LineItem:

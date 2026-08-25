@@ -68,7 +68,7 @@
 ## M01 — Repository and Governance Integrity Re-read
 
 MILESTONE: M01
-STATUS: IN_PROGRESS
+STATUS: PASS
 
 Requirements: master prompt §1/§6/§13 (governance integrity, .env reconciliation prep, scaffold).
 Security invariants: S10/S11/S30 (secret hygiene), P2-S01..S04 groundwork.
@@ -1941,3 +1941,139 @@ No code changed in this milestone; last full gate battery = M48/M49 records.
 - NONE this milestone.
 
 **STOP — awaiting human approval for Phase 3.**
+
+---
+
+## Addendum — Post-completion verification (2026-08-25)
+
+Human-requested audit: re-read the full governance set, then re-run the ENTIRE
+gate battery from a clean working tree to confirm every recorded PASS remains
+reproducible. No milestone work; no scope change.
+
+### Defect found and fixed
+
+`ruff format --check` FAILED on two files committed after M43:
+- `services/api/src/razormesh_api/evaluation.py`
+- `services/api/tests/test_reconciliation.py`
+
+Root cause: M43's evidence block (above) recorded `ruff check . -> clean` but
+omitted `ruff format --check`, which TESTING.md §15 makes part of the format
+gate — the same class of miss the M37 audit remediated for M31/M32. Fix:
+whitespace-only `ruff format` on the two files (37 insertions / 19 deletions,
+zero logic change); full format+lint gate re-run clean. M43's historical
+entry is preserved unmodified; this addendum documents the reconciliation.
+
+### Battery re-run results (all green)
+
+```text
+ruff format --check / ruff check   → clean / clean (after the fix above)
+mypy strict (-p razormesh_api)     → Success, no issues in 54 source files
+pytest (full)                      → 353 passed
+pnpm lint / typecheck              → clean / clean
+vitest                             → 11 passed (3 files)
+next build                         → OK, 6 routes prerendered
+playwright                         → 5 passed
+make security-check                → PASS (secret scan 0; pip-audit clean; pnpm audit clean)
+make benchmark                     → 20 pairs TP20/FP0/TN20/FN0, F1=1.0;
+                                      regenerated artifact BYTE-IDENTICAL to committed
+live acceptance (mock mode API)    → scripts/acceptance.py 10/10 PASS incl.
+                                      20-worker race = 1 effect, lab 22/22,
+                                      chain verify, tamper detected w/o mutation
+/ready honesty                     → mock override → provider=mock; no override
+                                      → provider=razorpay (both truthful)
+```
+
+### Real Razorpay interaction
+
+- NONE this session (mock-mode API only; no orders, payments or webhooks).
+
+### State after
+
+Working tree carries the two formatting fixes + this documentation update,
+left UNCOMMITTED (no commit authorization given). Phase 2 remains COMPLETE;
+STOP for Phase-3 human approval remains in effect.
+
+---
+
+## Addendum — Independent master-prompt logical audit (2026-08-25)
+
+Human-requested full Phase-2 validation against the attached master prompt.
+This audit did not assume that a green historical suite proved requirement
+completeness. It preserved the milestone history and repaired only concrete
+authority, correlation, settlement and evidence gaps.
+
+### Findings repaired
+
+1. Created provider orders were launched without validating the returned
+   amount, currency, receipt or create status. Created/fetched orders now share
+   exact id (when known), amount, currency and receipt validation; missing
+   receipt is a context conflict. An unexpected create response stays
+   PROVIDER_UNKNOWN/REQUIRED with its reservation held and is never launched.
+2. Callback lookup selected the latest attempt using browser-supplied intent
+   and checkout. The public launch/callback contract now carries the exact
+   server-issued `execution_attempt_id`, then independently matches its intent,
+   checkout and stored order. Cross-attempt/cross-principal-session replay is
+   rejected without mutation.
+3. A valid callback fetched provider state but did not revalidate current
+   authorization/checkout authority before capture settlement. Captured truth
+   after supersession or checkout drift is now retained as reconciliation
+   evidence but cannot commit spend or make fulfilment eligible.
+4. Webhook financial events did not enforce provider amount/currency against
+   the durable attempt. The raw-body verified projection now carries these
+   fields and the reducer rejects mismatches before settlement.
+5. `payment.failed` released authorization capacity even though R-014 and the
+   master prompt require safe failed→captured reconciliation. A fresh use could
+   consume the released room before a late capture. Failure now stays
+   FAILED/NOT_ELIGIBLE with reservation held and reconciliation REQUIRED;
+   verified late capture converts the same hold to committed exactly once.
+   Pre-provider definitive rejection still compensates immediately.
+6. Real-provider configuration rejected only `rzp_live_`, allowing arbitrary
+   non-test key prefixes and alternate API endpoints. Razorpay execution now
+   requires `rzp_test_` and the official HTTPS API base URL.
+7. A validly signed webhook with a structurally malformed payload envelope
+   could raise an uncontrolled 500 after HMAC verification. Nested provider
+   entities are now type-checked and malformed envelopes return a controlled,
+   zero-business-mutation response.
+8. Documentation had a contradictory detailed M01 `IN_PROGRESS` marker and a
+   non-approved completion phrase/obsolete final HEAD. These are reconciled;
+   historical live evidence remains intact and D-037 records the superseding
+   behavior.
+
+### New/expanded permanent regressions
+
+- provider create/fetch id, amount, currency, receipt and status mismatch;
+- exact callback attempt binding, browser-context rebinding and callback replay
+  across distinct principal sessions;
+- superseded authorization and stale checkout immediately before settlement;
+- financial webhook amount/currency mismatch;
+- signed malformed webhook envelope variants;
+- failure hold blocks concurrent authorization-capacity reuse, then late
+  capture commits exactly once;
+- invalid Test key prefix/API endpoint refusal;
+- frontend callback wire carries the exact execution attempt id.
+
+### Final audit battery
+
+```text
+ruff format --check / ruff check  → clean / clean
+mypy -p razormesh_api             → Success, 54 source files
+pytest (full)                     → 375 passed
+frontend eslint / tsc             → clean / clean
+vitest / Next build               → 11 passed / 6 routes built
+Playwright                        → 5 passed
+make security-check               → PASS; secret scan 0, dependency audits clean
+make benchmark                    → 20 pairs, TP20/FP0/TN20/FN0, F1=1.0
+Alembic dedicated test DB         → head→previous→head round-trip PASS
+live mock acceptance              → all 10 checks PASS; 20-worker=1 effect;
+                                    Security Lab 22/22; audit/tamper PASS
+Razorpay auth diagnostic          → current Test credentials accepted (read-only)
+trusted Test order create/fetch   → order_TTrDgDl63O45Xi; created; exact
+                                    amount/currency/receipt match; no checkout/payment
+```
+
+### State after audit
+
+All identified defects are repaired and the full Phase-2 exit battery is
+green. Phase 3 remains unstarted and requires the human owner's explicit
+approval. Audit changes are intentionally left uncommitted because this request
+did not authorize a local commit; no push was attempted.

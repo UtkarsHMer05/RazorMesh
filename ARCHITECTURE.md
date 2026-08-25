@@ -527,14 +527,17 @@ fault injection.
 RazorGuard ALLOW -> reservation -> ExecutionTicket -> durable ExecutionAttempt
     -> trusted executor
         -> RazorpayPaymentProvider.create_order (server-authoritative amount/currency)
+        -> validate returned id/amount/currency/receipt/status before launch
         -> launch payload (PUBLIC key id + order id + amount/currency) to browser
     -> Standard Checkout in browser (handler flow)
-        -> client callback {payment_id, order_id, signature}
+        -> client callback {execution_attempt_id, payment_id, order_id, signature}
+            -> exact attempt + intent + checkout + stored-order correlation
             -> server verification: HMAC-SHA256(SERVER-stored order_id|payment_id)
         -> verified webhook (raw body) + x-razorpay-event-id dedup
         -> provider fetch reconciliation
     -> provider-state reducer (callback | webhook | fetch feed ONE reducer)
-        -> captured/paid evidence -> exactly-once reservation commit
+        -> captured/paid evidence -> current-authority revalidation
+        -> exactly-once reservation commit or captured-truth reconciliation hold
         -> synthetic fulfilment state -> Evidence Ledger
 ```
 
@@ -543,12 +546,14 @@ RazorGuard ALLOW -> reservation -> ExecutionTicket -> durable ExecutionAttempt
 - internal execution attempt: CREATED/EXECUTING/PROVIDER_UNKNOWN/SUCCEEDED/FAILED
 - provider order: created/attempted/paid (+ documented states)
 - provider payment: authorized/captured/failed
-- reservation: RESERVED/COMMITTED/RELEASED (existing semantics unchanged)
+- reservation: RESERVED/COMMITTED/RELEASED (provider failure remains RESERVED
+  until later capture or explicit terminal resolution)
 - fulfilment: NOT_ELIGIBLE / ELIGIBLE / FULFILLED_SYNTHETIC
 
 `payment.failed → payment.captured` for the same transaction is documented Razorpay
 behavior (UPI TPAP retries/late auth); failure is therefore never modeled as an
-unrecoverable terminal for reconciliation purposes. Durable correlation lives in
+unrecoverable terminal for reconciliation purposes and does not release capacity
+while later capture remains possible. Durable correlation lives in
 PostgreSQL (provider order/payment/event ids with uniqueness constraints); Redis
 stays coordination-only.
 
@@ -573,9 +578,10 @@ for PROVIDER_UNKNOWN attempts:
 2. Fetch validation: reconcile_attempt revalidates amount/currency/receipt on
    every fetch; mismatches raise loudly and mutate nothing (P2-S06).
 3. Settlement: fetched `paid` is reduced as order.paid through the ONE reducer
-   (exactly-once); every terminal settlement marks reconcile_state=RESOLVED;
-   other statuses only snapshot — the attempt keeps identity+reservation and
-   waits for outcome evidence.
+   (exactly-once). Successful settlement marks reconcile_state=RESOLVED;
+   provider failure remains REQUIRED with its reservation held; other statuses
+   only snapshot — the attempt keeps identity+reservation and waits for outcome
+   evidence.
 
 Ops surface (read-only unless explicitly invoked):
 - GET /ops/reconciliation/required — REQUIRED attempts, safe fields, zero mutation;

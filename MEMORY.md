@@ -28,12 +28,12 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 # Current snapshot
 
-**Project:** RazorMesh Trust  
-**Active phase:** Phase 2 — Razorpay Test Mode Integration (ACTIVE since P2-M05)  
-**Current milestone:** P2-M41 — NOT_STARTED (provider-unknown / timeout reconciliation via local fault injection)  
-**Phase-2 milestones passed:** P2-M01..P2-M40  
-**Last updated:** 2026-08-25  
-**Gate:** M40 PASSED on the human's ONE failure checkout (order_TTionNHkv0TPGs / pay_TTipbCGaqWBrVD, 479900 INR, attempt exa_01M0TKTPWPR593Y4HNW48BF0SE): real payment.failed webhook TTiphMTgXsdq0K verified=true PROCESSED → atomic EXECUTING→FAILED, reservation released EXACTLY ONCE (spend v3 ensure→reserve→release; reserved=0, committed=0; M38 row untouched), PAYMENT_FAILED audited (chain valid, 13 events), provider fetch order=attempted/payment=failed, fulfilment NOT_ELIGIBLE, no callback (correct for failure). Reported stale-EXECUTING UI = propagation gap, NOT a reconciliation defect → D-035: read-only GET /buyer/status + modal ondismiss re-sync + manual refresh + FAILED hides Re-open; callback not-captured response re-reads fresh state; reducer dead-code artifact removed. Evidence captured BEFORE any test run: docs/PHASE2_M40_EVIDENCE.md. Suite 333/333 (new: status-endpoint + 2 callback race regressions + 3 frontend re-sync tests); dev DB byte-identical after runs. Race proof: _settle = FOR UPDATE + require_transition + spend effect in one txn; terminal states have empty transition sets; inbox PK dedup; callback never settles FAILED — no interleaving leaves EXECUTING (narrow failed-vs-captured window is money-safe, recovery = M41 scope).
+**Project:** RazorMesh Trust
+**Active phase:** Phase 2 COMPLETE — awaiting human approval for Phase 3
+**Current milestone:** none active (P2-M50 PASS; STOP gate in effect)
+**Phase-2 milestones passed:** P2-M01..P2-M50 (all 50)
+**Last updated:** 2026-08-25
+**Gate:** Independent master-prompt audit (2026-08-25) found and repaired gaps hidden by the prior green suite: provider create/fetch authority validation; exact callback attempt and cross-principal-session binding; current authorization/checkout revalidation at captured settlement; webhook amount/currency correlation; conservative failed-payment reservation hold preventing late-capture overspend; and strict `rzp_test_`/official-endpoint configuration. Final battery: Ruff + mypy clean; pytest 375/375; frontend lint/tsc, Vitest 11/11, build, Playwright 5/5; security-check zero findings; benchmark 20 pairs F1=1.0; migration down/up; live mock acceptance 10/10 with Security Lab 22/22; current Test auth diagnostic; trusted Test order create/fetch exact match, no checkout/payment. D-037 + PHASE2_STATUS final addendum are authoritative. Changes remain uncommitted; no push. Phase 3 still requires explicit human approval.
 
 ---
 
@@ -77,7 +77,7 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 - Unknown provider outcome is not blindly retried.
 - Checkout is revalidated before execution.
 - Audit is append-oriented and tamper-evident.
-- Phase 1 uses a mock provider only.
+- Phase 1 uses a mock provider only; Phase 2 permits Razorpay Test Mode only.
 
 ---
 
@@ -137,12 +137,15 @@ None recorded.
 
 # Active decisions
 
-See `DECISIONS.md`, currently D-001 through D-035 (D-032: M36 signed-webhook
+See `DECISIONS.md`, currently D-001 through D-037 (D-032: M36 signed-webhook
 proof deferred to M38 — satisfied by 7 real deliveries; D-033: M38
 spend-commit defect remediation + hard test/dev DB separation +
 UNMATCHED_CONTEXT classification; D-034: payment.authorized informative-only
 in every attempt state; D-035: UI re-syncs payment truth via read-only
 GET /buyer/status — browser is never a source of payment truth).
+D-037 supersedes release-on-provider-failure: provider failure retains the
+reservation until verified late capture or explicit terminal resolution, and
+all callback/provider evidence is correlated to current durable authority.
 
 ---
 
@@ -150,37 +153,28 @@ GET /buyer/status — browser is never a source of payment truth).
 
 - ESLint 9.39.5 is EOL but retained as a dev-only compatibility exception because the current Next 16.3.2 plugin stack crashes under ESLint 10.9.0. Re-test when upstream peers add v10 support.
 - Benchmark safe controls are synthetic fixture twins; metrics must never be generalized beyond the recorded suite.
+- Failed Razorpay payments conservatively retain reservation capacity while a late capture remains possible; Phase 2 has no automated terminal-release workflow because elapsed time alone is not provider truth.
 
 ---
 
 # Next action
 
 PHASE 2 COMPLETE (all 50 milestones PASS) — AWAITING HUMAN APPROVAL FOR PHASE 3.
-Completion report: docs/PHASE2_COMPLETION_REPORT.md. Final suite 353 backend +
-11 vitest + 5 Playwright; mypy strict 54 files both roots; benchmark 20 pairs
-F1=1.0; security battery green. Do NOT start Phase 3 without explicit human
-instruction. If asked to continue anything: verify gates first, then follow
-the resume protocol below. Historical M49 notes: clean-room PASS; findings fixed —
-(a) rzp_first_order ghost reservation removed (executor owns D-028 reservation),
-(b) NEW `make test-db` provisions razormesh_test after volume resets (suite
-needs it; migrate alone does NOT create it). M48 done: full gate battery green, zero findings (see PHASE2_STATUS M48 table).
-M47 done: PHASE2_PERFORMANCE.json — local path p50 58.5ms vs create 111-497ms /
-fetch 430-537ms network (separated); callback HMAC 2us; webhook e2e 67.6ms.
-M46 done: e2e/checkout.spec.ts stubs checkout.js +
-API boundary; success/failure/unknown paths; DOM+wire secret scans; PW 5/5.
-M45 done: unknown offers NO
-payment action (refresh only), authorization-binding explanation, aria-live,
-reduced-motion + responsive CSS. M44 done: CALLBACK_VERIFIED (exactly-once) +
-WEBHOOK_INGESTED (winner-only, attempt-correlated) + RECONCILIATION_RUN ledger
-events; test_ledger_phase2.py 5 tests. Done earlier: M41 (D-036 discovery+claim+RESOLVED +
-ops surface), M42 (concurrency single-effect proofs), M43 (lab 22/22 incl. 6
-new SYNTHETIC provider-evidence families; benchmark 20 pairs F1=1.0; lesson:
-synthetic event/payment ids must be unique per execution). Suite 347. Tunnel/share: if the zrok
-share dies, re-run make phase2-up and UPDATE the Dashboard URL + .env
-RAZORPAY_WEBHOOK_PUBLIC_URL (share is not reserved). Payment-#1 retry 403s
-(old secret) may still tail off; zero-mutation by design. M45 candidate
-from M40: page reload resets buyer component state — no cross-session
-attempt redisplay yet.
+Completion report: docs/PHASE2_COMPLETION_REPORT.md.
+
+POST-COMPLETION VERIFICATION (2026-08-25): initial formatting-only audit found
+and fixed two unformatted files; the later independent logical audit supersedes
+its completion assessment. Current evidence is the D-037/PHASE2_STATUS final
+addendum and the 375-test gate above. Do NOT start Phase 3 without explicit
+human instruction.
+
+Still-relevant operational notes: `make test-db` must re-provision
+razormesh_test after any `docker compose down -v` (migrate alone does NOT
+create it). If the zrok share dies, re-run `make phase2-up` and UPDATE the
+Dashboard webhook URL + `.env` RAZORPAY_WEBHOOK_PUBLIC_URL (share is not
+reserved); stale-secret retry 403s are zero-mutation by design. Known UI
+debt: page reload resets buyer component state — no cross-session attempt
+redisplay yet. Per-milestone detail (M41–M50) lives in PHASE2_STATUS.md.
 
 ---
 

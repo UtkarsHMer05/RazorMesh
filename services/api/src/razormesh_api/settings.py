@@ -72,10 +72,19 @@ def validate_payment_provider_config(settings: Settings) -> None:
     if settings.payment_provider == "razorpay":
         if not settings.razorpay_key_id:
             problems.append("RAZORPAY_KEY_ID is required when PAYMENT_PROVIDER=razorpay")
+        elif not settings.razorpay_key_id.startswith("rzp_test_"):
+            problems.append(
+                "RAZORPAY_TEST_MODE_REQUIRED: RAZORPAY_KEY_ID must use the test-mode prefix"
+            )
         if not settings.razorpay_key_secret.get_secret_value():
             problems.append("RAZORPAY_KEY_SECRET is required when PAYMENT_PROVIDER=razorpay")
         if not settings.razorpay_webhook_secret.get_secret_value():
             problems.append("RAZORPAY_WEBHOOK_SECRET is required when PAYMENT_PROVIDER=razorpay")
+        if settings.razorpay_api_base_url.rstrip("/") != "https://api.razorpay.com/v1":
+            problems.append(
+                "RAZORPAY_TEST_MODE_REQUIRED: RAZORPAY_API_BASE_URL must use the official "
+                "HTTPS API endpoint"
+            )
 
     if problems:
         raise ProviderConfigError(problems)

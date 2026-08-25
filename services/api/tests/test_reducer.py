@@ -16,10 +16,13 @@ from razormesh_api.persistence.models import (
     ExecutionAttempt,
     ExecutionTicket,
 )
-from razormesh_api.providers.razorpay import RazorpayPaymentProvider
+from razormesh_api.providers.razorpay import (
+    RazorpayPaymentProvider,
+    RazorpayProviderStateConflict,
+)
 from razormesh_api.reducer import ProviderStateReducer, VerifiedProviderEvent
 from razormesh_api.settings import get_settings
-from razormesh_api.spend import SpendManager
+from razormesh_api.spend import SpendError, SpendManager
 from test_executor import _make_ticket, _redis
 
 
@@ -32,13 +35,15 @@ class _ScriptedTransport(httpx.BaseTransport):
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         self._n += 1
         assert request.method == "POST" and request.url.path.endswith("/orders")
+        body = __import__("json").loads(request.read())
         return httpx.Response(
             201,
             json={
                 "id": f"order_red_{self._n}",
                 "status": "created",
-                "amount": 100000,
-                "currency": "INR",
+                "amount": body["amount"],
+                "currency": body["currency"],
+                "receipt": body["receipt"],
             },
         )
 
@@ -181,13 +186,13 @@ def test_authorized_is_informative_in_every_state(reducer_env) -> None:  # type:
     attempt = executor.execute(signed_ticket=signed, binding=binding, intent_id=contract.intent_id)
     oid = str(attempt.razorpay_order_id)
 
-    # FAILED + authorized -> inert; reservation stays released
+    # FAILED + authorized -> inert; reservation stays held for late capture
     reducer.apply_event(_failed(oid))
     out = reducer.apply_event(_authorized(oid))
     assert out.state == AttemptState.FAILED.value
     assert _attempt_state(repos, oid) == ("FAILED", "NOT_ELIGIBLE")
     row = _spend_row(repos, contract.intent_id)
-    assert (row.reserved_minor, row.committed_minor) == (0, 0)
+    assert (row.reserved_minor, row.committed_minor) == (binding.amount_minor, 0)
 
     # late capture reconciles once; a lagging authorized afterwards stays inert
     reducer.apply_event(_captured(oid))
@@ -223,6 +228,91 @@ def test_failed_then_captured_reconciles_with_capacity_guard(reducer_env) -> Non
     assert again.state == AttemptState.SUCCEEDED.value
     row2 = _spend_row(repos, contract.intent_id)
     assert row2.committed_minor == binding.amount_minor
+
+
+def test_failed_hold_prevents_capacity_reuse_before_late_capture(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    """The failed->captured window cannot oversubscribe human authority."""
+    repos, keys, spend, executor, reducer = reducer_env
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=binding.amount_minor)
+    attempt = executor.execute(signed_ticket=signed, binding=binding, intent_id=contract.intent_id)
+    oid = str(attempt.razorpay_order_id)
+
+    reducer.apply_event(_failed(oid))
+    with pytest.raises(SpendError):
+        spend.reserve(contract.intent_id, 1)
+
+    settled = reducer.apply_event(_captured(oid))
+    assert settled.state == AttemptState.SUCCEEDED.value
+    row = _spend_row(repos, contract.intent_id)
+    assert row.reserved_minor == 0
+    assert row.committed_minor == binding.amount_minor
+
+
+def test_late_capture_after_authorization_supersession_requires_reconciliation(
+    reducer_env,
+) -> None:  # type: ignore[no-untyped-def]
+    """FAILED->captured must not bypass the current-authority settlement gate."""
+    from razormesh_api.persistence.models import IntentContract as RowIntent
+
+    repos, keys, spend, executor, reducer = reducer_env
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=binding.amount_minor)
+    attempt = executor.execute(signed_ticket=signed, binding=binding, intent_id=contract.intent_id)
+    oid = str(attempt.razorpay_order_id)
+    reducer.apply_event(_failed(oid))
+
+    with repos.transaction() as session:
+        intent = session.get(RowIntent, str(contract.intent_id), with_for_update=True)
+        assert intent is not None
+        intent.authorization_generation += 1
+
+    with pytest.raises(RazorpayProviderStateConflict) as exc:
+        reducer.apply_event(_captured(oid, payment_id="pay_stale_late_capture"))
+    assert exc.value.code == "RAZORPAY_PAYMENT_CONTEXT_MISMATCH"
+    with repos.transaction() as session:
+        refreshed = session.get(ExecutionAttempt, attempt.execution_attempt_id)
+        assert refreshed is not None
+        assert refreshed.state == AttemptState.FAILED.value
+        assert refreshed.razorpay_payment_status == "captured"
+        assert refreshed.fulfilment_state == "NOT_ELIGIBLE"
+        assert refreshed.reconcile_state == "REQUIRED"
+    row = _spend_row(repos, contract.intent_id)
+    assert row.reserved_minor == binding.amount_minor
+    assert row.committed_minor == 0
+
+
+@pytest.mark.parametrize(
+    ("amount_minor", "currency", "code"),
+    [
+        (99999, "INR", "RAZORPAY_AMOUNT_MISMATCH"),
+        (100000, "USD", "RAZORPAY_CURRENCY_MISMATCH"),
+    ],
+)
+def test_verified_event_authority_mismatch_never_settles(
+    reducer_env, amount_minor: int, currency: str, code: str
+) -> None:  # type: ignore[no-untyped-def]
+    repos, keys, spend, executor, reducer = reducer_env
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+    attempt = executor.execute(signed_ticket=signed, binding=binding, intent_id=contract.intent_id)
+
+    with pytest.raises(RazorpayProviderStateConflict) as exc:
+        reducer.apply_event(
+            VerifiedProviderEvent(
+                kind="payment.captured",
+                razorpay_order_id=str(attempt.razorpay_order_id),
+                razorpay_payment_id="pay_bad_authority",
+                amount_minor=amount_minor,
+                currency=currency,
+            )
+        )
+    assert exc.value.code == code
+    state, fulfilment = _attempt_state(repos, str(attempt.razorpay_order_id))
+    assert (state, fulfilment) == ("EXECUTING", "NOT_ELIGIBLE")
+    row = _spend_row(repos, contract.intent_id)
+    assert row.reserved_minor == binding.amount_minor
+    assert row.committed_minor == 0
 
 
 def test_captured_resolves_provider_unknown(reducer_env) -> None:  # type: ignore[no-untyped-def]
@@ -267,8 +357,8 @@ def test_lagged_authorized_snapshot_cannot_regress_state(reducer_env) -> None:  
     assert _attempt_state(repos, oid) == before
 
 
-def test_failure_releases_reservation_definitively(reducer_env) -> None:  # type: ignore[no-untyped-def]
-    """M29: verified failure releases capacity; duplicate failure is a no-op."""
+def test_failure_retains_reservation_for_documented_late_capture(reducer_env) -> None:  # type: ignore[no-untyped-def]
+    """M29: payment.failed is not final enough to release reusable capacity."""
     repos, keys, spend, executor, reducer = reducer_env
     signed, binding, contract = _make_ticket(keys, repos)
     spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
@@ -281,7 +371,7 @@ def test_failure_releases_reservation_definitively(reducer_env) -> None:  # type
     assert first.state == AttemptState.FAILED.value
     assert second.state == AttemptState.FAILED.value
     row = _spend_row(repos, contract.intent_id)
-    assert row.reserved_minor == 0 and row.committed_minor == 0
+    assert row.reserved_minor == binding.amount_minor and row.committed_minor == 0
     state, fulfilment = _attempt_state(repos, oid)
     assert (state, fulfilment) == ("FAILED", "NOT_ELIGIBLE")
 
@@ -376,7 +466,12 @@ def test_permutation_delayed_authorization_only_stays_executing(reducer_env) -> 
 
 
 def test_permutation_failure_without_capture_stays_failed(reducer_env) -> None:  # type: ignore[no-untyped-def]
-    assert _run_sequence(reducer_env, ["auth", "fail"]) == ("FAILED", "NOT_ELIGIBLE", 0, 0)
+    assert _run_sequence(reducer_env, ["auth", "fail"]) == (
+        "FAILED",
+        "NOT_ELIGIBLE",
+        0,
+        100000,
+    )
 
 
 def test_permutation_every_ordering_converges_to_single_commit(reducer_env) -> None:  # type: ignore[no-untyped-def]
@@ -458,7 +553,13 @@ def test_webhook_route_wiring_commits_reservation(reducer_env) -> None:  # type:
                 "event": "payment.captured",
                 "payload": {
                     "payment": {
-                        "entity": {"id": "pay_route_w1", "order_id": oid, "status": "captured"}
+                        "entity": {
+                            "id": "pay_route_w1",
+                            "order_id": oid,
+                            "status": "captured",
+                            "amount": attempt.amount_minor,
+                            "currency": attempt.currency,
+                        }
                     }
                 },
             }
@@ -535,6 +636,8 @@ def test_webhook_unmatched_context_classified_with_zero_mutation(reducer_env) ->
                             "id": "pay_unmatched_1",
                             "order_id": "order_UNMATCHED_none",
                             "status": "captured",
+                            "amount": attempt.amount_minor,
+                            "currency": attempt.currency,
                         }
                     }
                 },

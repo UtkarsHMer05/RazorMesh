@@ -516,6 +516,42 @@ class RazorpayProviderStateConflict(RazorpayError):
         super().__init__(code, detail)
 
 
+def validate_order_authority(
+    order: RazorpayOrder,
+    *,
+    amount_minor: int,
+    currency: str,
+    receipt: str,
+    expected_order_id: str | None = None,
+) -> None:
+    """Fail closed when provider order truth disagrees with durable authority.
+
+    This validation is shared by order creation, callback fetches and operator
+    reconciliation so none of those paths can silently accept a provider order
+    with a different identity, amount, currency or internal receipt binding.
+    """
+    if expected_order_id is not None and order.order_id != expected_order_id:
+        raise RazorpayProviderStateConflict(
+            "RAZORPAY_ORDER_CONTEXT_MISMATCH",
+            f"provider returned order {order.order_id!r} while {expected_order_id!r} was fetched",
+        )
+    if order.amount_minor != amount_minor:
+        raise RazorpayProviderStateConflict(
+            "RAZORPAY_AMOUNT_MISMATCH",
+            f"provider {order.amount_minor} != internal {amount_minor}",
+        )
+    if order.currency != currency:
+        raise RazorpayProviderStateConflict(
+            "RAZORPAY_CURRENCY_MISMATCH",
+            f"provider {order.currency} != internal {currency}",
+        )
+    if order.receipt != receipt:
+        raise RazorpayProviderStateConflict(
+            "RAZORPAY_ORDER_CONTEXT_MISMATCH",
+            f"provider receipt {order.receipt!r} does not reference this attempt",
+        )
+
+
 @dataclass(frozen=True)
 class ReconcileResult:
     attempt_id: str
@@ -576,21 +612,13 @@ def reconcile_attempt(
 
     fetched = provider.fetch_order(order_id)
 
-    if fetched.amount_minor != attempt.amount_minor:
-        raise RazorpayProviderStateConflict(
-            "RAZORPAY_AMOUNT_MISMATCH",
-            f"provider {fetched.amount_minor} != internal {attempt.amount_minor}",
-        )
-    if fetched.currency != attempt.currency:
-        raise RazorpayProviderStateConflict(
-            "RAZORPAY_CURRENCY_MISMATCH",
-            f"provider {fetched.currency} != internal {attempt.currency}",
-        )
-    if fetched.receipt is not None and fetched.receipt != f"r_{attempt.execution_attempt_id}":
-        raise RazorpayProviderStateConflict(
-            "RAZORPAY_ORDER_CONTEXT_MISMATCH",
-            f"provider receipt {fetched.receipt!r} does not reference this attempt",
-        )
+    validate_order_authority(
+        fetched,
+        expected_order_id=order_id,
+        amount_minor=attempt.amount_minor,
+        currency=attempt.currency,
+        receipt=f"r_{attempt.execution_attempt_id}",
+    )
 
     payment_status = None
     if fetched.status in ("paid", "attempted"):

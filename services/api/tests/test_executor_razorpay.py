@@ -76,6 +76,7 @@ def rz_setup(tmp_path):  # type: ignore[no-untyped-def]
 
 
 def _ok_order(request: httpx.Request) -> httpx.Response:
+    body = __import__("json").loads(request.read())
     return httpx.Response(
         201,
         json={
@@ -83,7 +84,7 @@ def _ok_order(request: httpx.Request) -> httpx.Response:
             "status": "created",
             "amount": 100000,
             "currency": "INR",
-            "receipt": "r_x",
+            "receipt": body["receipt"],
         },
     )
 
@@ -156,3 +157,83 @@ def test_definitive_rejection_fails_and_releases(rz_setup) -> None:  # type: ign
     assert attempt.state == AttemptState.FAILED.value
     assert attempt.error_code == "RAZORPAY_ORDER_CREATE_REJECTED"
     assert _reserved(repos, contract.intent_id) == 0
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "code"),
+    [
+        ("amount", 99999, "RAZORPAY_AMOUNT_MISMATCH"),
+        ("currency", "USD", "RAZORPAY_CURRENCY_MISMATCH"),
+        ("status", "paid", "RAZORPAY_PROVIDER_STATE_CONFLICT"),
+    ],
+)
+def test_created_order_authority_mismatch_is_never_launched(
+    rz_setup, field: str, value: object, code: str
+) -> None:  # type: ignore[no-untyped-def]
+    """A provider-created order with different authority is UNKNOWN, not launchable."""
+    repos, keys, spend = rz_setup
+
+    def mismatch(request: httpx.Request) -> httpx.Response:
+        body = __import__("json").loads(request.read())
+        payload = {
+            "id": "order_mismatch",
+            "status": "created",
+            "amount": 100000,
+            "currency": "INR",
+            "receipt": body["receipt"],
+        }
+        payload[field] = value
+        return httpx.Response(201, json=payload)
+
+    executor = _razorpay_executor(repos, keys, _CountingTransport(mismatch), spend)
+    signed, binding, contract = _make_ticket(keys, repos)
+    spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+
+    attempt = executor.execute(signed_ticket=signed, binding=binding, intent_id=contract.intent_id)
+
+    assert attempt.state == AttemptState.PROVIDER_UNKNOWN.value
+    assert attempt.error_code == code
+    assert attempt.reconcile_state == "REQUIRED"
+    assert attempt.razorpay_order_id == "order_mismatch"  # known identity retained
+    assert _reserved(repos, contract.intent_id) == binding.amount_minor
+
+
+def test_contradictory_create_cannot_rebind_an_order_claimed_by_another_attempt(
+    rz_setup,
+) -> None:  # type: ignore[no-untyped-def]
+    """A duplicate contradictory provider id fails closed instead of raising 500."""
+    repos, keys, spend = rz_setup
+
+    def duplicate_paid(request: httpx.Request) -> httpx.Response:
+        body = __import__("json").loads(request.read())
+        return httpx.Response(
+            201,
+            json={
+                "id": "order_duplicate_contradiction",
+                "status": "paid",
+                "amount": body["amount"],
+                "currency": body["currency"],
+                "receipt": body["receipt"],
+            },
+        )
+
+    executor = _razorpay_executor(repos, keys, _CountingTransport(duplicate_paid), spend)
+    results = []
+    for _ in range(2):
+        signed, binding, contract = _make_ticket(keys, repos)
+        spend.ensure_authorization(contract.intent_id, authorized_minor=5_000_000)
+        results.append(
+            executor.execute(
+                signed_ticket=signed,
+                binding=binding,
+                intent_id=contract.intent_id,
+            )
+        )
+
+    assert [result.state for result in results] == [
+        AttemptState.PROVIDER_UNKNOWN.value,
+        AttemptState.PROVIDER_UNKNOWN.value,
+    ]
+    assert results[0].razorpay_order_id == "order_duplicate_contradiction"
+    assert results[1].razorpay_order_id is None
+    assert results[1].provider_reference == "order_duplicate_contradiction"

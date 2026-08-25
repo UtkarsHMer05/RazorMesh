@@ -14,11 +14,10 @@ State dimensions stay separate (master prompt §23):
 Key semantics (P2-S13..S16):
 - duplicate evidence            -> no-op
 - captured / order.paid         -> exactly-once settlement (commit + ELIGIBLE)
-- payment.failed                -> definitive for THAT payment: settle FAILED,
-                                   reservation RELEASED — but NOT unrecoverable:
+- payment.failed                -> FAILED / NOT_ELIGIBLE with reservation HELD;
                                    a later verified capture for the same order
-                                   reconciles via guarded FAILED->SUCCEEDED
-                                   (RAZORPAY_RECONCILED_LATE_CAPTURE).
+                                   converts that hold exactly once via guarded
+                                   FAILED->SUCCEEDED reconciliation.
 - authorized                    -> informative only; never fulfils.
 """
 
@@ -37,7 +36,11 @@ from razormesh_api.keys import DevKeyPair
 from razormesh_api.nonce import NonceRegistry
 from razormesh_api.persistence.models import ExecutionAttempt
 from razormesh_api.persistence.repositories import Repositories
-from razormesh_api.providers.razorpay import RazorpayError, RazorpayPaymentProvider
+from razormesh_api.providers.razorpay import (
+    RazorpayError,
+    RazorpayPaymentProvider,
+    RazorpayProviderStateConflict,
+)
 from razormesh_api.spend import SpendManager
 
 EventKind = Literal[
@@ -55,6 +58,8 @@ class VerifiedProviderEvent:
     kind: EventKind
     razorpay_order_id: str
     razorpay_payment_id: str | None = None
+    amount_minor: int | None = None
+    currency: str | None = None
 
 
 _CAPTURED_EVIDENCE: tuple[str, ...] = ("payment.captured", "order.paid")
@@ -92,6 +97,7 @@ class ProviderStateReducer:
             # (live M38 evidence: authorized for the retry payment arrived
             # while the attempt was FAILED). Never settles, never errors.
             return attempt
+        self._validate_event_authority(attempt, event)
         if attempt.state == AttemptState.SUCCEEDED.value:
             return attempt  # duplicate evidence: exactly-once already satisfied
 
@@ -108,6 +114,20 @@ class ProviderStateReducer:
         self, attempt: ExecutionAttempt, event: VerifiedProviderEvent, now: datetime
     ) -> ExecutionAttempt:
         payment_id = event.razorpay_payment_id or f"order:{event.razorpay_order_id}"
+
+        # All callback/fetch/webhook capture paths share the same current
+        # authority gate. In particular, FAILED->captured reconciliation must
+        # not bypass the stale/superseded checks enforced for normal capture.
+        try:
+            self._executor.validate_settlement_authority(attempt.execution_attempt_id, now=now)
+        except RazorpayProviderStateConflict as exc:
+            self._executor.record_capture_authority_conflict(
+                attempt.execution_attempt_id,
+                provider_payment_id=payment_id,
+                error=exc,
+                now=now,
+            )
+            raise
 
         if attempt.state == AttemptState.EXECUTING.value:
             return self._executor.confirm_captured(
@@ -136,10 +156,11 @@ class ProviderStateReducer:
         self, attempt: ExecutionAttempt, event: VerifiedProviderEvent, now: datetime
     ) -> ExecutionAttempt:
         if attempt.state == AttemptState.PROVIDER_UNKNOWN.value:
-            settled = self._executor.resolve_unknown(
+            settled = self._executor.record_provider_failure(
                 attempt.execution_attempt_id,
-                ProviderOutcome.FAILED,
                 error_code="RAZORPAY_PAYMENT_FAILED",
+                now=now,
+                release_reservation=False,
             )
             self._mark_payment_fields(
                 settled.execution_attempt_id, event.razorpay_payment_id, "failed"
@@ -148,13 +169,18 @@ class ProviderStateReducer:
         if attempt.state == AttemptState.FAILED.value:
             return attempt  # duplicate failure: already definitive
 
-        # EXECUTING: failure of the payment is definitive for this attempt;
-        # atomic settlement releases the reservation (D-028). A later capture
-        # reconciles through _reconcile_late_capture.
+        # EXECUTING: the payment attempt failed, but provider documentation
+        # permits a later capture for the same transaction. Preserve the hold
+        # and reconcile that later evidence through _reconcile_late_capture.
         settled = self._executor.record_provider_failure(
             attempt.execution_attempt_id,
             error_code="RAZORPAY_PAYMENT_FAILED",
             now=now,
+            # Razorpay documents that payment.failed may later be followed by
+            # payment.captured for the same transaction. Therefore this is not
+            # definitive enough to release capacity: retain the original hold
+            # until capture or an explicit terminal reconciliation (P2-S16).
+            release_reservation=False,
         )
         self._mark_payment_fields(settled.execution_attempt_id, event.razorpay_payment_id, "failed")
         return self._refresh(settled.execution_attempt_id)
@@ -201,6 +227,25 @@ class ProviderStateReducer:
                 )
             session.expunge(row)
         return row
+
+    @staticmethod
+    def _validate_event_authority(attempt: ExecutionAttempt, event: VerifiedProviderEvent) -> None:
+        """Reject authenticated provider evidence that contradicts authority.
+
+        Webhook payloads carry amount/currency and the route passes them here.
+        Fetch-derived internal events may omit them because reconcile_attempt()
+        has already performed the same durable validation.
+        """
+        if event.amount_minor is not None and event.amount_minor != attempt.amount_minor:
+            raise RazorpayProviderStateConflict(
+                "RAZORPAY_AMOUNT_MISMATCH",
+                f"provider event {event.amount_minor} != internal {attempt.amount_minor}",
+            )
+        if event.currency is not None and event.currency != attempt.currency:
+            raise RazorpayProviderStateConflict(
+                "RAZORPAY_CURRENCY_MISMATCH",
+                f"provider event {event.currency} != internal {attempt.currency}",
+            )
 
     def _refresh(self, attempt_id: str) -> ExecutionAttempt:
         from razormesh_api.domain.ids import ExecutionAttemptId

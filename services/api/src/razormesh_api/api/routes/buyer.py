@@ -23,7 +23,7 @@ from razormesh_api.domain.authz_hash import intent_authorization_hash
 from razormesh_api.domain.checkout import CheckoutEnvelope
 from razormesh_api.domain.ids import ExecutionAttemptId, IntentId, new_ulid
 from razormesh_api.domain.state_machine import NotExecutableError
-from razormesh_api.executor import IllegalAttemptTransition, TrustedPaymentExecutor
+from razormesh_api.executor import AttemptState, IllegalAttemptTransition, TrustedPaymentExecutor
 from razormesh_api.keys import DevKeyPair, DevSigningKeys
 from razormesh_api.ledger import EvidenceLedger
 from razormesh_api.nonce import (
@@ -108,6 +108,7 @@ class LaunchPayload(BaseModel):
 
 
 class CallbackIn(BaseModel):
+    execution_attempt_id: str = Field(min_length=6, max_length=64)
     intent_id: str = Field(min_length=6, max_length=64)
     checkout_id: str = Field(min_length=6, max_length=64)
     razorpay_payment_id: str = Field(min_length=6, max_length=64)
@@ -357,18 +358,25 @@ def checkout_callback(
     from razormesh_api.providers.razorpay import verify_checkout_signature
 
     with repos.transaction() as session:
-        attempt = (
-            session.query(ExecutionAttemptForCallback)
-            .filter(
-                ExecutionAttemptForCallback.intent_id == payload_in.intent_id,
-                ExecutionAttemptForCallback.checkout_id == payload_in.checkout_id,
-            )
-            .order_by(ExecutionAttemptForCallback.created_at.desc())
-            .first()
+        attempt = session.get(
+            ExecutionAttemptForCallback,
+            payload_in.execution_attempt_id,
         )
-        stored_order = attempt.razorpay_order_id if attempt else None
+        context_matches = bool(
+            attempt is not None
+            and attempt.intent_id == payload_in.intent_id
+            and attempt.checkout_id == payload_in.checkout_id
+        )
+        stored_order = attempt.razorpay_order_id if context_matches and attempt else None
 
-    if attempt is None or stored_order is None:
+    if attempt is None:
+        raise HTTPException(status_code=404, detail={"code": "RAZORPAY_ORDER_CONTEXT_MISMATCH"})
+    if not context_matches:
+        raise HTTPException(
+            status_code=403,
+            detail={"code": "RAZORPAY_PAYMENT_CONTEXT_MISMATCH"},
+        )
+    if stored_order is None:
         raise HTTPException(status_code=404, detail={"code": "RAZORPAY_ORDER_CONTEXT_MISMATCH"})
 
     # Browser-provided order id is advisory only; verification uses the stored id.
@@ -390,6 +398,60 @@ def checkout_callback(
         )
 
     now = datetime.now(UTC)
+    provider = _razorpay_provider(settings)
+    executor = TrustedPaymentExecutor(
+        repos=repos,
+        keys=keys.ensure(),
+        nonces=_nonce_registry(),
+        provider=provider,
+        spend=SpendManager(repos),
+    )
+
+    # A valid callback signature proves the payment/order pair, not that the
+    # provider order still matches durable amount/currency/context. Reuse the
+    # same authority validation as operator reconciliation before any callback
+    # verification marker or fulfilment transition (P2-S06, M18/M24/M25).
+    from razormesh_api.providers.razorpay import (
+        RazorpayError,
+        RazorpayProviderStateConflict,
+        reconcile_attempt,
+    )
+
+    try:
+        provider_snapshot = reconcile_attempt(
+            repos=repos,
+            provider=provider,
+            attempt_id=attempt.execution_attempt_id,
+            now=now,
+        )
+    except RazorpayProviderStateConflict as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": exc.code, "detail": exc.detail},
+        ) from exc
+    except RazorpayError as exc:
+        current = repos.attempts.get(ExecutionAttemptId(attempt.execution_attempt_id))
+        if current is not None and current.state in {
+            AttemptState.SUCCEEDED.value,
+            AttemptState.FAILED.value,
+        }:
+            # A replay cannot demote an already-settled attempt merely because
+            # the provider read is temporarily unavailable.
+            return ExecutionBody(
+                state=current.state,
+                attempt_id=current.execution_attempt_id,
+            )
+        unknown = executor.record_provider_unknown(
+            attempt.execution_attempt_id,
+            error_code=exc.code,
+            now=now,
+        )
+        return ExecutionBody(
+            state=unknown.state,
+            attempt_id=unknown.execution_attempt_id,
+            detail="RAZORPAY_RECONCILIATION_REQUIRED",
+        )
+
     first_verification = False
     with repos.transaction() as session:
         row = session.get(
@@ -419,22 +481,18 @@ def checkout_callback(
 
     # ---- P2-M25: a valid signature alone is NOT fulfilment authority.
     # Require captured/paid evidence from the provider before any settlement.
-    provider = _razorpay_provider(settings)
-    fetched = provider.fetch_order(stored_order)
-    if fetched.status == "paid":
-        executor = TrustedPaymentExecutor(
-            repos=repos,
-            keys=keys.ensure(),
-            nonces=_nonce_registry(),
-            provider=provider,
-            spend=SpendManager(repos),
-        )
+    if provider_snapshot.provider_status == "paid":
         try:
             settled = executor.confirm_captured(
                 attempt.execution_attempt_id,
                 provider_payment_id=payload_in.razorpay_payment_id,
                 now=now,
             )
+        except RazorpayProviderStateConflict as exc:
+            raise HTTPException(
+                status_code=409,
+                detail={"code": exc.code, "detail": exc.detail},
+            ) from exc
         except IllegalAttemptTransition:
             # Duplicate delivery after settlement: idempotent no-op (P2-S13).
             existing = repos.attempts.get(ExecutionAttemptId(attempt.execution_attempt_id))

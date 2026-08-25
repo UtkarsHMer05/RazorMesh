@@ -731,3 +731,67 @@ correlate but post-claim settles once; amount/currency mismatch mutate nothing
 and never claim; duplicate receipt conflict; failure resolution marks RESOLVED;
 ops listing/pass wiring incl. 404/409. Full suite 343 passed; ruff/mypy strict
 (54 files, both roots) clean; security-check PASS.
+
+---
+
+## D-037 — Phase-2 exit audit hardens provider authority and late-capture capacity
+
+Date: 2026-08-25
+Milestones: Phase-2 post-completion verification
+Status: Accepted
+Affected docs: `SECURITY.md`, `ARCHITECTURE.md`, `TESTING.md`,
+`PHASE2_STATUS.md`, `MEMORY.md`, `docs/PHASE2_COMPLETION_REPORT.md`
+
+Context: the milestone suite was green, but an independent requirement-by-
+requirement audit against the Phase-2 master prompt found missing negative
+proofs. A successful order-create response was trusted without validating its
+returned identity/amount/currency/receipt/status; callback lookup selected the
+latest attempt from browser context instead of an exact server-issued attempt;
+captured evidence could settle after authorization or checkout drift; webhook
+capture evidence did not carry amount/currency; and `payment.failed` released
+capacity even though R-014 records that the same transaction may later capture.
+The last behavior allowed a fresh use of the authorization to consume capacity
+before the late capture arrived. A correctly signed but structurally malformed
+webhook envelope could also raise an uncontrolled server error after HMAC
+verification.
+
+Decision:
+1. Validate every created or fetched order against durable order id (when
+   known), amount, currency and receipt. A create mismatch or unexpected create
+   status becomes `PROVIDER_UNKNOWN/REQUIRED` with the reservation held; it is
+   never launched. Verified financial webhook events must also match their
+   payload amount/currency before reduction; malformed signed envelopes are
+   controlled no-ops rather than exceptions.
+2. The launch contract includes `execution_attempt_id`; callbacks select that
+   exact row and independently match its intent, checkout and server-stored
+   order. Immediately before captured settlement, revalidate the ticket-bound
+   current authorization generation/hash and checkout revision/hash. Captured
+   provider truth against stale authority is retained for reconciliation but
+   cannot commit spend or grant fulfilment.
+3. A provider `payment.failed` state remains `FAILED/NOT_ELIGIBLE`, but its
+   reservation stays held with `reconcile_state=REQUIRED`. Verified later
+   capture converts that existing hold to committed exactly once. Capacity is
+   released only by a separate explicit terminal resolution that proves no
+   later provider effect is possible. Pre-provider definitive rejection keeps
+   its existing immediate compensation/release behavior.
+4. Razorpay execution accepts only `rzp_test_` key IDs and the official HTTPS
+   API base URL. The mock provider remains credential-free.
+
+Rationale: provider/browser data is evidence, not authority. Correlating every
+provider observation to the durable execution context and preserving capacity
+across an explicitly non-final failure closes both intent-to-execution drift and
+late-capture overspend windows without adding a new architecture or provider
+dependency.
+
+Security consequences: positive. Wrong-context, stale/superseded, mismatched
+amount/currency/order, unexpected create response, replay, and failure-then-
+capture capacity reuse now fail closed. Captured provider truth is never hidden,
+but stale authority never becomes fulfilment authority.
+
+Validation/evidence: backend suite 375 passed; strict Ruff + mypy clean;
+frontend lint/typecheck, 11 Vitest tests, build and Playwright 5/5 passed;
+security-check reported zero findings; migration downgrade/upgrade passed on
+the dedicated test database; mock live acceptance passed all checks including
+20-worker single-effect and Security Lab 22/22; current Test Mode auth passed;
+one trusted-path Test order create/fetch returned an exact authority match and
+performed no checkout/payment.

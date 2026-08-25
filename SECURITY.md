@@ -333,7 +333,8 @@ All Phase-1 invariants (SEC-001..030) remain release-blocking.
 **P2-S03** Key Secret never reaches the browser.
 **P2-S04** Webhook secret never reaches the browser.
 **P2-S05** Every real Test payment flow uses a server-created Razorpay Order.
-**P2-S06** Browser amount/currency/order context is never authoritative.
+**P2-S06** Browser/provider amount, currency and order context is never
+authoritative without exact correlation to the durable execution attempt.
 **P2-S07** Checkout success signature is verified server-side (HMAC-SHA256).
 **P2-S08** Verification uses the SERVER-stored Razorpay order id for the internal execution context.
 **P2-S09** Invalid callback signature cannot commit/fulfil.
@@ -343,7 +344,10 @@ All Phase-1 invariants (SEC-001..030) remain release-blocking.
 **P2-S13** Duplicate events produce one business effect.
 **P2-S14** Event delivery order is never assumed.
 **P2-S15** `payment.captured` + `order.paid` produce exactly one commit/fulfilment effect.
-**P2-S16** A verified later capture can reconcile an earlier failure per Razorpay semantics.
+**P2-S16** A verified later capture can reconcile an earlier failure per
+Razorpay semantics; failure retains the original reservation until capture or
+an explicit terminal resolution, so authorization capacity cannot be reused in
+the interim.
 **P2-S17** Network timeout is not definitive failure.
 **P2-S18** Provider-unknown retains reservation.
 **P2-S19** Provider-unknown is not blindly retried as a fresh payment.
@@ -363,6 +367,23 @@ T22 Out-of-order webhooks (captured before authorized; order.paid before capture
 T23 failed→captured same transaction → reconciled to captured exactly once.
 T24 Timeout after send → PROVIDER_UNKNOWN + reservation held + reconciliation path;
     never a blind second order/payment.
+
+## 14.1 Phase-2 exit-audit enforcement notes (D-037)
+
+- Order-create and order-fetch responses are checked against durable order id
+  (when known), amount, currency and receipt; an unexpected create status or
+  mismatch cannot produce a browser launch.
+- Callback input must name the exact server-issued execution attempt. Intent,
+  checkout and server-stored order must all match that row before signature
+  verification can become evidence.
+- Captured/paid settlement revalidates the current ticket-bound authorization
+  and checkout immediately before commit. Stale or superseded authority keeps
+  captured provider truth for reconciliation but grants no fulfilment.
+- Financial webhook payload amount/currency must match the durable attempt.
+- Correctly signed but structurally malformed webhook envelopes are handled as
+  controlled no-ops and never reach the inbox/reducer business transition.
+- Test execution requires an `rzp_test_` key id and the official HTTPS Razorpay
+  API base URL; alternative endpoints fail configuration validation.
 
 # 15. Webhook error precedence note (P2-M36)
 

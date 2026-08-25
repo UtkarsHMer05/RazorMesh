@@ -47,13 +47,15 @@ class _CountingTransport(httpx.BaseTransport):
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         self.calls += 1
         assert request.method == "POST" and request.url.path.endswith("/orders")
+        body = __import__("json").loads(request.read())
         return httpx.Response(
             201,
             json={
                 "id": "order_m42_single",
                 "status": "created",
-                "amount": 100000,
-                "currency": "INR",
+                "amount": body["amount"],
+                "currency": body["currency"],
+                "receipt": body["receipt"],
             },
         )
 

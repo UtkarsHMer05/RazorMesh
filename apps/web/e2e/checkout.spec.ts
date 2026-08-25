@@ -39,6 +39,7 @@ async function stubWorld(
     executeBody?: Record<string, unknown>;
     callbackStatus?: number;
     callbackBody?: Record<string, unknown>;
+    callbackRequests?: Record<string, unknown>[];
     statusState?: string;
     failCallbackNetwork?: boolean;
   } = {},
@@ -111,6 +112,9 @@ async function stubWorld(
 
   await page.route("**/buyer/callback", (route) => {
     if (options.failCallbackNetwork) return route.abort("failed");
+    options.callbackRequests?.push(
+      route.request().postDataJSON() as Record<string, unknown>,
+    );
     return route.fulfill({
       status: options.callbackStatus ?? 200,
       contentType: "application/json",
@@ -138,10 +142,12 @@ test.describe("P2-M46: stubbed-checkout E2E", () => {
     page,
   }) => {
     const requests: string[] = [];
+    const callbackRequests: Record<string, unknown>[] = [];
     page.on("request", (r) => requests.push(`${r.method()} ${r.url()}`));
 
     await stubWorld(page, {
       callbackBody: { state: "SUCCEEDED" },
+      callbackRequests,
     });
     await page.goto("/buyer");
 
@@ -175,6 +181,10 @@ test.describe("P2-M46: stubbed-checkout E2E", () => {
       });
     }, LAUNCH.razorpay_order_id);
     await expect(page.getByTestId("pay-state")).toHaveText("CAPTURED/PAID");
+    expect(callbackRequests).toHaveLength(1);
+    expect(callbackRequests[0]?.execution_attempt_id).toBe(
+      LAUNCH.execution_attempt_id,
+    );
     await expect(page.getByTestId("retry-pay")).toHaveCount(0);
     await expectNoSecrets(page);
     for (const req of requests) expect(req).not.toMatch(SECRET_SCAN);

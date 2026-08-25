@@ -180,6 +180,7 @@ export default function BuyerPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            execution_attempt_id: launch.execution_attempt_id,
             intent_id: launch.intent_id,
             checkout_id: launch.checkout_id,
             razorpay_payment_id: payload.razorpay_payment_id,
@@ -419,9 +420,9 @@ export default function BuyerPage() {
             )}
             {payPhase === "failed" && (
               <p data-testid="failed-note" role="status">
-                Payment failed — nothing was fulfilled and the reservation was released
-                server-side. Re-opening this checkout is disabled; start a fresh checkout
-                (Steps 1–3) to try again.
+                Payment failed — nothing was fulfilled. The backend keeps the reservation
+                held while it reconciles possible late provider evidence; re-opening or
+                starting a fresh payment is intentionally unavailable.
               </p>
             )}
             {payPhase === "provider_unknown" && (

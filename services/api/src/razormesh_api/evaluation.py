@@ -482,7 +482,6 @@ class AdversarialRunner:
             return self._finish(spec, "NO_FRESH_OP_AFTER_UNKNOWN", "same attempt reused; 1 call")
         return self._finish(spec, "FRESH_OP_CREATED", "retry created new work")
 
-
     # ------------------------------------------------------------------
     # P2-M43: Phase-2 provider-evidence families (SYNTHETIC fixtures only;
     # local transports + synthetic secrets — Razorpay is never contacted and
@@ -499,6 +498,7 @@ class AdversarialRunner:
         order_id = f"order_scn_{new_ulid().lower()}"
 
         def ok_order(request: "_httpx.Request") -> "_httpx.Response":
+            body = __import__("json").loads(request.read())
             return _httpx.Response(
                 201,
                 json={
@@ -506,6 +506,7 @@ class AdversarialRunner:
                     "status": "created",
                     "amount": amount,
                     "currency": "INR",
+                    "receipt": body["receipt"],
                 },
             )
 
@@ -557,7 +558,9 @@ class AdversarialRunner:
         ).hexdigest()
         forged = ("0" if valid[0] != "0" else "1") + valid[1:]
         accepted = verify_checkout_signature(
-            order_id=order_id, payment_id=payment_id, signature_hex=forged,
+            order_id=order_id,
+            payment_id=payment_id,
+            signature_hex=forged,
             key_secret=self._SCN_KEY_SECRET,
         )
         fresh = self._attempt_row(str(attempt.execution_attempt_id))
@@ -616,17 +619,22 @@ class AdversarialRunner:
             _hl.sha256,
         ).hexdigest()
         first = verify_checkout_signature(
-            order_id=str(attempt.razorpay_order_id), payment_id=payment_id,
-            signature_hex=sig, key_secret=self._SCN_KEY_SECRET,
+            order_id=str(attempt.razorpay_order_id),
+            payment_id=payment_id,
+            signature_hex=sig,
+            key_secret=self._SCN_KEY_SECRET,
         )
         second = verify_checkout_signature(
-            order_id=str(attempt.razorpay_order_id), payment_id=payment_id,
-            signature_hex=sig, key_secret=self._SCN_KEY_SECRET,
+            order_id=str(attempt.razorpay_order_id),
+            payment_id=payment_id,
+            signature_hex=sig,
+            key_secret=self._SCN_KEY_SECRET,
         )
         fresh = self._attempt_row(str(attempt.execution_attempt_id))
         if first and second and fresh is not None:
             return self._finish(
-                spec, "SINGLE_EFFECT_ONLY",
+                spec,
+                "SINGLE_EFFECT_ONLY",
                 f"verification deterministic; state={fresh.state}; "
                 f"verified_at_set={fresh.callback_verified_at is not None}",
             )
@@ -699,8 +707,11 @@ class AdversarialRunner:
         row = self._spend_snapshot(str(iid))
         committed_once = row is not None and row.committed_minor == attempt.amount_minor * 1
         if (
-            first is not None and second is not None
-            and first.processed and second.duplicate and committed_once
+            first is not None
+            and second is not None
+            and first.processed
+            and second.duplicate
+            and committed_once
             and row.reserved_minor == 0
         ):
             detail = f"first processed={first.processed}; second={second.reason}"
@@ -734,9 +745,14 @@ class AdversarialRunner:
         row = self._spend_snapshot(str(iid))
         fresh = self._attempt_row(str(attempt.execution_attempt_id))
         if (
-            captured and authorized and captured.processed and authorized.processed
-            and row is not None and row.committed_minor == attempt.amount_minor
-            and fresh is not None and fresh.state == AttemptState.SUCCEEDED.value
+            captured
+            and authorized
+            and captured.processed
+            and authorized.processed
+            and row is not None
+            and row.committed_minor == attempt.amount_minor
+            and fresh is not None
+            and fresh.state == AttemptState.SUCCEEDED.value
         ):
             return self._finish(
                 spec, "RECONCILED_EXACTLY_ONCE", "lagged snapshot regressed nothing"
@@ -773,11 +789,17 @@ class AdversarialRunner:
         row = self._spend_snapshot(str(iid))
         final = self._attempt_row(str(attempt.execution_attempt_id))
         if (
-            failed and captured and failed.processed and captured.processed
-            and mid is not None and mid.state == AttemptState.FAILED.value
-            and final is not None and final.state == AttemptState.SUCCEEDED.value
+            failed
+            and captured
+            and failed.processed
+            and captured.processed
+            and mid is not None
+            and mid.state == AttemptState.FAILED.value
+            and final is not None
+            and final.state == AttemptState.SUCCEEDED.value
             and final.fulfilment_state == "ELIGIBLE"
-            and row is not None and row.committed_minor == attempt.amount_minor
+            and row is not None
+            and row.committed_minor == attempt.amount_minor
             and row.reserved_minor == 0
         ):
             return self._finish(spec, "RECONCILED_EXACTLY_ONCE", "failed->captured reconciled once")

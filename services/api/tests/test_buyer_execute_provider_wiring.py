@@ -258,8 +258,8 @@ def test_status_endpoint_reflects_server_truth_and_is_read_only(
     assert "synthetic-secret" not in json.dumps(body)
     assert "synthetic-hook" not in json.dumps(body)
 
-    # Strictly read-only: repeated reads are identical; the reservation was
-    # released exactly once by the failure settlement and nothing re-reserves.
+    # Strictly read-only: repeated reads are identical; the reservation remains
+    # held because Razorpay documents that failed may later become captured.
     engine = create_engine(settings.database_url, future=True)
     factory = create_session_factory(engine)
     with factory() as session:
@@ -273,7 +273,7 @@ def test_status_endpoint_reflects_server_truth_and_is_read_only(
         from sqlalchemy import select
 
         spend = session.execute(select(AuthorizationSpend)).scalars().one()
-    assert spend.reserved_minor == 0
+    assert spend.reserved_minor > 0
     assert spend.committed_minor == 0
     assert spend.version == version_after_settle
 
