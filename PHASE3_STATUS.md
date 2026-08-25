@@ -25,7 +25,7 @@
 | M11 | IntentDraft schema | PASS | domain/intent_draft.py: versioned agentpay-intent-draft-v1; CompilerIntentPayload (hard/semantic/ambiguities/unspecified) + server-identity IntentDraft wrapper (drf_ ULID, source hash, created_at); StrictInt minor-unit money w/ explicit ISO currency (float/bool/<=0 rejected), extra=forbid (hallucinated keys fail), ALL defaults None (no invented currency/condition/recurring), bounded texts(280)/lists(8..12)/items(120); 14 negative+property tests incl. Hypothesis round-trips; suite 404/404 |
 | M12 | Compiler prompt & isolation contract | PASS | intent_compiler_prompt.py: COMPILER_SYSTEM_PROMPT v1 encoding all §12 rules (no-invention, hard-vs-semantic split, ambiguities, minor-unit money, negation preservation, sole-source authority); prompt_sha256 audit binding; TrustedHumanAuthorization value object (3..2000 chars, control-char rejection); build_compiler_messages single choke point with NO context parameter (structural isolation — signature-level test + module-surface scan proving no str inlet exists); hostile-text inertness test; suite 411/411 |
 | M13 | Strict validation + bounded repair | PASS | intent_compilation_service.py: extract_json_object (bare/fenced/wrapped) -> CompilerIntentPayload strict parse (20k char cap) -> ONE repair w/ validation feedback + response_format json_object -> fail closed; CompilerOutcome OK/FAILED(+NEEDS_CLARIFICATION ready for M16) carries attempts/error_code/request_ids; provider failures fail-closed with exact call-count proofs (1 on first-failure, 2 max total); malicious prose inert; 9 tests; suite 420/420 |
-| M14 | Compiler golden evaluation set | NOT_STARTED | — |
+| M14 | Compiler golden evaluation set | PASS | data/phase3/compiler_golden/golden_set.jsonl: 307 manual-truth cases across 25 categories (easy 234/medium 43/hard 30) from hand-authored template families with truth computed BY CONSTRUCTION (never Qwen); manifest w/ SHA256 + truth_source=human-authored; compiler_eval.py evaluator (Expectation schema, omission/invention/mismatch taxonomy incl. money-without-human-statement sentinel + declared invention bans); structural honesty test forbidding model-label fields in rows; 13 tests; suite 433/433 |
 | M15 | Real compiler evaluation | NOT_STARTED | — |
 | M16 | Human confirmation domain flow | NOT_STARTED | — |
 | M17 | Human confirmation UI | NOT_STARTED | — |
@@ -559,3 +559,41 @@ pytest (full)                    -> 420 passed
 
 ### Next
 - M14 — Intent compiler golden evaluation set.
+
+
+## M14 — Intent Compiler Golden Evaluation Set
+
+MILESTONE: M14
+STATUS: PASS
+
+Requirements: master prompt M14 — independent deterministic/manual-truth
+evaluation set with several hundred diverse intents; expected truth must not
+come from Qwen.
+
+### Implementation
+- `scripts/rzp_build_compiler_golden.py`: deterministic generator; **307
+  cases**, 25 categories spanning budgets, explicit currencies, quantity,
+  brands, condition-new requirements, recurring-forbidden phrasings,
+  trial-to-paid euphemisms, merchant restrictions, double negation,
+  multi-constraint stacks, underspecified minimal prompts, ambiguity surfacing,
+  injection-like HUMAN text (authority = literal statements only), shipping/
+  warranty/returns/delivery/deadline semantics, bundle obligations, membership-
+  insertion resistance, safe-lookalike title traps, alias handling, variant
+  guards. Difficulty split 234/43/30.
+- `compiler_eval.py`: Expectation + GoldenCase schemas;
+  evaluate_case() with an explicit OMISSION vs INVENTION vs MISMATCH taxonomy,
+  including the currency='UNSPECIFIED' sentinel that catches invented money.
+- Integrity: manifest.json carries case count + SHA256 + difficulty histogram +
+  truth_source declaration; a test forbids any model-self-label field in rows.
+
+### Validation commands + results
+```text
+python scripts/rzp_build_compiler_golden.py    -> 307 cases, sha256 recorded
+ruff check .                                   -> clean
+mypy -p razormesh_api (strict)                 -> Success, 59 files
+pytest tests/test_compiler_eval.py             -> 13 passed
+pytest (full)                                  -> 433 passed
+```
+
+### Next
+- M15 — Real Qwen compiler evaluation over this golden set.

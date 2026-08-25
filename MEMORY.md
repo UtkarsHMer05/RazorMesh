@@ -159,10 +159,12 @@ all callback/provider evidence is correlated to current durable authority.
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M14** (compiler golden evaluation set: several hundred
-diverse intents with MANUAL truth — budgets/currencies/quantity/brand/
-condition/recurring/trial/negation/ambiguity/multi-constraint/underspecified;
-truth NOT from Qwen). P3-M13 done: IntentCompilationService — extraction +
+PHASE 3 RUNNING — next milestone: **P3-M15** (REAL Qwen run over the 307-case golden set:
+schema validity, field P/R, numeric correctness, omissions/inventions,
+ambiguity handling, repair rate, latency -> docs/PHASE3_INTENT_COMPILER_EVAL.md;
+respect free-tier 503 windows w/ bounded pacing). P3-M14 done: golden set
+307 cases/25 categories/manual truth + evaluator w/ omission-invention
+taxonomy; suite 433. P3-M13 done: IntentCompilationService — extraction +
 strict parse + ONE repair + fail-closed outcomes w/ call-count proofs; P3-M12 done:
 prompt v1 hashed+versioned; TrustedHumanAuthorization choke point;
 structurally-proven isolation (signature + module-scan tests). P3-M11 done: domain/intent_draft.py v1 schema

@@ -1,0 +1,39 @@
+{
+  "format_version": "compiler-golden-v1",
+  "cases": 307,
+  "sha256": "9505e2bf6201c8201684c15f06cdc388800407e34262dbc0e9a98088d7fb3cc0",
+  "categories": [
+    "alias_handling",
+    "ambiguous_phrasing",
+    "brand_constraint",
+    "budget_currency_explicit",
+    "budget_only",
+    "bundle_semantic",
+    "condition_new_required",
+    "deadline_semantic",
+    "delivery_timing_semantic",
+    "injection_like_human_text",
+    "membership_resistance",
+    "merchant_restriction",
+    "multi_constraint",
+    "multi_constraint_variant",
+    "negation_preservation",
+    "quantity",
+    "recurring_forbidden_explicit",
+    "return_policy_semantic",
+    "safe_lookalike_alias",
+    "safe_lookalike_title_trap",
+    "shipping_fee_semantic",
+    "trial_euphemism",
+    "underspecified_minimal",
+    "variant_guard",
+    "warranty_semantic"
+  ],
+  "difficulty_counts": {
+    "easy": 234,
+    "medium": 43,
+    "hard": 30
+  },
+  "truth_source": "human-authored templates (never Qwen self-labels)",
+  "generated_at_utc": "2026-08-25T11:37:13.419729+00:00"
+}
