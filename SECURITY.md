@@ -398,3 +398,50 @@ which structural check failed gains no advantage — every path to business stat
 requires a valid signature computed with the secret. Pinned by tests
 (test_unauthenticated_variants_cause_zero_state_mutation) asserting zero rows in
 provider_events and audit_events across all unauthenticated header variants.
+
+
+# 16. Phase-3 security invariants (AI/ML trust layer — added P3-M08)
+
+**P3-S01** The TokenRouter API key is backend-only (SecretStr, env-injected);
+it never reaches the browser, bundle, logs, or dataset artifacts.
+**P3-S02** The Qwen Intent Compiler receives only trusted human authorization
+text plus system/schema instructions — never merchant pages or untrusted
+product content.
+**P3-S03** An AI-produced IntentDraft is not authority until explicit human
+confirmation; only CONFIRMED drafts create/supersede authorization generations.
+**P3-S04** Merchant/untrusted text cannot mutate a confirmed IntentContract.
+**P3-S05** Semantic hypotheses derive exclusively from confirmed human
+authorization; premises come from current sanitized commerce evidence with
+provenance.
+**P3-S06** The semantic verifier holds no payment provider client, no payment
+tool, and no direct DB mutation capability.
+**P3-S07** The semantic model can make decisions strictly stricter, never
+looser: hard BLOCK stays BLOCK; hard CHALLENGE + semantic PASS stays CHALLENGE;
+hard ALLOW + semantic BLOCK → BLOCK; hard ALLOW + semantic CHALLENGE → CHALLENGE.
+No probability combination may weaken a hard decision.
+**P3-S08** Inference failure/model unavailability fails closed to CHALLENGE
+(or another documented fail-closed state) — never silent ALLOW.
+**P3-S09** Gold labels never leak into training data or threshold tuning.
+**P3-S10** A fine-tuned model is selected ONLY on held-out evidence vs the
+zero-shot baseline; otherwise the baseline remains.
+**P3-S11** Dataset splits are group-based; pair siblings and template/entity/
+lookalike families cannot cross splits; automated leakage tests are
+release-blocking.
+**P3-S12** Qwen-generated dataset labels are provisional, never automatic gold.
+**P3-S13** Model id/hash, prompt version/hash, schema version, and threshold
+manifest are audit-visible.
+**P3-S14** TokenRouter outage cannot bypass human confirmation; no silent
+provider switching.
+**P3-S15** Phase-1/2 runtime payment guarantees are unchanged by Phase 3.
+**P3-S16** AI components cannot call Razorpay or any PaymentProvider.
+**P3-S17** Untrusted content cannot enter privileged compiler context.
+**P3-S18** NLI-only output never constitutes production payment authority.
+**P3-S19** Semantic false positives (safe transactions blocked/challenged) are
+measured and disclosed.
+**P3-S20** No fabricated model/benchmark metrics; every number traces to a
+recorded artifact with hash.
+
+Defensive scenario families T25+ (Security Lab, M41): disguised subscription,
+refurbished-vs-new condition, seller alias/ambiguity, hidden renewal,
+bundle obligation, double negation, prompt injection, safe lookalikes — each
+surfacing hard rule, NLI probabilities, semantic action, fused final decision.

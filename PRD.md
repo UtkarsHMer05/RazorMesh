@@ -385,3 +385,30 @@ human-approved Phase-2 master prompt. Test Mode ONLY; Live Mode forbidden.
 
 Phase-2 non-goals inherit §5 plus: no refunds/payouts/subscriptions/payment links,
 no real fulfilment, no protocol implementations (UCP/AP2/ACP/UAP/x402).
+
+
+# 12. Phase-3 requirements (AI/ML trust layer — added P3-M08)
+
+Phase-3 status: ACTIVE. Source of truth for scope:
+`RazorMesh_Trust_Phase3_Master_Prompt.md` + `PHASE3_MILESTONES.md`.
+
+**PRD-P3-001** The Qwen Intent Compiler converts trusted human natural-language
+authorization into a versioned, schema-validated IntentDraft; it never creates authority.
+**PRD-P3-002** Only explicit human confirmation moves an IntentDraft to CONFIRMED and may create/supersede IntentContract generations.
+**PRD-P3-003** The compiler sees ONLY trusted human text + system/schema instructions — never merchant pages, untrusted product text, or any secret.
+**PRD-P3-004** AgentPay-IR is synthetic + human-reviewed research data with full provenance metadata; NLI orientation is premise=trusted evidence, hypothesis=confirmed-authorization statement.
+**PRP-P3-004A** (renumbered PRD-P3-014) Splits are group-based (template/parent/entity/lookalike); siblings never cross train/test; leakage tests are release-blocking.
+**PRD-P3-005** A human-reviewed gold set (>=300 examples) is required before final model/threshold decisions; gold labels never leak into training/tuning.
+**PRD-P3-006** Two public DeBERTa baselines are evaluated on identical frozen data; selection uses security-first criteria (contradiction recall > neutral handling > safe-lookalike FPR > macro F1 > calibration > cost), frozen in DECISIONS.
+**PRD-P3-007** Fine-tuning happens in Colab on the selected baseline only; the fine-tuned model replaces the baseline only if held-out evidence shows meaningful improvement.
+**PRD-P3-008** Semantic policy is calibrated on validation data only: strong contradiction→BLOCK, neutral/ambiguous→CHALLENGE, strong entailment→PASS; inference failure fails closed to CHALLENGE, never ALLOW.
+**PRD-P3-009** Conservative fusion: semantic output can only STRICTEN deterministic decisions per the master-prompt matrix; no probability combination may turn hard BLOCK/CHALLENGE into ALLOW.
+**PRD-P3-010** The SemanticVerifier has no payment/provider/DB privileges and no network capability beyond model loading.
+**PRD-P3-011** Model artifacts are tracked as manifests+hashes+metrics; weights stay out of Git; local inference first (CPU→MPS→ONNX→quantized), Modal only via a genuine conditional human gate.
+**PRD-P3-012** AI decisions surface explainable evidence (premise/hypothesis/probabilities/thresholds/hard vs semantic vs final) in UI and audit.
+**PRD-P3-013** TokenRouter credentials are backend-only; provider outage never bypasses human confirmation or silently switches providers.
+**PRD-P3-014** No fabricated metrics; every reported number traces to a recorded artifact.
+
+Phase-3 non-goals inherit prior phases plus: no Qwen fine-tuning, no training
+from scratch, no production payment authority from NLI-only paths, no protocol
+implementations, no Modal without the conditional gate.

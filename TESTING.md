@@ -375,3 +375,32 @@ Current entries: callback-verification HMAC fixture, webhook-verification HMAC
 fixture, the P2-M38 route-wiring regression HMAC fixture
 (`wh-route-wiring-secret` in `tests/test_reducer.py`), the `rzp_live_`
 rejection literal, and the allowlist's own repeated `rzp_live_` literal.
+
+## 15. Phase-3 release-blocking gates (added P3-M08)
+
+On top of all Phase-1/2 gates:
+
+1. Context isolation: tests prove the compiler path cannot receive merchant/
+   untrusted text (M12/M42) and that hypotheses derive only from confirmed
+   authorization (M39).
+2. IntentDraft schema: property + negative tests for money/currency/no-invented-
+   defaults/bounded sizes (M11); strict output validation incl. one-bounded-
+   repair and fail-closed behavior (M13).
+3. Human confirmation state machine: only CONFIRMED creates/supersedes
+   authorization; bypass/stale/replay/idempotency tested (M16).
+4. Dataset gates: schema validators (M18), provenance/hash integrity, label-
+   consistency heuristics (M21), duplicate contamination caught by tests (M22),
+   group-split leakage tests that FAIL on intentionally contaminated fixtures
+   (M23).
+5. NLI harness: identical evaluation code across baselines with per-model
+   pinned label maps unit-tested against card-declared orders (M28/M29).
+6. Fusion: exhaustive matrix test + Hypothesis property proving semantic
+   output can never weaken hard BLOCK/CHALLENGE (M40) — release-blocking.
+7. Fail-closed: verifier-unavailable → CHALLENGE asserted (M38); compiler
+   unavailable → controlled error, no partial authority (M09+).
+8. Secret hygiene: no TokenRouter key in frontend bundle/build/docs/datasets;
+   private bootstrap deleted post-M10 and proven never tracked.
+9. Artifact verification: training zip hash + dataset hash + baseline id +
+   label map + env manifest validated before local import (M35).
+10. Threshold policy: calibration on validation only; single frozen-gold
+    evaluation recorded once (M37); thresholds stored with model+hash.

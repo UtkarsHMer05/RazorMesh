@@ -159,9 +159,10 @@ all callback/provider evidence is correlated to current durable authority.
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M08** (governance transition: PHASES/PRD/ARCHITECTURE/
-SECURITY P3-S01..S20/TESTING/DECISIONS entries incl. no-Qwen-finetune +
-conservative-fusion decisions). P3-M07 done: credentials merged into .env
+PHASE 3 RUNNING — next milestone: **P3-M09** (TokenRouter client abstraction: backend-only
+httpx client, typed errors, timeout, DI seam, fixtures; NO authority yet).
+P3-M08 done: governance fully extended (PRD §12, SECURITY §16 P3-S01..S20,
+TESTING §15, D-038/D-039/D-040, ARCHITECTURE §15, PHASE3_MILESTONES.md). P3-M07 done: credentials merged into .env
 (names-only output), Phase-1/2 vars preserved, .env.example placeholders
 added; PRIVATE FILE STILL EXISTS until M10 probe success. P3-M06 done: R-019..R-021 recorded — TokenRouter docs base
 URL is .io not .com (probe decides at M10); DeBERTa label maps DIVERGE

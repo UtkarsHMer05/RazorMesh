@@ -587,3 +587,41 @@ Ops surface (read-only unless explicitly invoked):
 - GET /ops/reconciliation/required — REQUIRED attempts, safe fields, zero mutation;
 - POST /ops/reconciliation/{attempt_id} — one reconciliation pass (404 unknown,
   409 authority conflict).
+
+
+# 15. Phase-3 AI/ML architecture (Qwen compiler + DeBERTa verifier)
+
+Status: ACTIVE from P3-M08 (D-038/D-039/D-040). The Phase-2 trust core is
+untouched: AI components attach at two seams only.
+
+```text
+trusted human authorization text
+    → IntentCompilerClient (backend-only; TokenRouter /v1/chat/completions;
+      typed config, timeout, structured errors, DI seam, fixture for tests)
+        → strict JSON extraction → Pydantic/domain validation
+        → one bounded repair → fail closed / NEEDS_CLARIFICATION
+    → IntentDraft {hard constraints | semantic constraints | ambiguities |
+      unspecified} (versioned schema)
+    → HUMAN CONFIRMATION (durable DRAFT/NEEDS_CLARIFICATION/CONFIRMED/REJECTED)
+        → only CONFIRMED creates/supersedes IntentContract generations
+current sanitized commerce evidence (provenance-tagged, deterministic builder)
+    → SemanticEvidenceBuilder → (premise, hypothesis) pairs
+        hypothesis ← confirmed authorization ONLY
+    → DebertaNLISemanticVerifier (pure inference; no provider/DB/network)
+        → calibrated semantic action PASS/CHALLENGE/BLOCK (frozen thresholds)
+    → conservative fusion (D-039): semantics can only STRICTEN hard decisions
+    → existing Phase-2 executor path unchanged
+```
+
+Context isolation (P3-S02/S17): the compiler request contains trusted human
+text + system/schema instructions ONLY. Merchant pages and untrusted product
+text flow into the SemanticEvidenceBuilder as PREMISE evidence, never into the
+compiler context. Secrets never enter either AI path.
+
+Auditability (P3-S13): INTENT_COMPILED / INTENT_CONFIRMED /
+SEMANTIC_VERIFICATION_RUN / POLICY_FUSION_DECIDED ledger events carry model id/
+hash, prompt version/hash, schema version, threshold manifest — never secrets.
+
+Data plane: AgentPay-IR lives under data/phase3 (schema-validated, provenance-
+complete, group-split, hash-manifested); training artifacts are manifests+
+hashes in Git with weights ignored locally.

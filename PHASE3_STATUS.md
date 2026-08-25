@@ -19,7 +19,7 @@
 | M05 | Freeze Phase-3 baseline | PASS | docs/PHASE3_BASELINE.md frozen at HEAD d457661: 375 backend tests, benchmark 20 pairs F1=1.0 regenerated, migration head a93c7d5e21f0, full gate table, runtime versions, Phase-2 references, explicit NO-PHASE-3-AI-ACTIVE statement, bootstrap values still unread |
 | M06 | Live AI/ML research and version manifest | PASS | R-019 TokenRouter reality (documented base URL api.tokenrouter.io/v1 vs prompt's .com; tr_ keys; OpenAI-compatible + JSON mode; model id to be proven live at M10); R-020 both DeBERTa cards (licenses MIT/Apache-2.0; CRITICAL label-map divergence A=[E,N,C] vs B=[C,E,N]; B ships ONNX); R-021 stack stables (transformers 5.15.1, datasets >=5.0.1 w/ PYSEC-2026-3716 floor, accelerate 1.14.0, onnxruntime 1.29.0); VERSION_MANIFEST rows added with planned-install milestones |
 | M07 | Private TokenRouter credential injection | PASS | exclusion re-verified (.gitignore:6 for .env mode600; .git/info/exclude:49 bootstrap); 3 vars parsed+merged into .env programmatically — only NAMES/lengths printed (key=51, url=30, model=21 chars), all Phase-1/2 vars byte-preserved; .env.example blank placeholders added; leak sweep over trackable files clean; private file NOT deleted (deletion gated on M10 probe success) |
-| M08 | Phase-3 governance transition | NOT_STARTED | — |
+| M08 | Phase-3 governance transition | PASS | PHASES Phase-3 ACTIVE; PRD §12 PRD-P3-001..014; SECURITY §16 P3-S01..S20 + T25+ families; TESTING §15 ten phase-3 gates; DECISIONS D-038 (architecture/no-Qwen-finetune) D-039 (fusion release-blocking) D-040 (data/gold/training/inference policy); ARCHITECTURE §15; PHASE3_MILESTONES.md created |
 | M09 | TokenRouter client abstraction | NOT_STARTED | — |
 | M10 | TokenRouter auth + capability probe | NOT_STARTED | — |
 | M11 | IntentDraft schema | NOT_STARTED | — |
@@ -333,3 +333,25 @@ Security invariants: P3-S01 groundwork, S30.
 
 ### Next
 - M08 — Phase-3 governance transition.
+
+
+## M08 — Phase-3 Governance Transition
+
+MILESTONE: M08
+STATUS: PASS
+
+Requirements: master prompt M08 — full governance extension without erasing
+history.
+
+### Updated
+- PHASES.md: Phase 3 ACTIVE banner.
+- PRD.md: §12 with PRD-P3-001..014 + non-goals.
+- SECURITY.md: §16 P3-S01..S020 invariants + defensive scenario families.
+- TESTING.md: §15 ten release-blocking Phase-3 gates.
+- DECISIONS.md: D-038, D-039, D-040.
+- ARCHITECTURE.md: §15 AI architecture + isolation + auditability.
+- PHASE3_MILESTONES.md: created (50 rows).
+- MEMORY.md already Phase-3 active (M05).
+
+### Validation
+Docs-only milestone; lint/mypy clean; settings suite 14 passed post-edit.

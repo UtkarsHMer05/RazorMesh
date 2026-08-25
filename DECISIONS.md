@@ -795,3 +795,49 @@ the dedicated test database; mock live acceptance passed all checks including
 20-worker single-effect and Security Lab 22/22; current Test Mode auth passed;
 one trusted-path Test order create/fetch returned an exact authority match and
 performed no checkout/payment.
+
+## D-038 — Phase-3 model architecture; no Qwen fine-tuning (P3-M08)
+
+Decision: two AI components, strictly separated. (1) Intent Compiler: Qwen
+3.8 Max Free via TokenRouter's OpenAI-compatible Chat Completions, used ONLY
+to convert trusted human text into a versioned IntentDraft behind strict
+Pydantic/domain validation with ONE bounded repair and fail-closed fallback.
+(2) Semantic Verifier: DeBERTa-v3 NLI (baseline chosen by frozen evidence at
+M30) as a pure-inference classifier with no provider/DB privileges. Qwen is
+never fine-tuned in Phase 3; DeBERTa is fine-tuned only on AgentPay-IR and
+only replaces the baseline if held-out gold evidence justifies it.
+
+Rationale: master prompt §3/§12; keeps probabilistic components out of the
+authority path entirely (AI proposes, RazorGuard authorizes).
+
+Security consequences: enforces P3-S02/S03/S06/S16/S18 by construction.
+
+Validation/evidence: contract tests from M09 onward; context-isolation tests
+M12/M42; ablation M46.
+
+## D-039 — Conservative fusion invariant is release-blocking (P3-M08)
+
+Decision: final decision = deterministic hard decision ⊕ semantic action per
+the master-prompt matrix — semantics may only STRICTEN. Implemented as a pure
+function with an exhaustive matrix test PLUS a property/Hypothesis test
+proving no semantic output or probability vector can weaken BLOCK/CHALLENGE.
+Any change to fusion requires changing these tests first.
+
+Security consequences: P3-S07/P2 hard-rule supremacy made mechanically
+unbypassable.
+
+## D-040 — Data/gold/training/inference policy (P3-M08)
+
+Decisions: (1) AgentPay-IR is synthetic + human-reviewed with full provenance;
+Qwen labels are provisional only. (2) A human-reviewed gold set of >=300
+stratified examples gates all final model/threshold claims; gold never leaks
+into training/tuning. (3) Splits are group-based (template/parent/entity/
+lookalike); leakage tests release-blocking. (4) Fine-tuning runs in Google
+Colab on the selected baseline with a self-contained reproducible notebook and
+hashed frozen inputs; artifact import requires hash+manifest verification.
+(5) Local inference first (CPU→MPS→ONNX→quantized); Modal only through the
+conditional human gate if measured local inference is genuinely inadequate.
+(6) Thresholds calibrated on validation data only, frozen with model/hash/
+version, evaluated once on frozen gold.
+
+Security consequences: P3-S09..S14, S20 enforcement strategy.
