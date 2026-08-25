@@ -1,0 +1,153 @@
+# PHASE3_STATUS.md — Phase-3 AI/ML Trust Layer Evidence
+
+## Status rules
+
+- Valid states: `NOT_STARTED`, `IN_PROGRESS`, `PASS`, `BLOCKED`, `HUMAN_GATE`.
+- PASS only with recorded acceptance evidence below.
+- Human gates per master prompt §15: gold review (M26), Colab training (M34),
+  conditional compute (only if justified), Phase-4 approval (after M50).
+- Secrets are never recorded here — only PRESENT/ABSENT markers.
+- AI components may propose; RazorGuard authorizes; trusted executor executes
+  (P3-S01..S20 in SECURITY.md).
+
+| # | Milestone | Status | Evidence summary |
+|---|---|---|---|
+| M01 | Repository, governance, secret-safety inspection | PASS | master prompt read fully; governance set read in AGENTS.md precedence; git tree clean on main @fc0422e (+P2-M50 final check); `.env` ignored (.gitignore:6, mode 600); bootstrap file untracked→locally excluded via .git/info/exclude:49, zero history entries; no TokenRouter refs in tracked source; full backend regression 375/375 (one transient scheduling flake in 20-worker race noted → M02 watch); PHASE3_STATUS skeleton created |
+| M02 | Full Phase-1/2 backend regression | NOT_STARTED | — |
+| M03 | Full Phase-1/2 frontend/E2E regression | NOT_STARTED | — |
+| M04 | Phase-2 real-provider integrity revalidation | NOT_STARTED | — |
+| M05 | Freeze Phase-3 baseline | NOT_STARTED | — |
+| M06 | Live AI/ML research and version manifest | NOT_STARTED | — |
+| M07 | Private TokenRouter credential injection | NOT_STARTED | — |
+| M08 | Phase-3 governance transition | NOT_STARTED | — |
+| M09 | TokenRouter client abstraction | NOT_STARTED | — |
+| M10 | TokenRouter auth + capability probe | NOT_STARTED | — |
+| M11 | IntentDraft schema | NOT_STARTED | — |
+| M12 | Compiler prompt & isolation contract | NOT_STARTED | — |
+| M13 | Strict validation + bounded repair | NOT_STARTED | — |
+| M14 | Compiler golden evaluation set | NOT_STARTED | — |
+| M15 | Real compiler evaluation | NOT_STARTED | — |
+| M16 | Human confirmation domain flow | NOT_STARTED | — |
+| M17 | Human confirmation UI | NOT_STARTED | — |
+| M18 | AgentPay-IR taxonomy/schema | NOT_STARTED | — |
+| M19 | Deterministic seed dataset | NOT_STARTED | — |
+| M20 | Qwen candidate generator | NOT_STARTED | — |
+| M21 | Candidate validation | NOT_STARTED | — |
+| M22 | Dedup / near-duplicate detection | NOT_STARTED | — |
+| M23 | Leakage-safe split builder | NOT_STARTED | — |
+| M24 | Adversarial dataset expansion | NOT_STARTED | — |
+| M25 | Gold review pack generation | NOT_STARTED | — |
+| M26 | HUMAN GATE 1 — gold review | NOT_STARTED | — |
+| M27 | Finalize AgentPay-IR v1 | NOT_STARTED | — |
+| M28 | DeBERTa baseline A eval | NOT_STARTED | — |
+| M29 | DeBERTa baseline B eval | NOT_STARTED | — |
+| M30 | Baseline selection | NOT_STARTED | — |
+| M31 | Reproducible training bundle | NOT_STARTED | — |
+| M32 | Colab notebook | NOT_STARTED | — |
+| M33 | Colab preflight bundle | NOT_STARTED | — |
+| M34 | HUMAN GATE 2 — Colab training | NOT_STARTED | — |
+| M35 | Training artifact verification | NOT_STARTED | — |
+| M36 | Fine-tuned vs baseline evaluation | NOT_STARTED | — |
+| M37 | Threshold calibration | NOT_STARTED | — |
+| M38 | Production SemanticVerifier | NOT_STARTED | — |
+| M39 | SemanticEvidenceBuilder | NOT_STARTED | — |
+| M40 | Conservative policy fusion | NOT_STARTED | — |
+| M41 | End-to-end semantic attack scenarios | NOT_STARTED | — |
+| M42 | Prompt-injection context-isolation tests | NOT_STARTED | — |
+| M43 | Phase-3 UI integration | NOT_STARTED | — |
+| M44 | AI audit evidence events | NOT_STARTED | — |
+| M45 | End-to-end Phase-3 benchmark | NOT_STARTED | — |
+| M46 | Ablation study | NOT_STARTED | — |
+| M47 | Local inference optimization / Modal decision | NOT_STARTED | — |
+| M48 | Full Phase-3 security/quality gate | NOT_STARTED | — |
+| M49 | Clean-room Phase-3 acceptance | NOT_STARTED | — |
+| M50 | Completion report & STOP | NOT_STARTED | — |
+
+---
+
+# Current milestone evidence
+
+## M01 — Repository, governance, and secret-safety inspection
+
+MILESTONE: M01
+STATUS: PASS
+
+Requirements: master prompt M01 + §1/§2/§5 steps 1–3 — repository/Git/state
+inspection, governance read in precedence order, secret safety proven BEFORE
+any private value is read. Security invariants: S30, P3-S01 groundwork.
+
+### Implementation / findings
+
+- Master prompt read completely (1959 lines) including all 50 milestones,
+  invariants P3-S01..S20, human gates, failure policy, acceptance matrix.
+- Governance read in AGENTS.md precedence: AGENTS.md, RULES.md, PRD.md,
+  PHASES.md (Phase 2 marked COMPLETE), SECURITY.md (P2-S01..S24 + D-037 note),
+  ARCHITECTURE.md §14, DESIGN.md, DECISIONS.md through **D-037**, PHASE2_
+  MILESTONES/PHASE2_STATUS, TESTING.md, VERSION_MANIFEST.md, RESEARCH.md,
+  PHASE1_STATUS.md (tail), MEMORY.md, AI_WORKFLOW.md, Phase-2 completion
+  artifacts. No conflict found between human decisions and the Phase-3 master
+  prompt (Phase-3 was explicitly approved by the human instruction that
+  delivered the prompt).
+- Git state: branch `main`; working tree clean except three UNTRACKED Phase-3
+  files (`RazorMesh_Trust_Phase3_Master_Prompt.md`,
+  `PASTE_THIS_TO_AGENT_PHASE3.md`, `PHASE3_PRIVATE_BOOTSTRAP_LOCAL_ONLY.md`).
+  HEAD `fc0422e` ("P2-M50 Final Check") on top of `3e63bcb` (P2-M50 PASS).
+  No unrelated user work at risk; nothing staged; no stash conflicts.
+- Secret safety (performed BEFORE reading any private value):
+  - `.env` ignored via `.gitignore:6`; permissions 600.
+  - Bootstrap file NOT tracked (`git ls-files` empty for it) and has ZERO
+    entries in any commit history (`git log --all -- <file>` empty).
+  - Exact filename added to `.git/info/exclude` line 49; verified via
+    `git check-ignore -v`.
+  - Grep across tracked backend/frontend source: zero TokenRouter references;
+    no `NEXT_PUBLIC_TOKENROUTER_API_KEY` anywhere (forbidden by master prompt).
+- Values NOT read yet — credential merge happens at M07, probe at M10,
+  deletion of the private file after M10 success (master prompt §5/M07/M10).
+- Full backend regression run as the M01 gate subset: **375/375 passed**
+  matching the post-completion audit count recorded in MEMORY (D-037 state).
+  One transient failure of `test_twenty_workers_same_ticket_one_provider_effect`
+  occurred in the FIRST full-suite run (machine under parallel load from the
+  session's prior commands); it then passed in isolation, in 3 consecutive
+  module runs, and in 2 further full-suite runs. Recorded honestly here as a
+  load-sensitivity observation; M02 owns the deeper look — if it recurs, make
+  the test load-robust WITHOUT weakening its exactly-once assertions.
+
+### Files changed
+
+- `PHASE3_STATUS.md` (new skeleton), `MEMORY.md` (phase transition), this file.
+- `.git/info/exclude` (local-only, not tracked).
+
+### Validation commands + results
+
+```bash
+git status --short                          # only intended untracked P3 files
+git check-ignore -v .env                    # .gitignore:6
+stat -f "%Sp %N" .env                       # mode 600
+git ls-files | grep -i "PHASE3_PRIVATE\|TOKENROUTER"   # empty
+git log --all --oneline -- PHASE3_PRIVATE_BOOTSTRAP_LOCAL_ONLY.md  # empty
+grep -rn "TOKENROUTER" services/api/src apps/web/src   # empty
+cat .git/info/exclude | tail -1             # exact filename present
+cd services/api && uv run pytest            # 375 passed
+```
+
+### Real external API use
+
+- NONE (no TokenRouter call yet; values unread).
+
+### Security regression
+
+- Full backend suite = the standing Phase-1/2 regression gate; green.
+
+### Human gate
+
+- NONE.
+
+### Known limitations
+
+- The 20-worker race test showed one load-induced flake; see findings above.
+
+### Next
+
+- M02 — Full Phase-1/2 backend regression (explicit milestone; includes
+  ruff/mypy/Hypothesis/concurrency/security batteries and the race-test
+  stability investigation).

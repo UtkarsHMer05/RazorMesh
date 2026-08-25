@@ -29,8 +29,8 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 # Current snapshot
 
 **Project:** RazorMesh Trust
-**Active phase:** Phase 2 COMPLETE — awaiting human approval for Phase 3
-**Current milestone:** none active (P2-M50 PASS; STOP gate in effect)
+**Active phase:** Phase 3 ACTIVE (human-approved 2026-08-25; M01 PASS)
+**Current milestone:** P2 complete (50/50 + D-037 final audit); P3-M01 PASS
 **Phase-2 milestones passed:** P2-M01..P2-M50 (all 50)
 **Last updated:** 2026-08-25
 **Gate:** Independent master-prompt audit (2026-08-25) found and repaired gaps hidden by the prior green suite: provider create/fetch authority validation; exact callback attempt and cross-principal-session binding; current authorization/checkout revalidation at captured settlement; webhook amount/currency correlation; conservative failed-payment reservation hold preventing late-capture overspend; and strict `rzp_test_`/official-endpoint configuration. Final battery: Ruff + mypy clean; pytest 375/375; frontend lint/tsc, Vitest 11/11, build, Playwright 5/5; security-check zero findings; benchmark 20 pairs F1=1.0; migration down/up; live mock acceptance 10/10 with Security Lab 22/22; current Test auth diagnostic; trusted Test order create/fetch exact match, no checkout/payment. D-037 + PHASE2_STATUS final addendum are authoritative. Changes remain uncommitted; no push. Phase 3 still requires explicit human approval.
@@ -159,16 +159,15 @@ all callback/provider evidence is correlated to current durable authority.
 
 # Next action
 
-PHASE 2 COMPLETE (all 50 milestones PASS) — AWAITING HUMAN APPROVAL FOR PHASE 3.
-Completion report: docs/PHASE2_COMPLETION_REPORT.md.
+PHASE 3 RUNNING — next milestone: **P3-M02** (full Phase-1/2 backend
+regression: ruff/mypy/Hypothesis/concurrency/security batteries + stability
+look at the 20-worker race flake observed once under load during M01).
+P3-M01 evidence: master prompt read fully; governance read in precedence;
+bootstrap file untracked + excluded via .git/info/exclude:49 with ZERO history
+entries and values still UNREAD (merge at M07, probe+delete after M10);
+backend regression 375/375.
 
-POST-COMPLETION VERIFICATION (2026-08-25): initial formatting-only audit found
-and fixed two unformatted files; the later independent logical audit supersedes
-its completion assessment. Current evidence is the D-037/PHASE2_STATUS final
-addendum and the 375-test gate above. Do NOT start Phase 3 without explicit
-human instruction.
-
-Still-relevant operational notes: `make test-db` must re-provision
+Standing notes: `make test-db` must re-provision
 razormesh_test after any `docker compose down -v` (migrate alone does NOT
 create it). If the zrok share dies, re-run `make phase2-up` and UPDATE the
 Dashboard webhook URL + `.env` RAZORPAY_WEBHOOK_PUBLIC_URL (share is not
