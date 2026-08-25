@@ -27,7 +27,7 @@
 | M13 | Strict validation + bounded repair | PASS | intent_compilation_service.py: extract_json_object (bare/fenced/wrapped) -> CompilerIntentPayload strict parse (20k char cap) -> ONE repair w/ validation feedback + response_format json_object -> fail closed; CompilerOutcome OK/FAILED(+NEEDS_CLARIFICATION ready for M16) carries attempts/error_code/request_ids; provider failures fail-closed with exact call-count proofs (1 on first-failure, 2 max total); malicious prose inert; 9 tests; suite 420/420 |
 | M14 | Compiler golden evaluation set | PASS | data/phase3/compiler_golden/golden_set.jsonl: 307 manual-truth cases across 25 categories (easy 234/medium 43/hard 30) from hand-authored template families with truth computed BY CONSTRUCTION (never Qwen); manifest w/ SHA256 + truth_source=human-authored; compiler_eval.py evaluator (Expectation schema, omission/invention/mismatch taxonomy incl. money-without-human-statement sentinel + declared invention bans); structural honesty test forbidding model-label fields in rows; 13 tests; suite 433/433 |
 | M15 | Real compiler evaluation | PASS | REAL Qwen run on stratified **N=90/307** sample (D-041 human-approved scope; full-307 = pre-M48 obligation). Schema validity 90/90=100%; bounded repair 7/90 all repaired to valid; **case pass 71/90=78.9%** (easy 77.5/medium 90.9/hard 71.4); field recall brands/merchants/quantity 1.0, currency 0.96, semantic 0.9706, recurring_forbidden 0.9231, max_amount_minor 0.8533; **money precision 1.0, 0 mismatches, 0 invented amounts** (all money errors are fail-closed omissions); ambiguity 6/6; injection 2/3 (one warranty semantic leak). Prompt v1→v2 (v1 long-form made the thinking model hit finish=length w/ empty content at 4000 tokens; v2 schema-forward compiles reliably). Two golden-truth defects fixed transparently (F1 rupee→INR pre-measurement; F13-002 recurring_forbidden removed post-measurement + re-measured, sha256 eef70c9c→9164f04c, stale rows preserved). Budget-2000 harness contamination discarded + re-measured at 4000 (F10-001/003 then passed). Provider-noise rows retried, never counted. Docs: docs/PHASE3_INTENT_COMPILER_EVAL.md |
-| M16 | Human confirmation domain flow | NOT_STARTED | — |
+| M16 | Human confirmation domain flow | PASS | domain/confirmation.py (DraftState DRAFT/NEEDS_CLARIFICATION/CONFIRMED/REJECTED; fail-closed build_confirmed_contract: no-stated-money -> DRAFT_MISSING_MONEY, conservative terms aggregate=threshold=cap, quantity default 1, recurring forbidden unless explicit) + confirmation_service.py (advisory lineage locks, compile supersession, idempotent same-nonce replay, replay-mismatch rejection, NEEDS_CLARIFICATION unconfirmable, generation bump reusing intent_id w/ DRAFT_BELOW_COMMITTED_SPEND capacity guard, INTENT_COMPILED/CONFIRMED/REJECTED/SUPERSEDED/COMPILE_FAILED ledger events); migration e7a1c4f9b2d5; raw human text never stored (sha256 only); 17 tests incl. 8-thread concurrent single-authority proof; suite 449/449; D-042 |
 | M17 | Human confirmation UI | NOT_STARTED | — |
 | M18 | AgentPay-IR taxonomy/schema | NOT_STARTED | — |
 | M19 | Deterministic seed dataset | NOT_STARTED | — |
@@ -680,3 +680,58 @@ make security-check                -> PASS (secret scan 0; pip-audit 0; pnpm aud
 ### Next
 - M16 — Human confirmation domain flow (DRAFT/NEEDS_CLARIFICATION/CONFIRMED/
   REJECTED; only CONFIRMED creates/supersedes authorization).
+
+
+## M16 — Human Confirmation Domain Flow
+
+MILESTONE: M16
+STATUS: PASS
+
+Requirements: master prompt M16 — durable DRAFT/NEEDS_CLARIFICATION/CONFIRMED/
+REJECTED states; only CONFIRMED creates/supersedes authorization generations;
+ambiguities block confirmation; fail-closed materialization. P3-S03.
+Security invariants: P3-S03/S14/S15.
+
+### Implementation (previous-agent WIP reviewed, completed + tested)
+- `domain/confirmation.py`: state machine + `build_confirmed_contract`
+  (D-042): raises DRAFT_MISSING_MONEY / DRAFT_UNSUPPORTED_CURRENCY rather than
+  inventing permissive terms; aggregate_budget and approval_threshold DEFAULT
+  TO the stated cap (never larger), max_quantity defaults DOWN to 1,
+  recurring_allowed only when the human explicitly allowed it.
+- `confirmation_service.py`: `HumanConfirmationService` with pg advisory
+  lineage locks (lock order advisory->rows), FAILED compiler outcomes create
+  NO draft (+INTENT_COMPILE_FAILED audit), fresh compiles supersede open
+  drafts, confirm_draft is idempotent for identical nonce (no new authority),
+  CONFIRMATION_REPLAY_MISMATCH for differing nonce, generation bump REUSES the
+  lineage intent_id and enforces DRAFT_BELOW_COMMITTED_SPEND against durable
+  reserved+committed.
+- Migration `e7a1c4f9b2d5` applied to dev AND razormesh_test.
+
+### Evidence (tests/test_confirmation_flow.py — 17 tests)
+Recording semantics (4): OK->DRAFT; ambiguities->NEEDS_CLARIFICATION
+(unconfirmable); FAILED->no draft+audit; supersession chain w/ DRAFT_STALE.
+Authority (6): gen-1 creation w/ conservative terms incl. brand casefold;
+same-nonce idempotent replay; differing-nonce rejection; second confirmation
+bumps generation reusing intent_id; missing money fails closed creating
+NOTHING (row count scoped to fresh lineage stays 0, draft unchanged);
+unsupported currency refused.
+Rejection (2): terminal+idempotent+single audit event; cannot reject after
+confirmation.
+Capacity guard (1): new cap below committed spend refused.
+Concurrency (1): 8 threads confirming one draft -> exactly ONE authority
+identity; losers get controlled errors only; ledger chain valid.
+Privacy (1): raw human text never persisted (sha256 only).
+
+### Validation commands + results
+```text
+ruff check .                     -> clean
+mypy -p razormesh_api (strict)   -> Success, 61 files
+pytest (full)                    -> 449 passed
+make security-check              -> PASS
+```
+
+### Real external API use
+- NONE (CompilerOutcome fixtures; no Qwen call needed for this milestone).
+
+### Next
+- M17 — Human confirmation UI.

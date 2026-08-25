@@ -44,6 +44,7 @@ def wipe_business_tables(engine: Engine) -> None:
         "DELETE FROM execution_tickets",
         "DELETE FROM decisions",
         "DELETE FROM authorization_spend",
+        "DELETE FROM intent_drafts",
         "DELETE FROM checkouts",
         "DELETE FROM intent_contracts",
         "DELETE FROM products",

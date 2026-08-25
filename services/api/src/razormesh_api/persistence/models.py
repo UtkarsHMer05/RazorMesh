@@ -258,6 +258,48 @@ class ProviderEvent(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+class IntentDraftRecord(Base):
+    """P3-M16: durable human-confirmation draft state (P3-S03).
+
+    A row exists only when the compiler produced a schema-valid payload. State
+    moves DRAFT/NEEDS_CLARIFICATION -> CONFIRMED | REJECTED; only the CONFIRMED
+    transition creates/supersedes an IntentContract authorization_generation.
+    Raw human text is never stored — only its SHA256.
+    """
+
+    __tablename__ = "intent_drafts"
+    __table_args__ = (
+        CheckConstraint(
+            "state IN ('DRAFT','NEEDS_CLARIFICATION','CONFIRMED','REJECTED')",
+            name="ck_intent_draft_state",
+        ),
+        UniqueConstraint("confirmation_nonce", name="uq_draft_confirmation_nonce"),
+        Index("ix_intent_drafts_principal_agent", "principal_id", "agent_id"),
+        Index("ix_intent_drafts_state", "state"),
+    )
+
+    draft_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    principal_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    agent_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    state: Mapped[str] = mapped_column(String(32), nullable=False)
+    schema_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_text_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    compiler_model: Mapped[str] = mapped_column(String(64), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    prompt_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    compile_attempts: Mapped[int] = mapped_column(Integer, nullable=False)
+    request_ids: Mapped[list[Any]] = mapped_column(JSONB, nullable=False, default=list)
+    superseded_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    confirmation_nonce: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    confirmed_generation: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    intent_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    actor: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class AuditEvent(Base):
     __tablename__ = "audit_events"
     __table_args__ = (

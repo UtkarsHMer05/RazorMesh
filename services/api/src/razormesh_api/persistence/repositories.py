@@ -17,6 +17,7 @@ from razormesh_api.domain.ids import (
     AuditEventId,
     CheckoutId,
     DecisionId,
+    DraftId,
     ExecutionAttemptId,
     ExecutionTicketId,
     IntentId,
@@ -32,6 +33,7 @@ from razormesh_api.persistence.models import (
     ExecutionAttempt,
     ExecutionTicket,
     IntentContract,
+    IntentDraftRecord,
     Merchant,
     Product,
 )
@@ -154,6 +156,64 @@ class IntentRepository:
     def get(self, intent_id: IntentId) -> IntentContract | None:
         with session_scope(self._factory) as s:
             return s.get(IntentContract, str(intent_id))
+
+    def latest_for_lineage_for_update(
+        self, principal_id: str, agent_id: str, session: Session
+    ) -> IntentContract | None:
+        """P3-M16: lock the newest contract of a principal+agent lineage."""
+        return (
+            session.execute(
+                select(IntentContract)
+                .where(
+                    IntentContract.principal_id == principal_id,
+                    IntentContract.agent_id == agent_id,
+                )
+                .order_by(IntentContract.authorization_generation.desc())
+                .limit(1)
+                .with_for_update()
+            )
+            .scalars()
+            .first()
+        )
+
+
+class IntentDraftRepository:
+    """P3-M16: durable confirmation-draft access (session-scoped helpers).
+
+    The confirmation service owns multi-row transactions (supersede + insert,
+    confirm + generation bump), so these helpers operate on a caller-held
+    session instead of opening their own scope.
+    """
+
+    def __init__(self, factory: sessionmaker[Session]) -> None:
+        self._factory = factory
+
+    def get(self, draft_id: DraftId) -> IntentDraftRecord | None:
+        with session_scope(self._factory) as s:
+            return s.get(IntentDraftRecord, str(draft_id))
+
+    def get_for_update(self, draft_id: DraftId, session: Session) -> IntentDraftRecord | None:
+        return session.get(IntentDraftRecord, str(draft_id), with_for_update=True)
+
+    def open_for_update(
+        self, principal_id: str, agent_id: str, session: Session
+    ) -> Sequence[IntentDraftRecord]:
+        """Lock all non-superseded, non-terminal drafts for a principal+agent."""
+        return (
+            session.execute(
+                select(IntentDraftRecord)
+                .where(
+                    IntentDraftRecord.principal_id == principal_id,
+                    IntentDraftRecord.agent_id == agent_id,
+                    IntentDraftRecord.superseded_by.is_(None),
+                    IntentDraftRecord.state.in_(("DRAFT", "NEEDS_CLARIFICATION")),
+                )
+                .order_by(IntentDraftRecord.created_at)
+                .with_for_update()
+            )
+            .scalars()
+            .all()
+        )
 
 
 class CheckoutRepository:
@@ -309,6 +369,7 @@ class Repositories:
         self.merchants = MerchantRepository(factory)
         self.products = ProductRepository(factory)
         self.intents = IntentRepository(factory)
+        self.drafts = IntentDraftRepository(factory)
         self.checkouts = CheckoutRepository(factory)
         self.decisions = DecisionRepository(factory)
         self.spend = AuthorizationSpendRepository(factory)

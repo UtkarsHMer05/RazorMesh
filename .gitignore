@@ -55,3 +55,6 @@ redisdata/
 *.safetensors
 *.bin models/
 models/
+PASTE_THIS_TO_AGENT_PHASE3.md
+PASTE_THIS_TO_AGENT.md
+RazorMesh_Trust_Phase3_Master_Prompt.md

@@ -163,8 +163,7 @@ truth corrections F1 rupee→INR + F13-002 recurring removed, sha256 9164f04c).
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M16** (human confirmation domain flow:
-DRAFT / NEEDS_CLARIFICATION / CONFIRMED / REJECTED durable states; only
+PHASE 3 RUNNING — next milestone: **P3-M17** (human confirmation UI: draft review page wired to /buyer drafts API; no secrets in browser).
 CONFIRMED creates/supersedes an authorization; bypass/stale/replay/idempotency
 tests; compiler output stays inert until human confirmation). Read DESIGN.md
 before M17 (UI).

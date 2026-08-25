@@ -903,3 +903,55 @@ eef70c9c… → 9164f04c…. Known gap recorded: after (a), zero golden cases
 exercise the currency-unstated → unspecified path; add genuinely
 currency-unstated cases in a future golden revision (pre-M48, folds into
 M18–M25 dataset work). All details in docs/PHASE3_INTENT_COMPILER_EVAL.md §5/§8.
+
+## D-042 — Human confirmation domain flow (P3-M16)
+
+Context: M16 adds durable draft states and makes human confirmation the ONLY
+path to authority (P3-S03). A confirmed draft materializes/supersedes an
+IntentContract authorization_generation.
+
+Decisions:
+1. **Durable draft table** `intent_drafts` stores every compiler outcome that
+   produced a valid payload, with state DRAFT / NEEDS_CLARIFICATION /
+   CONFIRMED / REJECTED, the full validated payload (JSONB), source-text hash,
+   and compiler provenance (model id, prompt version+sha256, schema version,
+   attempts, request ids) for P3-S13 auditability. Raw human text is NOT
+   stored — only its SHA256 — so the durable store carries no unnecessary
+   secret/PII-bearing prose.
+2. **State machine.** A fresh compile yields NEEDS_CLARIFICATION when the
+   payload has ambiguities, else DRAFT. Only a DRAFT that is not superseded
+   may be confirmed. Confirming transitions DRAFT→CONFIRMED and is the single
+   code path that creates/supersedes an IntentContract generation. Rejecting
+   transitions DRAFT|NEEDS_CLARIFICATION→REJECTED. CONFIRMED and REJECTED are
+   terminal. A new compile/revise for the same (principal, agent) supersedes
+   any prior non-terminal draft via `superseded_by` (stale drafts can never be
+   confirmed).
+3. **Fail-closed authority materialization.** A confirmed draft maps to an
+   IntentContract deterministically with the most-restrictive non-inventing
+   defaults: currency + max_total from the draft's stated money (a draft with
+   no stated max_amount cannot create authority — confirmation is refused);
+   aggregate_budget = max_total (no invented larger lifetime budget);
+   approval_threshold = max_total; max_quantity = stated quantity_max else 1;
+   recurring_allowed = true ONLY if the draft explicitly set
+   recurring_forbidden=false, else false; brand/condition restrictions carried
+   from the draft when stated. Free-text merchant names are NOT yet resolved to
+   typed merchant ids (no resolver exists); allowed_merchant_ids stays None and
+   merchant-name enforcement is deferred to the semantic-verifier/fusion phase
+   (recorded limitation, revisit at M39).
+4. **Idempotency + replay.** Confirmation carries a client nonce stored on the
+   draft. Re-confirming an already-CONFIRMED draft with the SAME nonce returns
+   the original result without bumping the generation again; a DIFFERENT nonce
+   on a confirmed draft is a replay conflict and fails closed. The generation
+   bump is tied to the one-time DRAFT→CONFIRMED transition inside a single DB
+   transaction (PostgreSQL remains durable authority; Redis uninvolved).
+5. **Audit.** INTENT_COMPILED / INTENT_CONFIRMED / INTENT_REJECTED /
+   INTENT_DRAFT_SUPERSEDED ledger events carry draft_id, intent_id, generation,
+   model/prompt/schema versions — never secrets, never raw human text.
+
+Security consequences: enforces P3-S03 (no authority before confirmation),
+P3-S14 (a compiler outage yields no draft and therefore no confirmation path —
+outage cannot bypass the human), and preserves P3-S13/P3-S20 auditability.
+
+Recorded limitations: merchant-name→id resolution deferred (semantic layer);
+aggregate_budget/approval_threshold use conservative equals-max_total defaults
+until a later milestone lets the human state them explicitly.

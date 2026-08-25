@@ -217,6 +217,17 @@ class ReservationId(Identifier):
         return cls(f"{cls.PREFIX}_{new_ulid()}")
 
 
+class DraftId(Identifier):
+    """P3-M16: durable intent-draft identity (drf_ prefix, server-generated)."""
+
+    PREFIX = "drf"
+    __slots__ = ()
+
+    @classmethod
+    def generate(cls) -> "DraftId":
+        return cls(f"{cls.PREFIX}_{new_ulid()}")
+
+
 ALL_ID_TYPES: Final[tuple[type[Identifier], ...]] = (
     IntentId,
     CheckoutId,
@@ -230,4 +241,5 @@ ALL_ID_TYPES: Final[tuple[type[Identifier], ...]] = (
     AgentId,
     ExecutionAttemptId,
     ReservationId,
+    DraftId,
 )
