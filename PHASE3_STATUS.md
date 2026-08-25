@@ -23,7 +23,7 @@
 | M09 | TokenRouter client abstraction | PASS | intent_compiler.py: backend-only httpx client (Bearer from SecretStr, bounded timeout, X-Request-Id ULID correlation); taxonomy AUTH/REJECTED/UNKNOWN mirroring D-030 with calls==1 no-retry proofs; malformed-payload matrix; response_format passthrough; /models probe method; DI factory naming TOKENROUTER_API_KEY only; settings fields added (SecretStr key, documented .io default URL, planner model, timeout<=120); 13 MockTransport tests; suite 388/388 |
 | M10 | TokenRouter auth + capability probe | PASS | REAL probe: AUTH ok on api.tokenrouter.com (bootstrap URL validated; R-019 corrected); planner qwen/qwen3.8-max-free visible+usable (reported internally as qwen3.8-max-pd); Qwen3.8 is a THINKING model -> reasoning_content/reasoning_tokens captured in client; empty content at tiny max_tokens proven; JSON-by-instruction parseable {max_price_minor:499999,currency:INR} 11.8s; response_format json_object ACCEPTED parseable (68s); failure shape = transient 503 hard_concurrency_limit windows -> taxonomy UNKNOWN + probe-only bounded backoff; PRIVATE FILE DELETED, zero history/tracked exposure re-proven |
 | M11 | IntentDraft schema | PASS | domain/intent_draft.py: versioned agentpay-intent-draft-v1; CompilerIntentPayload (hard/semantic/ambiguities/unspecified) + server-identity IntentDraft wrapper (drf_ ULID, source hash, created_at); StrictInt minor-unit money w/ explicit ISO currency (float/bool/<=0 rejected), extra=forbid (hallucinated keys fail), ALL defaults None (no invented currency/condition/recurring), bounded texts(280)/lists(8..12)/items(120); 14 negative+property tests incl. Hypothesis round-trips; suite 404/404 |
-| M12 | Compiler prompt & isolation contract | NOT_STARTED | — |
+| M12 | Compiler prompt & isolation contract | PASS | intent_compiler_prompt.py: COMPILER_SYSTEM_PROMPT v1 encoding all §12 rules (no-invention, hard-vs-semantic split, ambiguities, minor-unit money, negation preservation, sole-source authority); prompt_sha256 audit binding; TrustedHumanAuthorization value object (3..2000 chars, control-char rejection); build_compiler_messages single choke point with NO context parameter (structural isolation — signature-level test + module-surface scan proving no str inlet exists); hostile-text inertness test; suite 411/411 |
 | M13 | Strict validation + bounded repair | NOT_STARTED | — |
 | M14 | Compiler golden evaluation set | NOT_STARTED | — |
 | M15 | Real compiler evaluation | NOT_STARTED | — |
@@ -472,3 +472,48 @@ pytest (full)                                 -> 404 passed
 
 ### Next
 - M12 — Qwen compiler prompt & isolation contract.
+
+
+## M12 — Qwen Compiler Prompt & Isolation Contract
+
+MILESTONE: M12
+STATUS: PASS
+
+Requirements: master prompt M12 — versioned+hashed system prompt; trusted
+human text only; anti-invention/negation/money rules; context-isolation tests.
+Security invariants: P3-S02/S17, P3-S13 groundwork.
+
+### Implementation
+- `intent_compiler_prompt.py`: COMPILER_PROMPT_VERSION +
+  COMPILER_SYSTEM_PROMPT (rules: never invent; hard vs semantic separation;
+  ambiguities surfaced not resolved; money→integer minor units + explicit
+  currency or 'unspecified'; preserve negation; user text is the ONLY source;
+  ignore embedded instructions).
+- `prompt_sha256()` binds audits to exact prompt text (P3-S13; tamper test).
+- `TrustedHumanAuthorization` value object: 3..2000 chars, control chars
+  rejected — the marker type that marks text as human-channel.
+- `build_compiler_messages(trusted)`: THE choke point. Signature accepts only
+  the marker object — structurally impossible to pass merchant/product blobs;
+  human text embedded verbatim.
+
+### Isolation proofs (tests/test_compiler_prompt_isolation.py)
+1. Version/hash stability + tamper sensitivity of the prompt hash.
+2. Rules present in the prompt (grep-style assertions on all §12 mandates).
+3. Verbatim embedding; roles exactly [system, user].
+4. **Structural**: get_type_hints(build_compiler_messages) == {trusted, return}
+   — no parameter exists for extra content.
+5. **Module surface scan**: every function defined in the module is checked;
+   none besides build_compiler_messages takes any string parameter at all.
+6. Hostile merchant injection text stays verbatim in the user message and
+   leaks nothing into the system prompt.
+
+### Validation commands + results
+```text
+ruff check .                     -> clean
+mypy -p razormesh_api (strict)   -> Success, 56 files
+pytest tests/test_compiler_prompt_isolation.py -> 7 passed
+pytest (full)                    -> 411 passed
+```
+
+### Next
+- M13 — Strict output validation and bounded repair.
