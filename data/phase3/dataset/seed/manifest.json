@@ -1,0 +1,19 @@
+{
+  "format_version": "agentpay-ir-v0.1",
+  "dataset_role": "seed (template_truth; splits assigned in P3-M23)",
+  "records": 915,
+  "records_before_content_dedup": 915,
+  "sha256": "9d8897fdd3a5f61aff26bf2a11822bd5e98e35ff8c49d276905930017a84b519",
+  "by_label": {
+    "contradiction": 301,
+    "entailment": 307,
+    "neutral": 307
+  },
+  "by_difficulty": {
+    "easy": 698,
+    "hard": 88,
+    "medium": 129
+  },
+  "families": 18,
+  "generated_at_utc": "2026-08-25T23:33:03.906304+00:00"
+}

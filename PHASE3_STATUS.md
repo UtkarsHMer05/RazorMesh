@@ -30,7 +30,7 @@
 | M16 | Human confirmation domain flow | PASS | domain/confirmation.py (DraftState DRAFT/NEEDS_CLARIFICATION/CONFIRMED/REJECTED; fail-closed build_confirmed_contract: no-stated-money -> DRAFT_MISSING_MONEY, conservative terms aggregate=threshold=cap, quantity default 1, recurring forbidden unless explicit) + confirmation_service.py (advisory lineage locks, compile supersession, idempotent same-nonce replay, replay-mismatch rejection, NEEDS_CLARIFICATION unconfirmable, generation bump reusing intent_id w/ DRAFT_BELOW_COMMITTED_SPEND capacity guard, INTENT_COMPILED/CONFIRMED/REJECTED/SUPERSEDED/COMPILE_FAILED ledger events); migration e7a1c4f9b2d5; raw human text never stored (sha256 only); 17 tests incl. 8-thread concurrent single-authority proof; suite 449/449; D-042 |
 | M17 | Human confirmation UI | NOT_STARTED | — |
 | M18 | AgentPay-IR taxonomy/schema | PASS | agentpay_ir.py v0.1: fixed NLI orientation (premise=trusted evidence, hypothesis=confirmed-authorization statement), 18 semantic families, label/source/difficulty vocabularies, Provenance+Review blocks, content_sha256 integrity binding (any mutation detected), split reserved for M23; 10 tests incl. tamper-detection + vocabulary enforcement; suite 463/463 |
-| M19 | Deterministic seed dataset | NOT_STARTED | — |
+| M19 | Deterministic seed dataset | PASS | data/phase3/dataset/seed: 915 AgentPay-IR records (307 golden cases × entailment/contradiction/neutral templates; content-dedup 921→915); labels balanced within 5%; all 18 families covered; deterministic regeneration byte-identical (fixed provenance ts + derived record ids); label_source=template_truth throughout; 6 tests incl. ≥600 floor + manifest-hash binding; suite 469/469 |
 | M20 | Qwen candidate generator | NOT_STARTED | — |
 | M21 | Candidate validation | NOT_STARTED | — |
 | M22 | Dedup / near-duplicate detection | NOT_STARTED | — |
@@ -779,3 +779,36 @@ ruff check . / mypy strict (63 files)   -> clean
 pytest tests/test_agentpay_ir.py        -> 10 passed
 pytest (full)                           -> 463 passed
 ```
+
+
+## M19 — Deterministic Seed Dataset
+
+MILESTONE: M19
+STATUS: PASS
+
+Requirements: master prompt M19 — template-grounded seed set in AgentPay-IR
+form, several hundred records, fully deterministic.
+
+### Implementation
+- `scripts/rzp_build_seed_dataset.py`: for every golden case emits up to three
+  IR records — ENTAILMENT (evidence matches stated constraints),
+  CONTRADICTION (evidence violates the hardest stated constraint: brand /
+  recurring / quantity / price ceiling), NEUTRAL (listing silent on an
+  unspecified dimension). Premises embed the session request context so
+  content is unique per case.
+- Content-level dedup at build time (921→915); record ids DERIVED from content
+  hash + case salt → regeneration is byte-identical (provenance timestamp
+  pinned).
+
+### Validation commands + results
+```text
+python scripts/rzp_build_seed_dataset.py    -> 915 records, sha256 in manifest
+ruff check .                                -> clean
+mypy -p razormesh_api (strict)              -> Success, 63 files
+pytest tests/test_seed_dataset.py           -> 6 passed
+pytest (full)                               -> 469 passed
+make security-check                         -> PASS
+```
+
+### Next
+- M20 — Qwen candidate generator (volume per overnight policy D-043).
