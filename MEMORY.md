@@ -159,8 +159,11 @@ all callback/provider evidence is correlated to current durable authority.
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M04** (Phase-2 real-provider integrity
-revalidation via safe/read-only/mock methods). P3-M03 done: frontend battery
+PHASE 3 RUNNING — next milestone: **P3-M05** (freeze Phase-3 baseline doc;
+MEMORY goes Phase-3-active only after M05 per master prompt M05 wording).
+P3-M04 done: phase-2 integrity re-proven (focused suites 67, live-key
+rejection runtime-proven, dev audit chain valid=True, read-only diagnostic OK,
+no new payments). P3-M03 done: frontend battery
 green — lint/tsc/vitest 11/build/Playwright 5; zero secret refs in src/e2e/.next. P3-M02 done: battery
 green (375 stable); FIXED latent strict-mypy violation in D-037 settlement-
 authority validator (stale .mypy_cache had masked it — always purge caches

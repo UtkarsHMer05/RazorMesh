@@ -15,7 +15,7 @@
 | M01 | Repository, governance, secret-safety inspection | PASS | master prompt read fully; governance set read in AGENTS.md precedence; git tree clean on main @fc0422e (+P2-M50 final check); `.env` ignored (.gitignore:6, mode 600); bootstrap file untracked→locally excluded via .git/info/exclude:49, zero history entries; no TokenRouter refs in tracked source; full backend regression 375/375 (one transient scheduling flake in 20-worker race noted → M02 watch); PHASE3_STATUS skeleton created |
 | M02 | Full Phase-1/2 backend regression | PASS | ruff format 158 files OK; ruff clean; mypy STRICT both roots after .mypy_cache purge — found+fixed latent untyped session param in D-037 `_validate_settlement_authority_in_session` (root cache had masked it); pytest 375/375 stable across 5+ runs; hypothesis/stateful 7; focused security keywords 40; security-check PASS; race-test flake ROOT-CAUSED: (a) Redis SET-NX timeouts under load raise CoordinationUnavailable fail-closed -> now treated as inconclusive-no-effect, (b) late workers legitimately return via ticket-idempotency shortcut BEFORE nonce claim -> multiple settled rows valid iff SAME attempt id; durable exactly-once asserts (calls==1, attempts==1, held-once) kept STRICT |
 | M03 | Full Phase-1/2 frontend/E2E regression | PASS | eslint clean; tsc clean; vitest 11/11 (3 files); next production build OK (static prerender); Playwright 5/5 incl. stubbed-checkout success/failure/unknown paths + DOM/network secret scans; grep over src+e2e+.next/static for rzp_live_/TOKENROUTER/tokenrouter = 0; all four baseline surfaces exercised by smoke spec |
-| M04 | Phase-2 real-provider integrity revalidation | NOT_STARTED | — |
+| M04 | Phase-2 real-provider integrity revalidation | PASS | focused suites 47+20 pass (settings fail-safe/provider/taxonomy/callback/webhook/reducer/reconciliation/executor-rz/schema/spend/executor/ledger); runtime live-key probe -> RAZORPAY_LIVE_KEY_REJECTED; real EvidenceLedger.verify() on dev DB valid=True; REAL read-only auth diagnostic ok=True mode=test guard passed (864ms); NO new payment created |
 | M05 | Freeze Phase-3 baseline | NOT_STARTED | — |
 | M06 | Live AI/ML research and version manifest | NOT_STARTED | — |
 | M07 | Private TokenRouter credential injection | NOT_STARTED | — |
@@ -227,3 +227,32 @@ Merchant, Security Lab, Audit headings reachable.
 
 ### Next
 - M04 — Phase-2 real-provider integrity revalidation.
+
+
+## M04 — Phase-2 Real-Provider Integrity Revalidation
+
+MILESTONE: M04
+STATUS: PASS
+
+Requirements: master prompt M04 + §1 — revalidate Test Mode guard, mock-vs-
+real boundary, live-key rejection, webhook/dedup/ordering semantics,
+provider-unknown recovery, reservation invariants, audit chain, safe read-only
+diagnostic. No unnecessary payments.
+Security invariants: P2-S01..S24 re-proven where testable without new spend.
+
+### Evidence
+```text
+Focused suites (47) tests/test_settings_phase2.py test_provider_razorpay.py
+  test_razorpay_error_taxonomy.py test_callback_verification.py
+  test_webhook_verification.py test_reducer.py test_reconciliation.py
+  test_executor_razorpay.py test_schema_phase2.py            -> all pass
+Reservation/settlement/ledger suites (20): spend/executor/ledger -> all pass
+Runtime live-key probe  -> ProviderConfigError RAZORPAY_LIVE_KEY_REJECTED
+EvidenceLedger.verify() on dev DB (real M38/M40 evidence)   -> valid=True
+scripts/rzp_auth_check.py (READ_ONLY, real Test keys)       -> ok=True,
+  mode: test guard passed, latency 863.77ms
+```
+No order/payment was created this milestone.
+
+### Next
+- M05 — Freeze Phase-3 baseline.
