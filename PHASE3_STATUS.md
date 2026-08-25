@@ -26,7 +26,7 @@
 | M12 | Compiler prompt & isolation contract | PASS | intent_compiler_prompt.py: COMPILER_SYSTEM_PROMPT v1 encoding all §12 rules (no-invention, hard-vs-semantic split, ambiguities, minor-unit money, negation preservation, sole-source authority); prompt_sha256 audit binding; TrustedHumanAuthorization value object (3..2000 chars, control-char rejection); build_compiler_messages single choke point with NO context parameter (structural isolation — signature-level test + module-surface scan proving no str inlet exists); hostile-text inertness test; suite 411/411 |
 | M13 | Strict validation + bounded repair | PASS | intent_compilation_service.py: extract_json_object (bare/fenced/wrapped) -> CompilerIntentPayload strict parse (20k char cap) -> ONE repair w/ validation feedback + response_format json_object -> fail closed; CompilerOutcome OK/FAILED(+NEEDS_CLARIFICATION ready for M16) carries attempts/error_code/request_ids; provider failures fail-closed with exact call-count proofs (1 on first-failure, 2 max total); malicious prose inert; 9 tests; suite 420/420 |
 | M14 | Compiler golden evaluation set | PASS | data/phase3/compiler_golden/golden_set.jsonl: 307 manual-truth cases across 25 categories (easy 234/medium 43/hard 30) from hand-authored template families with truth computed BY CONSTRUCTION (never Qwen); manifest w/ SHA256 + truth_source=human-authored; compiler_eval.py evaluator (Expectation schema, omission/invention/mismatch taxonomy incl. money-without-human-statement sentinel + declared invention bans); structural honesty test forbidding model-label fields in rows; 13 tests; suite 433/433 |
-| M15 | Real compiler evaluation | NOT_STARTED | — |
+| M15 | Real compiler evaluation | PASS | REAL Qwen run on stratified **N=90/307** sample (D-041 human-approved scope; full-307 = pre-M48 obligation). Schema validity 90/90=100%; bounded repair 7/90 all repaired to valid; **case pass 71/90=78.9%** (easy 77.5/medium 90.9/hard 71.4); field recall brands/merchants/quantity 1.0, currency 0.96, semantic 0.9706, recurring_forbidden 0.9231, max_amount_minor 0.8533; **money precision 1.0, 0 mismatches, 0 invented amounts** (all money errors are fail-closed omissions); ambiguity 6/6; injection 2/3 (one warranty semantic leak). Prompt v1→v2 (v1 long-form made the thinking model hit finish=length w/ empty content at 4000 tokens; v2 schema-forward compiles reliably). Two golden-truth defects fixed transparently (F1 rupee→INR pre-measurement; F13-002 recurring_forbidden removed post-measurement + re-measured, sha256 eef70c9c→9164f04c, stale rows preserved). Budget-2000 harness contamination discarded + re-measured at 4000 (F10-001/003 then passed). Provider-noise rows retried, never counted. Docs: docs/PHASE3_INTENT_COMPILER_EVAL.md |
 | M16 | Human confirmation domain flow | NOT_STARTED | — |
 | M17 | Human confirmation UI | NOT_STARTED | — |
 | M18 | AgentPay-IR taxonomy/schema | NOT_STARTED | — |
@@ -597,3 +597,86 @@ pytest (full)                                  -> 433 passed
 
 ### Next
 - M15 — Real Qwen compiler evaluation over this golden set.
+
+
+## M15 — Real Intent Compiler Evaluation (Qwen via TokenRouter)
+
+MILESTONE: M15
+STATUS: PASS
+
+Requirements: master prompt M15 — run the REAL compiler on the golden set;
+improve prompt/schema within this milestone if needed; write
+`docs/PHASE3_INTENT_COMPILER_EVAL.md`.
+
+Scope decision: **D-041** — human owner explicitly approved evaluating a
+deterministic stratified sample of **N=90/307** (2026-08-25). Full-307
+continuation is a carried-forward pre-M48 obligation; M48 cannot PASS on the
+sample alone.
+
+### Implementation
+- `scripts/rzp_run_compiler_eval.py [N]`: resumable real-API runner —
+  deterministic stratified sampling (round-robin over sorted categories),
+  last-row-wins results.jsonl, FAILED/COMPILER_UNAVAILABLE rows retried and
+  never counted, bounded backoff over transient 503 hard_concurrency_limit
+  windows, resumable abort (exit 5) at repeated provider failures. Real
+  `IntentCompilationService` with `max_output_tokens=4000, temperature=0.0`.
+- `scripts/rzp_summarize_compiler_eval.py [N]`: aggregate metrics — schema
+  validity, repair rate, case pass by difficulty/category, field recall with
+  manual-truth denominators, numeric correctness (omissions vs invented
+  money), omission/invention/mismatch counters, ambiguity handling, latency
+  percentiles. Provider-noise rows excluded and reported separately.
+- Prompt **v1→v2** (`intent_compiler_prompt.py`): v1 (P3-M12 long-form) made
+  Qwen3.8's hidden reasoning hit `finish_reason=length` with EMPTY content
+  even at 4000 tokens; v2 compresses the same rules into a short
+  schema-forward prompt that compiles reliably. Version pin updated in
+  `test_compiler_prompt_isolation.py`.
+- Golden-truth corrections (transparent, §5 of the eval doc): F1 rupee-stated
+  phrases → `currency="INR"` (applied pre-measurement); F13-002
+  `recurring_forbidden` expectation removed (subscription REQUEST ≠ forbidding
+  recurrence) and that one case re-measured. Golden sha256
+  `eef70c9c…` → `9164f04c…`; stale rows preserved in
+  `data/phase3/compiler_eval/discarded_stale_truth_rows.jsonl`.
+- Harness integrity: 4 hard cases measured under a harness-reduced
+  max_output_tokens=2000 budget were discarded (preserved in
+  `discarded_budget2000_rows.jsonl`) and re-measured at 4000 — F10-001/F10-003
+  then passed, proving harness contamination, not model failure.
+- Security scan: synthetic `tr_test_key_placeholder` fixtures (M09/M13 tests)
+  added to the TESTING.md §15 allowlist mechanism (pinned path+rule+literal in
+  `scripts/security_check.py`).
+
+### Results (N=90/307, stratified; full detail in the eval doc)
+- Schema validity 90/90 = 100%; bounded repair 7/90, all repaired to valid.
+- **Case pass 71/90 = 78.9%** (easy 31/40, medium 20/22, hard 20/28).
+- Field recall: brands/merchants/quantity 1.0; currency 0.96; semantic 0.9706;
+  recurring_forbidden 0.9231; max_amount_minor 0.8533.
+- **Money precision 1.0; 0 mismatches; 0 invented amounts** — every money
+  error is a fail-closed omission (11 amount omissions, 3 currency omissions).
+- Hallucinations: 6 condition, 1 warranty (injection partial leak F13-000),
+  1 brand/alias. Ambiguity surfacing 6/6. Injection-like text 2/3.
+- Latency p50/p95/max/mean = 63.5s / 197.7s / 241.2s / 79.5s (hosted free-tier
+  thinking model; not the local production verification path).
+- Bonus non-sample coverage: 18 additional full-set rows measured (15 pass),
+  same failure families; not part of headline metrics.
+
+### Validation commands + results
+```text
+rzp_run_compiler_eval.py 90        -> 90/90 sample measured (resumable; noise retried)
+rzp_summarize_compiler_eval.py 90  -> summary.json (N=90/307, complete=false)
+ruff format (services/api scripts) -> 136 files unchanged
+ruff check                         -> All checks passed
+mypy -p razormesh_api --strict     -> Success, no issues in 59 source files (cache purged)
+pytest (full)                      -> 433 passed in 38.11s
+make security-check                -> PASS (secret scan 0; pip-audit 0; pnpm audit 0)
+```
+
+### Limitations recorded
+- Sample scope (D-041); full-307 before M48.
+- Zero golden cases now exercise the currency-unstated → `unspecified` path
+  after the F1 correction; add genuinely currency-unstated cases in a future
+  golden revision (folds into M18–M25 dataset work).
+- F9-002 truth ("I refuse trials of any kind" → recurring_forbidden) kept as
+  designed hard-case signal; judgment-call noted in the eval doc.
+
+### Next
+- M16 — Human confirmation domain flow (DRAFT/NEEDS_CLARIFICATION/CONFIRMED/
+  REJECTED; only CONFIRMED creates/supersedes authorization).

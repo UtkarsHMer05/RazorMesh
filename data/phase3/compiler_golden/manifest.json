@@ -1,7 +1,7 @@
 {
   "format_version": "compiler-golden-v1",
   "cases": 307,
-  "sha256": "9505e2bf6201c8201684c15f06cdc388800407e34262dbc0e9a98088d7fb3cc0",
+  "sha256": "9164f04c8714d711cae1a9ecba0db35853947bfec0683af9428bd4f6c86c79b7",
   "categories": [
     "alias_handling",
     "ambiguous_phrasing",
@@ -35,5 +35,5 @@
     "hard": 30
   },
   "truth_source": "human-authored templates (never Qwen self-labels)",
-  "generated_at_utc": "2026-08-25T11:37:13.419729+00:00"
+  "generated_at_utc": "2026-08-25T18:59:48.500170+00:00"
 }

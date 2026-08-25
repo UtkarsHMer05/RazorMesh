@@ -374,7 +374,11 @@ rejection, P2-S02). Rules:
 Current entries: callback-verification HMAC fixture, webhook-verification HMAC
 fixture, the P2-M38 route-wiring regression HMAC fixture
 (`wh-route-wiring-secret` in `tests/test_reducer.py`), the `rzp_live_`
-rejection literal, and the allowlist's own repeated `rzp_live_` literal.
+rejection literal, the allowlist's own repeated `rzp_live_` literal, and the
+synthetic TokenRouter-shaped key `tr_test_key_placeholder` in
+`tests/test_intent_compiler_client.py` + `tests/test_intent_compilation_service.py`
+(required to prove Bearer auth works and errors never leak the key, P3-S01;
+added P3-M15 when the scanner flagged the M09/M13 fixtures).
 
 ## 15. Phase-3 release-blocking gates (added P3-M08)
 

@@ -51,9 +51,7 @@ def _payload(**overrides) -> CompilerIntentPayload:
 def test_golden_file_exists_matches_manifest() -> None:
     assert JSONL.exists() and MANIFEST.exists()
     manifest = json.loads(MANIFEST.read_text())
-    rows = [
-        json.loads(line) for line in JSONL.read_text().splitlines() if line.strip()
-    ]
+    rows = [json.loads(line) for line in JSONL.read_text().splitlines() if line.strip()]
     assert manifest["cases"] == len(rows) >= 300
     import hashlib
 
@@ -110,9 +108,7 @@ def test_omission_detected_when_human_stated_budget_but_draft_missing() -> None:
 
 def test_invention_detected_when_currency_guessed() -> None:
     # human never mentioned money; the "UNSPECIFIED" sentinel marks that truth
-    invented = HardConstraints(
-        max_amount=MoneyBound(amount_minor=100000, currency="INR")
-    )
+    invented = HardConstraints(max_amount=MoneyBound(amount_minor=100000, currency="INR"))
     payload = _payload(hard=invented)
     verdict = evaluate_case(payload, Expectation(currency="UNSPECIFIED"))
     assert any(i.startswith("money_without_human_statement") for i in verdict.inventions)

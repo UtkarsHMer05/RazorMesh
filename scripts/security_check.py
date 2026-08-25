@@ -88,6 +88,17 @@ _ALLOWED_TEST_FIXTURES: dict[tuple[str, str], frozenset[str]] = {
         "services/api/tests/test_settings_phase2.py",
         "razorpay-key-shape",
     ): frozenset({"rzp_live_CkYzExample"}),
+    # Synthetic TokenRouter-shaped key for the P3-M09 client tests: proves the
+    # Bearer header carries the key and that error paths NEVER leak it (P3-S01).
+    (
+        "services/api/tests/test_intent_compiler_client.py",
+        "credential-assignment",
+    ): frozenset({"tr_test_key_placeholder"}),
+    # Same synthetic key for the P3-M13 compilation-service tests (DI seam).
+    (
+        "services/api/tests/test_intent_compilation_service.py",
+        "credential-assignment",
+    ): frozenset({"tr_test_key_placeholder"}),
     # The allowlist definition above necessarily repeats the pinned literal.
     (
         "scripts/security_check.py",

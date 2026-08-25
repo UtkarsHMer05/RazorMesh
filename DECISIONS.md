@@ -841,3 +841,65 @@ conditional human gate if measured local inference is genuinely inadequate.
 version, evaluated once on frozen gold.
 
 Security consequences: P3-S09..S14, S20 enforcement strategy.
+
+## D-041 — M15 compiler evaluation on a stratified 90-case sample; full-307 continuation is a pre-M48 obligation (P3-M15)
+
+Date: 2026-08-25
+Milestone: P3-M15
+Status: Accepted (explicit human instruction, 2026-08-25)
+Affected docs: `PHASE3_STATUS.md`, `MEMORY.md`, `TESTING.md` (§15 gate note),
+`docs/PHASE3_INTENT_COMPILER_EVAL.md`
+
+Context: master prompt M15 says "run the real compiler on the golden set"
+(307 manual-truth cases). Measured free-tier TokenRouter reality: qwen3.8-max
+is a thinking model at ~30–250s per case with intermittent 503
+hard_concurrency_limit windows (~6–8 cases per 10 minutes when open), so a
+full 307-case run costs ~5–7 hours of wall time. The human owner explicitly
+asked to reduce the recorded evaluation to ~90 cases.
+
+Decision:
+1. The recorded P3-M15 evaluation is a DETERMINISTIC STRATIFIED SAMPLE of 90
+   cases: round-robin across all 25 golden-set categories preserving the
+   difficulty mix (runner `stratified()`; selection is reproducible from the
+   frozen golden set — no randomness).
+2. Every reported M15 metric states N=90/307 explicitly with the sampling
+   method disclosed (P3-S20 honesty; no implied full-set coverage).
+3. The remaining 217 cases are a CARRIED-FORWARD OBLIGATION: the resumable
+   runner (`scripts/rzp_run_compiler_eval.py`, no argument = full set)
+   completes them before the M48 full Phase-3 gate, where the acceptance
+   matrix item "Intent compiler evaluation complete" is re-verified on the
+   full 307. M48 cannot PASS on the sample alone.
+4. Provider-noise rows (COMPILER_UNAVAILABLE) are never counted as results;
+   four hard cases measured under a harness-reduced max_output_tokens=2000
+   budget were discarded (preserved in
+   `data/phase3/compiler_eval/discarded_budget2000_rows.jsonl`) and
+   re-measured at the restored 4000 budget per M10 thinking-model evidence.
+
+Rationale: a stratified sample across all categories is a defensible measured
+evaluation when disclosed; the human owner owns scope; the resumable runner
+makes full coverage a scheduling matter, not a scientific one.
+
+Security consequences: none adverse — no security invariant is affected by
+evaluation sample size; no metric is fabricated or generalized beyond the
+measured N; the compiler itself (schema, repair, fail-closed, isolation) is
+unchanged and fully unit-tested.
+
+Validation/evidence: `docs/PHASE3_INTENT_COMPILER_EVAL.md` (N=90 metrics +
+sampling statement), `data/phase3/compiler_eval/summary.json`,
+`data/phase3/compiler_eval/results.jsonl`.
+
+Follow-up: full-307 continuation run before M48; update the eval doc with the
+full-set numbers when it completes.
+
+Addendum (same milestone, 2026-08-25) — golden-truth corrections found during
+M15 failure analysis, applied transparently (truth accuracy, not score
+management): (a) F1 budget-only phrases that explicitly state rupees/₹/INR now
+carry currency="INR" instead of "UNSPECIFIED" (applied before sample
+measurement); (b) F13-002 "subscribe me to the premium tier monthly" is a
+subscription REQUEST, so the contradictory recurring_forbidden=true expectation
+was removed and that one case re-measured against corrected truth (passes;
+stale row preserved in discarded_stale_truth_rows.jsonl). Golden sha256 moved
+eef70c9c… → 9164f04c…. Known gap recorded: after (a), zero golden cases
+exercise the currency-unstated → unspecified path; add genuinely
+currency-unstated cases in a future golden revision (pre-M48, folds into
+M18–M25 dataset work). All details in docs/PHASE3_INTENT_COMPILER_EVAL.md §5/§8.

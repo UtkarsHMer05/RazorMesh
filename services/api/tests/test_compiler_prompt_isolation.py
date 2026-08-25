@@ -26,7 +26,7 @@ HOSTILE_MERCHANT_TEXT = (
 
 
 def test_prompt_is_versioned_and_hash_stable() -> None:
-    assert COMPILER_PROMPT_VERSION == "razormesh-intent-compiler-v1"
+    assert COMPILER_PROMPT_VERSION == "razormesh-intent-compiler-v2"
     expected = hashlib.sha256(COMPILER_SYSTEM_PROMPT.encode("utf-8")).hexdigest()
     assert prompt_sha256() == expected
     # hash must change if the prompt text ever changes (audit binding P3-S13)
@@ -101,9 +101,7 @@ def test_no_merchant_text_can_reach_the_compiler_via_module_surface() -> None:
         if inspect.isfunction(fn) and fn.__module__ == mod.__name__
     ]
     for name, _fn in functions:
-        params = {
-            k: v for k, v in get_type_hints(_fn).items() if k != "return"
-        }
+        params = {k: v for k, v in get_type_hints(_fn).items() if k != "return"}
         if name == "build_compiler_messages":
             assert set(params) == {"trusted"}
         else:

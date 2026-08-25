@@ -1,0 +1,215 @@
+{
+  "generated_at_utc": "2026-08-25T19:05:00.844146+00:00",
+  "golden_set": {
+    "cases": 307,
+    "sha256": "9164f04c8714d711cae1a9ecba0db35853947bfec0683af9428bd4f6c86c79b7",
+    "truth_source": "human-authored templates (never Qwen self-labels)"
+  },
+  "coverage": {
+    "final_rows": 90,
+    "of_golden": 307,
+    "sample": 90,
+    "complete": false,
+    "provider_noise_rows_excluded": 0
+  },
+  "schema_validity": {
+    "ok": 90,
+    "failed": 0,
+    "schema_valid_rate": 1.0,
+    "failure_codes": {}
+  },
+  "repair": {
+    "cases_needing_repair": 7,
+    "repair_rate": 0.0778,
+    "repaired_to_valid": 7
+  },
+  "case_pass": {
+    "passed": 71,
+    "pass_rate": 0.7889,
+    "by_difficulty": {
+      "easy": {
+        "n": 40,
+        "passed": 31,
+        "pass_rate": 0.775,
+        "schema_ok": 40
+      },
+      "medium": {
+        "n": 22,
+        "passed": 20,
+        "pass_rate": 0.9091,
+        "schema_ok": 22
+      },
+      "hard": {
+        "n": 28,
+        "passed": 20,
+        "pass_rate": 0.7143,
+        "schema_ok": 28
+      }
+    },
+    "by_category": {
+      "alias_handling": {
+        "n": 2,
+        "passed": 1,
+        "pass_rate": 0.5
+      },
+      "ambiguous_phrasing": {
+        "n": 6,
+        "passed": 3,
+        "pass_rate": 0.5
+      },
+      "brand_constraint": {
+        "n": 7,
+        "passed": 6,
+        "pass_rate": 0.8571
+      },
+      "budget_currency_explicit": {
+        "n": 7,
+        "passed": 3,
+        "pass_rate": 0.4286
+      },
+      "budget_only": {
+        "n": 7,
+        "passed": 4,
+        "pass_rate": 0.5714
+      },
+      "bundle_semantic": {
+        "n": 1,
+        "passed": 0,
+        "pass_rate": 0.0
+      },
+      "condition_new_required": {
+        "n": 7,
+        "passed": 7,
+        "pass_rate": 1.0
+      },
+      "deadline_semantic": {
+        "n": 1,
+        "passed": 0,
+        "pass_rate": 0.0
+      },
+      "delivery_timing_semantic": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "injection_like_human_text": {
+        "n": 3,
+        "passed": 2,
+        "pass_rate": 0.6667
+      },
+      "membership_resistance": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "merchant_restriction": {
+        "n": 7,
+        "passed": 7,
+        "pass_rate": 1.0
+      },
+      "multi_constraint": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "multi_constraint_variant": {
+        "n": 3,
+        "passed": 2,
+        "pass_rate": 0.6667
+      },
+      "negation_preservation": {
+        "n": 5,
+        "passed": 4,
+        "pass_rate": 0.8
+      },
+      "quantity": {
+        "n": 6,
+        "passed": 5,
+        "pass_rate": 0.8333
+      },
+      "recurring_forbidden_explicit": {
+        "n": 6,
+        "passed": 6,
+        "pass_rate": 1.0
+      },
+      "return_policy_semantic": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "safe_lookalike_alias": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "safe_lookalike_title_trap": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "shipping_fee_semantic": {
+        "n": 2,
+        "passed": 2,
+        "pass_rate": 1.0
+      },
+      "trial_euphemism": {
+        "n": 6,
+        "passed": 5,
+        "pass_rate": 0.8333
+      },
+      "underspecified_minimal": {
+        "n": 6,
+        "passed": 6,
+        "pass_rate": 1.0
+      },
+      "variant_guard": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "warranty_semantic": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      }
+    }
+  },
+  "field_recall": {
+    "brands": 1.0,
+    "currency": 0.96,
+    "max_amount_minor": 0.8533,
+    "merchants": 1.0,
+    "quantity_max": 1.0,
+    "recurring_forbidden": 0.9231,
+    "semantic": 0.9706,
+    "unspecified": null
+  },
+  "numeric_correctness": {
+    "expected_money_cases": 75,
+    "amount_omissions": 11,
+    "currency_omissions": 3,
+    "money_precision": 1.0
+  },
+  "unsafe_omissions": {
+    "max_amount_minor": 11,
+    "currency": 3,
+    "semantic": 1,
+    "recurring_forbidden": 1
+  },
+  "hallucinated_constraints": {
+    "condition": 6,
+    "warranty": 1,
+    "brands": 1
+  },
+  "mismatches": {},
+  "ambiguity_handling": {
+    "cases_requiring_ambiguity": 6,
+    "satisfied": 6
+  },
+  "latency_ms": {
+    "p50": 63499.3,
+    "p95": 197736.4,
+    "max": 241218.4,
+    "mean": 79529.0
+  }
+}

@@ -51,8 +51,10 @@ def _with_backoff(fn, *, attempts: int = 8, sleep_s: float = 20.0):
         except TokenRouterUnknownOutcomeError as exc:
             last_exc = exc
             if attempt < attempts - 1:
-                print(f"  transient unknown outcome; backing off {sleep_s}s "
-                      f"(attempt {attempt + 1}/{attempts})")
+                print(
+                    f"  transient unknown outcome; backing off {sleep_s}s "
+                    f"(attempt {attempt + 1}/{attempts})"
+                )
                 time.sleep(sleep_s)
     raise last_exc if last_exc else RuntimeError("unreachable")
 

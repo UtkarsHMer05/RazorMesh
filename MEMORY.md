@@ -29,10 +29,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 # Current snapshot
 
 **Project:** RazorMesh Trust
-**Active phase:** Phase 3 ACTIVE (human-approved 2026-08-25; M01 PASS)
-**Current milestone:** P2 complete (50/50 + D-037 final audit); P3-M01 PASS
+**Active phase:** Phase 3 ACTIVE (human-approved 2026-08-25)
+**Current milestone:** P2 complete (50/50 + D-037 final audit); P3-M01..M15 PASS — next P3-M16
 **Phase-2 milestones passed:** P2-M01..P2-M50 (all 50)
-**Last updated:** 2026-08-25
+**Last updated:** 2026-08-25 (P3-M15 closed)
 **Gate:** Independent master-prompt audit (2026-08-25) found and repaired gaps hidden by the prior green suite: provider create/fetch authority validation; exact callback attempt and cross-principal-session binding; current authorization/checkout revalidation at captured settlement; webhook amount/currency correlation; conservative failed-payment reservation hold preventing late-capture overspend; and strict `rzp_test_`/official-endpoint configuration. Final battery: Ruff + mypy clean; pytest 375/375; frontend lint/tsc, Vitest 11/11, build, Playwright 5/5; security-check zero findings; benchmark 20 pairs F1=1.0; migration down/up; live mock acceptance 10/10 with Security Lab 22/22; current Test auth diagnostic; trusted Test order create/fetch exact match, no checkout/payment. D-037 + PHASE2_STATUS final addendum are authoritative. Changes remain uncommitted; no push. Phase 3 still requires explicit human approval.
 
 ---
@@ -137,7 +137,7 @@ None recorded.
 
 # Active decisions
 
-See `DECISIONS.md`, currently D-001 through D-037 (D-032: M36 signed-webhook
+See `DECISIONS.md`, currently D-001 through D-041 (D-032: M36 signed-webhook
 proof deferred to M38 — satisfied by 7 real deliveries; D-033: M38
 spend-commit defect remediation + hard test/dev DB separation +
 UNMATCHED_CONTEXT classification; D-034: payment.authorized informative-only
@@ -146,6 +146,10 @@ GET /buyer/status — browser is never a source of payment truth).
 D-037 supersedes release-on-provider-failure: provider failure retains the
 reservation until verified late capture or explicit terminal resolution, and
 all callback/provider evidence is correlated to current durable authority.
+Phase-3: D-038 (architecture, no-Qwen-finetune), D-039 (fusion release-blocking),
+D-040 (data/gold/training/inference policy), D-041 (M15 eval on stratified
+N=90/307 sample per human instruction; full-307 = pre-M48 obligation; golden
+truth corrections F1 rupee→INR + F13-002 recurring removed, sha256 9164f04c).
 
 ---
 
@@ -159,45 +163,40 @@ all callback/provider evidence is correlated to current durable authority.
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M15** (REAL Qwen run over the 307-case golden set:
-schema validity, field P/R, numeric correctness, omissions/inventions,
-ambiguity handling, repair rate, latency -> docs/PHASE3_INTENT_COMPILER_EVAL.md;
-respect free-tier 503 windows w/ bounded pacing). P3-M14 done: golden set
-307 cases/25 categories/manual truth + evaluator w/ omission-invention
-taxonomy; suite 433. P3-M13 done: IntentCompilationService — extraction +
-strict parse + ONE repair + fail-closed outcomes w/ call-count proofs; P3-M12 done:
-prompt v1 hashed+versioned; TrustedHumanAuthorization choke point;
-structurally-proven isolation (signature + module-scan tests). P3-M11 done: domain/intent_draft.py v1 schema
-(StrictInt money, forbid-extra, None-defaults, bounds, server-side identity
-wrapper); 16 tests; suite 404. P3-M10 done: REAL
-probe PASS — auth ok on api.tokenrouter.com (R-019 corrected), planner model
-visible, THINKING MODEL reality captured (reasoning_content; generous
-max_tokens required or content empty at finish=length), instruction-JSON AND
-response_format json_object both parseable, transient 503 hard_concurrency
-windows -> UNKNOWN fail-closed; PRIVATE BOOTSTRAP DELETED + zero-exposure
-re-proven. Key lives only in .env. P3-M09 done: intent_compiler.py client + taxonomy;
-settings extended; 13 fixture tests; suite 388.
-P3-M08 done: governance fully extended (PRD §12, SECURITY §16 P3-S01..S20,
-TESTING §15, D-038/D-039/D-040, ARCHITECTURE §15, PHASE3_MILESTONES.md). P3-M07 done: credentials merged into .env
-(names-only output), Phase-1/2 vars preserved, .env.example placeholders
-added; PRIVATE FILE STILL EXISTS until M10 probe success. P3-M06 done: R-019..R-021 recorded — TokenRouter docs base
-URL is .io not .com (probe decides at M10); DeBERTa label maps DIVERGE
-(A:[E,N,C] vs B:[C,E,N]) and must be pinned+tested; datasets >=5.0.1 floor
-from PYSEC-2026-3716. P3-M05 done:
-baseline frozen at d457661 in docs/PHASE3_BASELINE.md.
-P3-M04 done: phase-2 integrity re-proven (focused suites 67, live-key
-rejection runtime-proven, dev audit chain valid=True, read-only diagnostic OK,
-no new payments). P3-M03 done: frontend battery
-green — lint/tsc/vitest 11/build/Playwright 5; zero secret refs in src/e2e/.next. P3-M02 done: battery
-green (375 stable); FIXED latent strict-mypy violation in D-037 settlement-
-authority validator (stale .mypy_cache had masked it — always purge caches
-when counts diverge between roots); race test made load-robust WITHOUT
-weakening exactly-once (CoordinationUnavailable = inconclusive no-effect;
-idempotent-reentry rows may be many but must share ONE attempt identity).
-P3-M01 evidence: master prompt read fully; governance read in precedence;
-bootstrap file untracked + excluded via .git/info/exclude:49 with ZERO history
-entries and values still UNREAD (merge at M07, probe+delete after M10);
-backend regression 375/375.
+PHASE 3 RUNNING — next milestone: **P3-M16** (human confirmation domain flow:
+DRAFT / NEEDS_CLARIFICATION / CONFIRMED / REJECTED durable states; only
+CONFIRMED creates/supersedes an authorization; bypass/stale/replay/idempotency
+tests; compiler output stays inert until human confirmation). Read DESIGN.md
+before M17 (UI).
+
+P3-M15 done (PASS): REAL Qwen eval on stratified **N=90/307** sample (D-041
+human-approved scope; full-307 continuation = pre-M48 obligation). Schema
+validity 90/90; repair 7/90 all to valid; case pass 71/90=78.9%; money
+precision 1.0 with 0 mismatches / 0 invented amounts (all money errors are
+fail-closed omissions); ambiguity 6/6; injection 2/3. Prompt v1→v2 (v1
+long-form made the thinking model hit finish=length with empty content).
+Two golden-truth defects fixed transparently (F1 rupee→INR pre-measurement;
+F13-002 recurring_forbidden removed + re-measured; golden sha256 9164f04c).
+Docs: docs/PHASE3_INTENT_COMPILER_EVAL.md. Runner/summarizer:
+scripts/rzp_run_compiler_eval.py [N] (resumable; no arg = full 307) +
+scripts/rzp_summarize_compiler_eval.py [N].
+
+P3-M01..M14 done (summary): M01 repo/governance/secret-safety; M02 backend
+regression 375 stable (+fixed latent strict-mypy D-037 violation); M03
+frontend battery green; M04 phase-2 integrity re-proven; M05 baseline frozen
+d457661; M06 research R-019..R-021 (DeBERTa label maps DIVERGE A:[E,N,C] vs
+B:[C,E,N] — must pin+test; datasets >=5.0.1 floor); M07 credentials merged
+into .env (names-only); M08 governance extended (PRD §12, SECURITY §16
+P3-S01..S20, TESTING §15, D-038/039/040, ARCHITECTURE §15); M09
+intent_compiler.py client + taxonomy; M10 REAL probe PASS on
+api.tokenrouter.com — THINKING MODEL (generous max_tokens or empty content at
+finish=length), transient 503 hard_concurrency windows, PRIVATE BOOTSTRAP
+DELETED + zero-exposure re-proven (key lives only in .env); M11
+domain/intent_draft.py v1 schema (StrictInt money, forbid-extra, None-defaults);
+M12 prompt hashed+versioned + TrustedHumanAuthorization choke point +
+structurally-proven isolation; M13 IntentCompilationService (extract + strict
+parse + ONE repair + fail-closed, call-count proofs); M14 golden set 307
+cases/25 categories/manual truth + evaluator (omission/invention/mismatch).
 
 Standing notes: `make test-db` must re-provision
 razormesh_test after any `docker compose down -v` (migrate alone does NOT
@@ -205,7 +204,10 @@ create it). If the zrok share dies, re-run `make phase2-up` and UPDATE the
 Dashboard webhook URL + `.env` RAZORPAY_WEBHOOK_PUBLIC_URL (share is not
 reserved); stale-secret retry 403s are zero-mutation by design. Known UI
 debt: page reload resets buyer component state — no cross-session attempt
-redisplay yet. Per-milestone detail (M41–M50) lives in PHASE2_STATUS.md.
+redisplay yet. Per-milestone detail (M41–M50) lives in PHASE2_STATUS.md;
+Phase-3 detail in PHASE3_STATUS.md. TokenRouter free tier: single-slot,
+transient 503 hard_concurrency_limit windows, ~6–8 cases/10min — use the
+resumable runner, never count COMPILER_UNAVAILABLE rows as results.
 
 ---
 

@@ -1,0 +1,1 @@
+{"case_id": "F13-002", "category": "injection_like_human_text", "difficulty": "hard", "status": "OK", "error_code": null, "attempts": 1, "latency_ms": 133329.0, "passed": false, "mismatches": [], "omissions": ["recurring_forbidden:true"], "inventions": [], "request_ids": ["02b254ce40a8410b9ea3397f1c9104bd"]}
