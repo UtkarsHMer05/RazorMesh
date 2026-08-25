@@ -18,7 +18,7 @@
 | M04 | Phase-2 real-provider integrity revalidation | PASS | focused suites 47+20 pass (settings fail-safe/provider/taxonomy/callback/webhook/reducer/reconciliation/executor-rz/schema/spend/executor/ledger); runtime live-key probe -> RAZORPAY_LIVE_KEY_REJECTED; real EvidenceLedger.verify() on dev DB valid=True; REAL read-only auth diagnostic ok=True mode=test guard passed (864ms); NO new payment created |
 | M05 | Freeze Phase-3 baseline | PASS | docs/PHASE3_BASELINE.md frozen at HEAD d457661: 375 backend tests, benchmark 20 pairs F1=1.0 regenerated, migration head a93c7d5e21f0, full gate table, runtime versions, Phase-2 references, explicit NO-PHASE-3-AI-ACTIVE statement, bootstrap values still unread |
 | M06 | Live AI/ML research and version manifest | PASS | R-019 TokenRouter reality (documented base URL api.tokenrouter.io/v1 vs prompt's .com; tr_ keys; OpenAI-compatible + JSON mode; model id to be proven live at M10); R-020 both DeBERTa cards (licenses MIT/Apache-2.0; CRITICAL label-map divergence A=[E,N,C] vs B=[C,E,N]; B ships ONNX); R-021 stack stables (transformers 5.15.1, datasets >=5.0.1 w/ PYSEC-2026-3716 floor, accelerate 1.14.0, onnxruntime 1.29.0); VERSION_MANIFEST rows added with planned-install milestones |
-| M07 | Private TokenRouter credential injection | NOT_STARTED | — |
+| M07 | Private TokenRouter credential injection | PASS | exclusion re-verified (.gitignore:6 for .env mode600; .git/info/exclude:49 bootstrap); 3 vars parsed+merged into .env programmatically — only NAMES/lengths printed (key=51, url=30, model=21 chars), all Phase-1/2 vars byte-preserved; .env.example blank placeholders added; leak sweep over trackable files clean; private file NOT deleted (deletion gated on M10 probe success) |
 | M08 | Phase-3 governance transition | NOT_STARTED | — |
 | M09 | TokenRouter client abstraction | NOT_STARTED | — |
 | M10 | TokenRouter auth + capability probe | NOT_STARTED | — |
@@ -303,3 +303,33 @@ accelerate/onnxruntime/huggingface-hub pages. All dated 2026-08-25.
 
 ### Next
 - M07 — Private TokenRouter credential injection.
+
+
+## M07 — Private TokenRouter Credential Injection
+
+MILESTONE: M07
+STATUS: PASS
+
+Requirements: master prompt M07/§5 steps 1–7 — safe merge without printing;
+preserve Phase-1/2 values; blank placeholders; deletion deferred to post-M10.
+Security invariants: P3-S01 groundwork, S30.
+
+### Evidence
+- Exclusion re-verified BEFORE reading: `.env` -> .gitignore:6 (mode 600);
+  bootstrap -> .git/info/exclude:49.
+- Programmatic merge (python heredoc): parsed exactly the three expected keys,
+  replaced-or-appended into `.env`; asserted all Razorpay/Phase-1 keys still
+  present; asserted every non-target pre-existing line survived byte-for-byte.
+  Output limited to key NAMES + char lengths (51/30/21) — no values.
+- `.env.example`: Phase-3 section appended with commented BLANK placeholders
+  plus public-docs guidance (no real values).
+- Leak sweep: grep across trackable files for `TOKENROUTER_API_KEY` /
+  high-entropy `tr_...` tokens -> only a doc mention of the FORBIDDEN
+  `NEXT_PUBLIC_` name in PHASE3_STATUS; no values anywhere.
+- settings fail-safe suite re-run: 14 passed.
+
+### Real external API use
+- NONE (probe is M10).
+
+### Next
+- M08 — Phase-3 governance transition.

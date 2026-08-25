@@ -159,10 +159,11 @@ all callback/provider evidence is correlated to current durable authority.
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M07** (credential injection: verify exclusion still
-holds, merge TOKENROUTER_* from private file into .env WITHOUT printing,
-preserve Phase-1/2 vars, blank placeholders into .env.example; deletion only
-after M10 probe). P3-M06 done: R-019..R-021 recorded — TokenRouter docs base
+PHASE 3 RUNNING — next milestone: **P3-M08** (governance transition: PHASES/PRD/ARCHITECTURE/
+SECURITY P3-S01..S20/TESTING/DECISIONS entries incl. no-Qwen-finetune +
+conservative-fusion decisions). P3-M07 done: credentials merged into .env
+(names-only output), Phase-1/2 vars preserved, .env.example placeholders
+added; PRIVATE FILE STILL EXISTS until M10 probe success. P3-M06 done: R-019..R-021 recorded — TokenRouter docs base
 URL is .io not .com (probe decides at M10); DeBERTa label maps DIVERGE
 (A:[E,N,C] vs B:[C,E,N]) and must be pinned+tested; datasets >=5.0.1 floor
 from PYSEC-2026-3716. P3-M05 done:
