@@ -21,7 +21,7 @@
 | M07 | Private TokenRouter credential injection | PASS | exclusion re-verified (.gitignore:6 for .env mode600; .git/info/exclude:49 bootstrap); 3 vars parsed+merged into .env programmatically — only NAMES/lengths printed (key=51, url=30, model=21 chars), all Phase-1/2 vars byte-preserved; .env.example blank placeholders added; leak sweep over trackable files clean; private file NOT deleted (deletion gated on M10 probe success) |
 | M08 | Phase-3 governance transition | PASS | PHASES Phase-3 ACTIVE; PRD §12 PRD-P3-001..014; SECURITY §16 P3-S01..S20 + T25+ families; TESTING §15 ten phase-3 gates; DECISIONS D-038 (architecture/no-Qwen-finetune) D-039 (fusion release-blocking) D-040 (data/gold/training/inference policy); ARCHITECTURE §15; PHASE3_MILESTONES.md created |
 | M09 | TokenRouter client abstraction | PASS | intent_compiler.py: backend-only httpx client (Bearer from SecretStr, bounded timeout, X-Request-Id ULID correlation); taxonomy AUTH/REJECTED/UNKNOWN mirroring D-030 with calls==1 no-retry proofs; malformed-payload matrix; response_format passthrough; /models probe method; DI factory naming TOKENROUTER_API_KEY only; settings fields added (SecretStr key, documented .io default URL, planner model, timeout<=120); 13 MockTransport tests; suite 388/388 |
-| M10 | TokenRouter auth + capability probe | NOT_STARTED | — |
+| M10 | TokenRouter auth + capability probe | PASS | REAL probe: AUTH ok on api.tokenrouter.com (bootstrap URL validated; R-019 corrected); planner qwen/qwen3.8-max-free visible+usable (reported internally as qwen3.8-max-pd); Qwen3.8 is a THINKING model -> reasoning_content/reasoning_tokens captured in client; empty content at tiny max_tokens proven; JSON-by-instruction parseable {max_price_minor:499999,currency:INR} 11.8s; response_format json_object ACCEPTED parseable (68s); failure shape = transient 503 hard_concurrency_limit windows -> taxonomy UNKNOWN + probe-only bounded backoff; PRIVATE FILE DELETED, zero history/tracked exposure re-proven |
 | M11 | IntentDraft schema | NOT_STARTED | — |
 | M12 | Compiler prompt & isolation contract | NOT_STARTED | — |
 | M13 | Strict validation + bounded repair | NOT_STARTED | — |
@@ -389,3 +389,49 @@ pytest (full)                                 -> 388 passed
 
 ### Next
 - M10 — TokenRouter authentication and capability probe (real key).
+
+
+## M10 — TokenRouter Authentication & Capability Probe
+
+MILESTONE: M10
+STATUS: PASS
+
+Requirements: master prompt M10 + §5 steps 8–10 — real probe of auth, model,
+JSON compliance, response_format support, latency, failure shapes; delete the
+private bootstrap after safe success; prove it was never tracked.
+Security invariants: P3-S01/S14.
+
+### Probe results (scripts/rzp_tokenrouter_probe.py; safe output only)
+1. AUTH ok via GET /v1/models with the real key (2 models listed); base URL =
+   api.tokenrouter.com per bootstrap — R-019 corrected accordingly.
+2. `qwen/qwen3.8-max-free` visible and usable; gateway reports internal name
+   `qwen3.8-max-pd`.
+3. **Thinking-model reality**: responses carry message.reasoning_content +
+   usage.reasoning_tokens; with max_tokens=16 the model ends finish=length
+   with EMPTY content — compiler budgets must be generous (client now
+   surfaces both fields; fixture-tested).
+4. JSON-by-instruction: parseable strict JSON
+   {"max_price_minor": 499999, "currency": "INR"} — semantically correct for
+   the prompt; finish=stop; ~11.8s.
+5. response_format={"type":"json_object"} ACCEPTED by gateway/model and
+   produced parseable JSON (~68s wall under contention).
+6. Failure/rate-limit shape: transient 503 JSON body
+   {code: hard_concurrency_limit} arriving in windows; our taxonomy maps it to
+   TOKENROUTER_UNKNOWN_OUTCOME (fail-closed) — the PROBE uses bounded backoff;
+   production compiler calls will NOT auto-retry (failure policy §22).
+
+### Private file disposal
+```text
+rm PHASE3_PRIVATE_BOOTSTRAP_LOCAL_ONLY.md            # deleted after success
+git log --all -- <file>                              -> 0 entries (never tracked)
+git status grep private                              -> none
+grep tr_[A-Za-z0-9]{10,} across tracked trees        -> 0 hits
+```
+The key survives ONLY in gitignored `.env`.
+
+### Client changes folded in
+ChatCompletionResult gained reasoning_content/reasoning_tokens (fixture-
+tested). Suite remains green (13 client tests).
+
+### Next
+- M11 — IntentDraft schema.

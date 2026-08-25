@@ -40,10 +40,14 @@ def _ok_body() -> dict[str, object]:
             {
                 "index": 0,
                 "finish_reason": "stop",
-                "message": {"role": "assistant", "content": '{"ok": true}'},
+                "message": {
+                    "role": "assistant",
+                    "content": '{"ok": true}',
+                    "reasoning_content": "thinking...",
+                },
             }
         ],
-        "usage": {"prompt_tokens": 12, "completion_tokens": 5},
+        "usage": {"prompt_tokens": 12, "completion_tokens": 5, "reasoning_tokens": 7},
     }
 
 
@@ -66,6 +70,8 @@ def test_happy_path_returns_validated_projection() -> None:
     assert result.model_reported == "qwen/qwen3.8-max-free"
     assert result.finish_reason == "stop"
     assert result.prompt_tokens == 12 and result.completion_tokens == 5
+    assert result.reasoning_content == "thinking..."
+    assert result.reasoning_tokens == 7
     assert result.request_id and len(result.request_id) == 32
 
 

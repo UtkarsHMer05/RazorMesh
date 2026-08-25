@@ -159,10 +159,15 @@ all callback/provider evidence is correlated to current durable authority.
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M10** (REAL TokenRouter auth+capability probe using the
-merged key: model id present in /v1/models, chat completion, JSON compliance,
-response_format behavior, latency; THEN delete private bootstrap file and
-prove never tracked). P3-M09 done: intent_compiler.py client + taxonomy;
+PHASE 3 RUNNING — next milestone: **P3-M11** (IntentDraft versioned Pydantic schema:
+hard/semantic constraints + ambiguities + unspecified; integer minor-unit
+money; no invented defaults; property/negative tests). P3-M10 done: REAL
+probe PASS — auth ok on api.tokenrouter.com (R-019 corrected), planner model
+visible, THINKING MODEL reality captured (reasoning_content; generous
+max_tokens required or content empty at finish=length), instruction-JSON AND
+response_format json_object both parseable, transient 503 hard_concurrency
+windows -> UNKNOWN fail-closed; PRIVATE BOOTSTRAP DELETED + zero-exposure
+re-proven. Key lives only in .env. P3-M09 done: intent_compiler.py client + taxonomy;
 settings extended; 13 fixture tests; suite 388.
 P3-M08 done: governance fully extended (PRD §12, SECURITY §16 P3-S01..S20,
 TESTING §15, D-038/D-039/D-040, ARCHITECTURE §15, PHASE3_MILESTONES.md). P3-M07 done: credentials merged into .env

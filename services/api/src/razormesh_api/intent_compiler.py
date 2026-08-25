@@ -66,7 +66,13 @@ class TokenRouterUnknownOutcomeError(TokenRouterError):
 
 @dataclass(frozen=True)
 class ChatCompletionResult:
-    """Minimal validated projection of a chat-completion response."""
+    """Minimal validated projection of a chat-completion response.
+
+    ``reasoning_content``/``reasoning_tokens`` are captured because Qwen3.8
+    is a thinking model (M10 probe evidence): callers must treat ``content``
+    as the ONLY answer channel and budget ``max_tokens`` for hidden reasoning,
+    or the model can end with finish_reason=length and EMPTY content.
+    """
 
     content: str
     model_reported: str
@@ -74,6 +80,8 @@ class ChatCompletionResult:
     prompt_tokens: int | None
     completion_tokens: int | None
     request_id: str
+    reasoning_content: str | None = None
+    reasoning_tokens: int | None = None
 
 
 def _validate_payload(payload: Any, *, request_id: str) -> dict[str, Any]:
@@ -185,10 +193,12 @@ class TokenRouterClient:
 
         data = _validate_payload(payload, request_id=request_id)
         first = data["choices"][0]
+        message = first["message"]
         raw_usage = data.get("usage")
         usage: dict[str, Any] = raw_usage if isinstance(raw_usage, dict) else {}
+        reasoning = message.get("reasoning_content")
         return ChatCompletionResult(
-            content=str(first["message"]["content"]),
+            content=str(message["content"]),
             model_reported=str(data.get("model") or model),
             finish_reason=str(first.get("finish_reason") or ""),
             prompt_tokens=usage.get("prompt_tokens")
@@ -198,6 +208,10 @@ class TokenRouterClient:
             if isinstance(usage.get("completion_tokens"), int)
             else None,
             request_id=request_id,
+            reasoning_content=reasoning if isinstance(reasoning, str) else None,
+            reasoning_tokens=usage.get("reasoning_tokens")
+            if isinstance(usage.get("reasoning_tokens"), int)
+            else None,
         )
 
     # ------------------------------------------------------------------

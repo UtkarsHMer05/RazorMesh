@@ -458,6 +458,12 @@ Findings:
 
 Confidence: High for docs; model-id availability to be proven live (M10).
 
+M10 CORRECTION (2026-08-25, live probe): the credential's base URL is
+`api.tokenrouter.com` and it AUTHENTICATES successfully — the master prompt's
+.com was correct for this account; the public .io docs page is the marketing
+docs host. Both hosts appear to serve the same gateway API family. The
+bootstrap value (now merged into .env) is authoritative for this project.
+
 ## R-020 — NLI baseline candidates: cards, licenses, label maps
 
 Date checked: 2026-08-25 (Phase 3 M06)
