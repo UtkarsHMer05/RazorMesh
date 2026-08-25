@@ -20,7 +20,7 @@
 | M06 | Live AI/ML research and version manifest | PASS | R-019 TokenRouter reality (documented base URL api.tokenrouter.io/v1 vs prompt's .com; tr_ keys; OpenAI-compatible + JSON mode; model id to be proven live at M10); R-020 both DeBERTa cards (licenses MIT/Apache-2.0; CRITICAL label-map divergence A=[E,N,C] vs B=[C,E,N]; B ships ONNX); R-021 stack stables (transformers 5.15.1, datasets >=5.0.1 w/ PYSEC-2026-3716 floor, accelerate 1.14.0, onnxruntime 1.29.0); VERSION_MANIFEST rows added with planned-install milestones |
 | M07 | Private TokenRouter credential injection | PASS | exclusion re-verified (.gitignore:6 for .env mode600; .git/info/exclude:49 bootstrap); 3 vars parsed+merged into .env programmatically — only NAMES/lengths printed (key=51, url=30, model=21 chars), all Phase-1/2 vars byte-preserved; .env.example blank placeholders added; leak sweep over trackable files clean; private file NOT deleted (deletion gated on M10 probe success) |
 | M08 | Phase-3 governance transition | PASS | PHASES Phase-3 ACTIVE; PRD §12 PRD-P3-001..014; SECURITY §16 P3-S01..S20 + T25+ families; TESTING §15 ten phase-3 gates; DECISIONS D-038 (architecture/no-Qwen-finetune) D-039 (fusion release-blocking) D-040 (data/gold/training/inference policy); ARCHITECTURE §15; PHASE3_MILESTONES.md created |
-| M09 | TokenRouter client abstraction | NOT_STARTED | — |
+| M09 | TokenRouter client abstraction | PASS | intent_compiler.py: backend-only httpx client (Bearer from SecretStr, bounded timeout, X-Request-Id ULID correlation); taxonomy AUTH/REJECTED/UNKNOWN mirroring D-030 with calls==1 no-retry proofs; malformed-payload matrix; response_format passthrough; /models probe method; DI factory naming TOKENROUTER_API_KEY only; settings fields added (SecretStr key, documented .io default URL, planner model, timeout<=120); 13 MockTransport tests; suite 388/388 |
 | M10 | TokenRouter auth + capability probe | NOT_STARTED | — |
 | M11 | IntentDraft schema | NOT_STARTED | — |
 | M12 | Compiler prompt & isolation contract | NOT_STARTED | — |
@@ -355,3 +355,37 @@ history.
 
 ### Validation
 Docs-only milestone; lint/mypy clean; settings suite 14 passed post-edit.
+
+
+## M09 — TokenRouter Client Abstraction
+
+MILESTONE: M09
+STATUS: PASS
+
+Requirements: master prompt M09 — backend-only provider client with explicit
+timeout, structured errors, safe correlation, DI, typed config, no secret
+logs, deterministic fixtures. NO authority semantics yet (P3-S03/S16).
+Security invariants: P3-S01/S16 groundwork.
+
+### Implementation
+- settings.py: tokenrouter_api_key (SecretStr), tokenrouter_base_url
+  (documented .io default per R-019), planner_model, bounded timeout.
+- intent_compiler.py: TokenRouterClient + taxonomy
+  (AUTH_FAILED / REQUEST_REJECTED / UNKNOWN_OUTCOME / CONFIG_INVALID),
+  ChatCompletionResult projection, list_models() read-only probe,
+  build_tokenrouter_client() fail-safe factory. Errors carry codes +
+  request ids only — never keys/bodies.
+
+### Validation commands + results
+```text
+ruff check .                                  -> clean
+mypy -p razormesh_api (strict)                -> Success, 55 files
+pytest tests/test_intent_compiler_client.py   -> 13 passed
+pytest (full)                                 -> 388 passed
+```
+
+### Real external API use
+- NONE (MockTransport only; real probe is M10).
+
+### Next
+- M10 — TokenRouter authentication and capability probe (real key).

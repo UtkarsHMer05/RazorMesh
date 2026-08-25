@@ -37,6 +37,18 @@ class Settings(BaseSettings):
     razorpay_webhook_path: str = "/api/v1/webhooks/razorpay"
     razorpay_webhook_public_url: str = ""
 
+    # P3-M09 (D-038): Intent Compiler provider via TokenRouter. Backend-only
+    # secrets (P3-S01); base URL default is the DOCUMENTED endpoint (R-019) —
+    # .env may override; M10 probe is the authority on what actually works.
+    tokenrouter_api_key: SecretStr = SecretStr("")
+    tokenrouter_base_url: str = "https://api.tokenrouter.io/v1"
+    planner_model: str = "qwen/qwen3.8-max-free"
+    tokenrouter_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
+
+    @property
+    def tokenrouter_credentials_present(self) -> bool:
+        return bool(self.tokenrouter_api_key.get_secret_value())
+
     @property
     def razorpay_credentials_present(self) -> bool:
         return bool(self.razorpay_key_id) and bool(self.razorpay_key_secret.get_secret_value())
