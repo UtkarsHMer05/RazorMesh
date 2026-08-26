@@ -50,7 +50,7 @@
 | M36 | Fine-tuned vs baseline evaluation | NOT_STARTED | — |
 | M37 | Threshold calibration | PASS (PROVISIONAL) | calibrated on frozen VAL split ONLY: tau_block=0.36 tau_entail=0.40 -> contradiction recall 0.704 @ block precision 0.927, false-blocks on entailment 2/171 (<=5% cap); objective F2(BLOCK); first calibration attempt degenerate (tau=1.0/recall 0) -> reformulated honestly; policy manifest data/phase3/policy/semantic_thresholds.json stamped PENDING_GOLD_VALIDATION; single gold/test evaluation deferred to post-gold-review rerun list |
 | M38 | Production SemanticVerifier | NOT_STARTED | — |
-| M39 | SemanticEvidenceBuilder | NOT_STARTED | — |
+| M39 | SemanticEvidenceBuilder | PASS | semantic_evidence.py: deterministic pairs per verifiable aspect (budget/brand/condition/recurring) from CURRENT sanitized evidence; hypothesis text derived ONLY from confirmed authorization terms — hostile product text stays premise-side and can never become the claim; 3 tests incl. injection-in-product-title case |
 | M40 | Conservative policy fusion | NOT_STARTED | — |
 | M41 | End-to-end semantic attack scenarios | NOT_STARTED | — |
 | M42 | Prompt-injection context-isolation tests | NOT_STARTED | — |
