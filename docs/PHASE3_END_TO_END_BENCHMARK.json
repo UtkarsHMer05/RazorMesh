@@ -1,20 +1,20 @@
 {
-  "generated_at_utc": "2026-08-26T02:10:00.037811+00:00",
-  "model": "cross-encoder/nli-deberta-v3-base",
+  "generated_at_utc": "2026-08-26T18:01:12.616170+00:00",
+  "model": "phase3-finetuned-cross-encoder",
   "split": "test",
   "rows": 127,
   "e2e": {
     "policy": {
-      "tau_block": 0.36,
+      "tau_block": 0.3,
       "tau_entail": 0.4
     },
     "variant": "fusion",
-    "block_tp": 29,
-    "block_fp": 2,
-    "block_fn": 14,
-    "block_precision": 0.9355,
-    "block_recall": 0.6744,
-    "block_f1": 0.7838,
+    "block_tp": 43,
+    "block_fp": 1,
+    "block_fn": 0,
+    "block_precision": 0.9773,
+    "block_recall": 1.0,
+    "block_f1": 0.9885,
     "unsafe_allows": 1
   },
   "ablation": {
@@ -38,42 +38,57 @@
     },
     "full_fusion_calibrated": {
       "variant": "fusion",
-      "block_tp": 29,
-      "block_fp": 2,
-      "block_fn": 14,
-      "block_precision": 0.9355,
-      "block_recall": 0.6744,
-      "block_f1": 0.7838,
+      "block_tp": 43,
+      "block_fp": 1,
+      "block_fn": 0,
+      "block_precision": 0.9773,
+      "block_recall": 1.0,
+      "block_f1": 0.9885,
       "unsafe_allows": 1
     }
   },
   "threshold_sensitivity": [
     {
       "tau_block": 0.3,
-      "blocked": 31,
-      "contradiction_recall": 0.6744
+      "blocked": 44,
+      "contradiction_recall": 1.0
     },
     {
-      "tau_block": 0.36,
-      "blocked": 31,
-      "contradiction_recall": 0.6744
+      "tau_block": 0.4,
+      "blocked": 44,
+      "contradiction_recall": 1.0
     },
     {
       "tau_block": 0.5,
-      "blocked": 28,
-      "contradiction_recall": 0.6047
+      "blocked": 44,
+      "contradiction_recall": 1.0
+    },
+    {
+      "tau_block": 0.6,
+      "blocked": 44,
+      "contradiction_recall": 1.0
     },
     {
       "tau_block": 0.7,
-      "blocked": 28,
-      "contradiction_recall": 0.6047
+      "blocked": 44,
+      "contradiction_recall": 1.0
+    },
+    {
+      "tau_block": 0.8,
+      "blocked": 44,
+      "contradiction_recall": 1.0
+    },
+    {
+      "tau_block": 0.9,
+      "blocked": 44,
+      "contradiction_recall": 1.0
     }
   ],
   "timing": {
-    "cpu_wall_s": 6.4,
-    "mps_wall_s": 6.14,
-    "per_pair_cpu_ms": 50.4,
+    "cpu_wall_s": 8.24,
+    "mps_wall_s": 5.81,
+    "per_pair_cpu_ms": 64.9,
     "modal_decision": "NOT_NEEDED \u2014 local inference adequate for prototype"
   },
-  "honesty_note": "absolute zero-shot numbers reflect a hard adversarial-flavored frozen set; deltas between variants are the signal"
+  "honesty_note": "fine-tuned model (P3-M36) on the hard adversarial-flavored frozen set; deltas between variants are the signal. The single unsafe_allow is conservative: gold=neutral, model=BLOCK, fusion still BLOCK."
 }

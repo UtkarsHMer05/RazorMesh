@@ -114,5 +114,3 @@ def test_fusion_tightens_but_never_creates_authority() -> None:
     assert final is DeterministicDecision.BLOCK  # tightened, as intended
     # ...and NOTHING in this flow touched durable authority (no contract rows
     # are created by design — verified structurally: no repository access here).
-
-

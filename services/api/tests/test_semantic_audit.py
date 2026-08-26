@@ -65,5 +65,3 @@ def test_semantic_events_recorded_without_text() -> None:
     )
 
     assert EvidenceLedger(repos).verify().valid
-
-

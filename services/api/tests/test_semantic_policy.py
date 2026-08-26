@@ -114,3 +114,84 @@ def test_verifier_fail_closed_when_model_missing(tmp_path) -> None:  # type: ign
     verdict = v.verify(premise="p text here", hypothesis="h text here")
     assert verdict.action is SemanticAction.CHALLENGE
     assert verdict.fail_closed is True
+
+
+def test_verifier_reads_label_map_from_artifact(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """P3-M38: when a model dir has label_map.json, the verifier reads it on
+    first local inference. We force the lazy load by calling the (non-scoring)
+    initializer and inspect the resolved indices."""
+    from razormesh_api.semantic_verifier import DebertaNLISemanticVerifier
+
+    artifact = tmp_path / "art"
+    artifact.mkdir()
+    # baseline-A order: 0=entailment, 1=neutral, 2=contradiction
+    (artifact / "label_map.json").write_text(
+        json.dumps({0: "entailment", 1: "neutral", 2: "contradiction"})
+    )
+    policy = {
+        "model": "test-baseline-A",
+        "policy_version": "semantic-thresholds-v1",
+        "selected": {"tau_block": 0.36, "tau_entail": 0.40},
+        "gold_validation_status": "GOLD_VALIDATED",
+    }
+    p = tmp_path / "policy.json"
+    p.write_text(json.dumps(policy))
+    v = DebertaNLISemanticVerifier(model_dir=artifact, policy_path=p)
+    # Manually drive the label_map read path (it requires real weights which
+    # are absent here; the read happens AFTER AutoModel.from_pretrained). We
+    # instead exercise the helper directly to confirm the on-disk file is
+    # read correctly.
+    assert v._read_label_map() == {
+        0: "entailment",
+        1: "neutral",
+        2: "contradiction",
+    }
+
+
+def test_verifier_legacy_fallback_when_no_label_map(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """P3-M38: when neither artifact label_map nor policy label_map exists, the
+    legacy cross-encoder order (0=C, 1=E, 2=N) is used (back-compat)."""
+    from razormesh_api.semantic_verifier import DebertaNLISemanticVerifier
+
+    artifact = tmp_path / "art"
+    artifact.mkdir()
+    # No label_map.json on disk
+    policy = {
+        "model": "test-legacy",
+        "policy_version": "semantic-thresholds-v1",
+        "selected": {"tau_block": 0.36, "tau_entail": 0.40},
+        "gold_validation_status": "GOLD_VALIDATED",
+    }
+    p = tmp_path / "policy.json"
+    p.write_text(json.dumps(policy))
+    v = DebertaNLISemanticVerifier(model_dir=artifact, policy_path=p)
+    assert v._read_label_map() == {
+        0: "contradiction",
+        1: "entailment",
+        2: "neutral",
+    }
+
+
+def test_verifier_policy_label_map_fallback(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    """P3-M38: if the artifact has no label_map.json but the policy manifest
+    includes one (e.g. for an HF hub model that ships with config.json but no
+    separate label_map.json), the policy's map is used."""
+    from razormesh_api.semantic_verifier import DebertaNLISemanticVerifier
+
+    artifact = tmp_path / "art"
+    artifact.mkdir()
+    policy = {
+        "model": "test-with-policy-map",
+        "policy_version": "semantic-thresholds-v1",
+        "label_map": {"0": "entailment", "1": "neutral", "2": "contradiction"},
+        "selected": {"tau_block": 0.36, "tau_entail": 0.40},
+        "gold_validation_status": "GOLD_VALIDATED",
+    }
+    p = tmp_path / "policy.json"
+    p.write_text(json.dumps(policy))
+    v = DebertaNLISemanticVerifier(model_dir=artifact, policy_path=p)
+    assert v._read_label_map() == {
+        0: "entailment",
+        1: "neutral",
+        2: "contradiction",
+    }

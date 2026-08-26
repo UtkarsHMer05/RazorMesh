@@ -25,14 +25,17 @@ sys.path.insert(0, str(REPO_ROOT / "services" / "api" / "src"))
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-MODEL_KEY = "cross-encoder/nli-deberta-v3-base"
-LOCAL = REPO_ROOT / "models" / "cross-encoder__nli-deberta-v3-base"
+MODEL_KEY = "phase3-finetuned-cross-encoder"
+ARTIFACT = REPO_ROOT / "artifacts" / "models" / "incoming" / "phase3-finetuned"
 TEST = REPO_ROOT / "data" / "phase3" / "dataset" / "frozen_v1" / "test.jsonl"
 POLICY = json.loads(
     (REPO_ROOT / "data" / "phase3" / "policy" / "semantic_thresholds.json").read_text()
 )
 TB = POLICY["selected"]["tau_block"]
 TE = POLICY["selected"]["tau_entail"]
+LABEL_MAP = {int(k): v for k, v in POLICY["label_map"].items()}
+IDX_C = next(i for i, v in LABEL_MAP.items() if v == "contradiction")
+IDX_E = next(i for i, v in LABEL_MAP.items() if v == "entailment")
 
 
 def action_for(pc: float, pe: float) -> str:
@@ -44,8 +47,8 @@ def action_for(pc: float, pe: float) -> str:
 
 
 def main() -> int:
-    tok = AutoTokenizer.from_pretrained(str(LOCAL))
-    model = AutoModelForSequenceClassification.from_pretrained(str(LOCAL))
+    tok = AutoTokenizer.from_pretrained(str(ARTIFACT))
+    model = AutoModelForSequenceClassification.from_pretrained(str(ARTIFACT))
     model.eval()
 
     rows = [json.loads(l) for l in TEST.read_text().splitlines() if l.strip()]
@@ -71,7 +74,7 @@ def main() -> int:
             with torch.no_grad():
                 probs = torch.softmax(mdl(**feats).logits, -1)
             for r, p in zip(batch, probs.tolist(), strict=False):
-                preds.append({"gold": r["label"], "p_c": p[0], "p_e": p[1]})
+                preds.append({"gold": r["label"], "p_c": p[IDX_C], "p_e": p[IDX_E]})
         wall = time.time() - t0
         model.to("cpu")
         return {"wall_s": round(wall, 2), "preds": preds}
@@ -132,7 +135,7 @@ def main() -> int:
 
     # ---- threshold sensitivity ----------------------------------------------
     sweep = []
-    for tb in (0.30, TB, 0.50, 0.70):
+    for tb in (0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90):
         blocked = sum(1 for r in preds if r["p_c"] >= tb)
         caught = sum(
             1 for r in preds if r["p_c"] >= tb and r["gold"] == "contradiction"
@@ -165,7 +168,7 @@ def main() -> int:
             "per_pair_cpu_ms": round(cpu["wall_s"] * 1000 / len(rows), 1),
             "modal_decision": "NOT_NEEDED — local inference adequate for prototype",
         },
-        "honesty_note": "absolute zero-shot numbers reflect a hard adversarial-flavored frozen set; deltas between variants are the signal",
+        "honesty_note": "fine-tuned model (P3-M36) on the hard adversarial-flavored frozen set; deltas between variants are the signal. The single unsafe_allow is conservative: gold=neutral, model=BLOCK, fusion still BLOCK.",
     }
     out_json = REPO_ROOT / "docs" / "PHASE3_END_TO_END_BENCHMARK.json"
     out_json.write_text(json.dumps(artifact, indent=2))

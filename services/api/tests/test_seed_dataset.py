@@ -23,9 +23,7 @@ def _rows() -> list[AgentPayIRRecord]:
 def test_seed_exists_and_matches_manifest() -> None:
     assert JSONL.exists() and MANIFEST.exists()
     manifest = json.loads(MANIFEST.read_text())
-    rows_raw = [
-        line for line in JSONL.read_text().splitlines() if line.strip()
-    ]
+    rows_raw = [line for line in JSONL.read_text().splitlines() if line.strip()]
     assert manifest["records"] == len(rows_raw) >= 600  # master-prompt floor
     assert manifest["sha256"] == hashlib.sha256(JSONL.read_bytes()).hexdigest()
 

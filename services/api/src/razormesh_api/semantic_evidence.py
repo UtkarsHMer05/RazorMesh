@@ -44,46 +44,53 @@ def _cap_text(amount_minor: int | None, currency: str | None) -> str:
     return f"{currency} {major:,.2f}"
 
 
-def build_pairs(evidence: CommerceEvidence, *, max_amount_minor: int,
-                currency: str, recurring_forbidden: bool,
-                brand_allowlist: tuple[str, ...] = ()) -> list[EvidencePair]:
+def build_pairs(
+    evidence: CommerceEvidence,
+    *,
+    max_amount_minor: int,
+    currency: str,
+    recurring_forbidden: bool,
+    brand_allowlist: tuple[str, ...] = (),
+) -> list[EvidencePair]:
     """One pair per verifiable aspect of the confirmed authorization."""
     pairs: list[EvidencePair] = []
     cap = _cap_text(max_amount_minor, currency)
 
     price_text = (
-        f"The listing price is {evidence.price_minor / 100:,.2f} "
-        f"{evidence.currency}."
+        f"The listing price is {evidence.price_minor / 100:,.2f} {evidence.currency}."
         if evidence.price_minor is not None and evidence.currency
         else "The listing does not display a comparable total price."
     )
-    pairs.append(EvidencePair(
-        premise=f"Product page states: {evidence.item_title}. {price_text}",
-        hypothesis=f"The purchase stays within the authorized budget of {cap}.",
-        aspect="budget_ceiling",
-    ))
+    pairs.append(
+        EvidencePair(
+            premise=f"Product page states: {evidence.item_title}. {price_text}",
+            hypothesis=f"The purchase stays within the authorized budget of {cap}.",
+            aspect="budget_ceiling",
+        )
+    )
 
     if brand_allowlist:
         listed_brand = (evidence.brand or "").strip().casefold()
         allowed = ", ".join(b.casefold() for b in brand_allowlist)
-        pairs.append(EvidencePair(
-            premise=(
-                f"Seller/listing identifies the brand as "
-                f"'{evidence.brand or 'unknown'}'."
-            ),
-            hypothesis=(
-                f"The authorized brand restriction ({allowed}) is satisfied."
-            ),
-            aspect="brand_identity",
-        ))
+        pairs.append(
+            EvidencePair(
+                premise=(
+                    f"Seller/listing identifies the brand as '{evidence.brand or 'unknown'}'."
+                ),
+                hypothesis=(f"The authorized brand restriction ({allowed}) is satisfied."),
+                aspect="brand_identity",
+            )
+        )
         _ = listed_brand
 
     condition = (evidence.condition or "unknown").strip().casefold()
-    pairs.append(EvidencePair(
-        premise=f"Listing states the item condition as: {condition}.",
-        hypothesis="The human requires the item to be new.",
-        aspect="condition_new_only",
-    ))
+    pairs.append(
+        EvidencePair(
+            premise=f"Listing states the item condition as: {condition}.",
+            hypothesis="The human requires the item to be new.",
+            aspect="condition_new_only",
+        )
+    )
 
     if recurring_forbidden:
         renewal_note = (
@@ -91,12 +98,12 @@ def build_pairs(evidence: CommerceEvidence, *, max_amount_minor: int,
             if evidence.recurring_terms
             else "no auto-renewing subscription terms are disclosed"
         )
-        pairs.append(EvidencePair(
-            premise=(
-                f"Checkout disclosure states that {renewal_note} for this item."
-            ),
-            hypothesis="The human forbade any recurring charges.",
-            aspect="recurring_forbidden",
-        ))
+        pairs.append(
+            EvidencePair(
+                premise=(f"Checkout disclosure states that {renewal_note} for this item."),
+                hypothesis="The human forbade any recurring charges.",
+                aspect="recurring_forbidden",
+            )
+        )
 
     return pairs

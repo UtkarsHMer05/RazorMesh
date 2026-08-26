@@ -30,9 +30,10 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust
 **Active phase:** Phase 3 ACTIVE (human-approved 2026-08-25)
-**Current milestone:** P2 complete (50/50 + D-037 final audit); P3-M01..M15 PASS — next P3-M16
-**Phase-2 milestones passed:** P2-M01..P2-M50 (all 50)
-**Last updated:** 2026-08-25 (P3-M15 closed)
+**Current milestone:** P3-M50 PASS (completion report finalized). All
+automatable scope complete; **Phase-4 approval is the only remaining
+human gate** per master prompt §15.
+**Last updated:** 2026-08-26 (P3-M35..M50 sweep closed)
 **Gate:** Independent master-prompt audit (2026-08-25) found and repaired gaps hidden by the prior green suite: provider create/fetch authority validation; exact callback attempt and cross-principal-session binding; current authorization/checkout revalidation at captured settlement; webhook amount/currency correlation; conservative failed-payment reservation hold preventing late-capture overspend; and strict `rzp_test_`/official-endpoint configuration. Final battery: Ruff + mypy clean; pytest 375/375; frontend lint/tsc, Vitest 11/11, build, Playwright 5/5; security-check zero findings; benchmark 20 pairs F1=1.0; migration down/up; live mock acceptance 10/10 with Security Lab 22/22; current Test auth diagnostic; trusted Test order create/fetch exact match, no checkout/payment. D-037 + PHASE2_STATUS final addendum are authoritative. Changes remain uncommitted; no push. Phase 3 still requires explicit human approval.
 
 ---
@@ -137,19 +138,11 @@ None recorded.
 
 # Active decisions
 
-See `DECISIONS.md`, currently D-001 through D-041 (D-032: M36 signed-webhook
-proof deferred to M38 — satisfied by 7 real deliveries; D-033: M38
-spend-commit defect remediation + hard test/dev DB separation +
-UNMATCHED_CONTEXT classification; D-034: payment.authorized informative-only
-in every attempt state; D-035: UI re-syncs payment truth via read-only
-GET /buyer/status — browser is never a source of payment truth).
-D-037 supersedes release-on-provider-failure: provider failure retains the
-reservation until verified late capture or explicit terminal resolution, and
-all callback/provider evidence is correlated to current durable authority.
-Phase-3: D-038 (architecture, no-Qwen-finetune), D-039 (fusion release-blocking),
-D-040 (data/gold/training/inference policy), D-041 (M15 eval on stratified
-N=90/307 sample per human instruction; full-307 = pre-M48 obligation; golden
-truth corrections F1 rupee→INR + F13-002 recurring removed, sha256 9164f04c).
+See `DECISIONS.md`, currently D-001 through D-046. D-046 (P3-M36) selects
+the fine-tuned model as production SemanticVerifier; baseline B retained
+as documented fallback for parity regression checks. P3-M34/M35/M36/M37
+/M38/M45/M46/M47/M48/M49/M50 all PASS this turn; full-307 compiler
+eval is the only recorded carry-forward obligation (D-041).
 
 ---
 
@@ -163,49 +156,36 @@ truth corrections F1 rupee→INR + F13-002 recurring removed, sha256 9164f04c).
 
 # Next action
 
-PHASE 3 RUNNING — P3-M16 hardening committed (identity-map FOR UPDATE bypass was the flake root).
-tests; compiler output stays inert until human confirmation). Read DESIGN.md
-before M17 (UI).
+**PHASE 3 RUNNING — M50 PASS; STOP for Phase-4 approval.**
 
-P3-M15 done (PASS): REAL Qwen eval on stratified **N=90/307** sample (D-041
-human-approved scope; full-307 continuation = pre-M48 obligation). Schema
-validity 90/90; repair 7/90 all to valid; case pass 71/90=78.9%; money
-precision 1.0 with 0 mismatches / 0 invented amounts (all money errors are
-fail-closed omissions); ambiguity 6/6; injection 2/3. Prompt v1→v2 (v1
-long-form made the thinking model hit finish=length with empty content).
-Two golden-truth defects fixed transparently (F1 rupee→INR pre-measurement;
-F13-002 recurring_forbidden removed + re-measured; golden sha256 9164f04c).
-Docs: docs/PHASE3_INTENT_COMPILER_EVAL.md. Runner/summarizer:
-scripts/rzp_run_compiler_eval.py [N] (resumable; no arg = full 307) +
-scripts/rzp_summarize_compiler_eval.py [N].
+M35–M50 sweep (this turn): M35 artifact verify PASS (config +
+label_map{0:C,1:E,2:N} + metrics eval_macro_f1=0.9826 +
+base_model=cross-encoder/nli-deberta-v3-base + 738MB safetensors
+present). M36 fine-tuned vs baseline B: val 0.982/0.983, test
+0.984/0.984, human_gold_heldout (79) 0.937/0.938 with **0 unsafe
+entail on 31 human contradictions** (baseline B 8/31). D-046 selects
+the fine-tuned model. M37 re-frozen v2: τ_block=0.30, τ_entail=0.40,
+F2=0.978, status GOLD_VALIDATED. M38 verifier reads label_map from
+artifact (data-driven). M45/M46/M47 e2e + ablation re-run with fine-
+tuned verifier: block P=0.977 R=1.000 F1=0.989, CPU 69.8 ms/pair, MPS
+16.99s. M48 full battery 522 passed; M49 clean-room acceptance
+**522/522** on fresh volume with migrations to e7a1c4f9b2d5. M50
+report finalized. Honest limitation: heldout false-block rate
+4/26=0.154 is above the 0.05 calibration cap — these are conservative
+refusals, not unsafe allows; the cap is the CALIBRATION constraint
+satisfied on val, the heldout is reported for transparency.
 
-P3-M01..M14 done (summary): M01 repo/governance/secret-safety; M02 backend
-regression 375 stable (+fixed latent strict-mypy D-037 violation); M03
-frontend battery green; M04 phase-2 integrity re-proven; M05 baseline frozen
-d457661; M06 research R-019..R-021 (DeBERTa label maps DIVERGE A:[E,N,C] vs
-B:[C,E,N] — must pin+test; datasets >=5.0.1 floor); M07 credentials merged
-into .env (names-only); M08 governance extended (PRD §12, SECURITY §16
-P3-S01..S20, TESTING §15, D-038/039/040, ARCHITECTURE §15); M09
-intent_compiler.py client + taxonomy; M10 REAL probe PASS on
-api.tokenrouter.com — THINKING MODEL (generous max_tokens or empty content at
-finish=length), transient 503 hard_concurrency windows, PRIVATE BOOTSTRAP
-DELETED + zero-exposure re-proven (key lives only in .env); M11
-domain/intent_draft.py v1 schema (StrictInt money, forbid-extra, None-defaults);
-M12 prompt hashed+versioned + TrustedHumanAuthorization choke point +
-structurally-proven isolation; M13 IntentCompilationService (extract + strict
-parse + ONE repair + fail-closed, call-count proofs); M14 golden set 307
-cases/25 categories/manual truth + evaluator (omission/invention/mismatch).
-
-Standing notes: `make test-db` must re-provision
-razormesh_test after any `docker compose down -v` (migrate alone does NOT
-create it). If the zrok share dies, re-run `make phase2-up` and UPDATE the
-Dashboard webhook URL + `.env` RAZORPAY_WEBHOOK_PUBLIC_URL (share is not
-reserved); stale-secret retry 403s are zero-mutation by design. Known UI
-debt: page reload resets buyer component state — no cross-session attempt
-redisplay yet. Per-milestone detail (M41–M50) lives in PHASE2_STATUS.md;
-Phase-3 detail in PHASE3_STATUS.md. TokenRouter free tier: single-slot,
-transient 503 hard_concurrency_limit windows, ~6–8 cases/10min — use the
-resumable runner, never count COMPILER_UNAVAILABLE rows as results.
+Standing notes: `make test-db` must re-provision razormesh_test after
+any `docker compose down -v` (migrate alone does NOT create it). The
+fine-tuned model lives at `artifacts/models/incoming/phase3-finetuned/`
+(zip sha256 54d0fa01…f1e24). Eval scripts: `rzp_eval_finetuned.py`
+(M36), `rzp_calibrate_thresholds_finetuned.py` (M37),
+`rzp_run_e2e_benchmark.py` (M45 — already swapped to the artifact).
+Verifier at `services/api/src/razormesh_api/semantic_verifier.py` —
+label_map read from `model_dir/label_map.json` (or policy manifest
+fallback, or legacy C/E/N fallback). Policy manifest
+`data/phase3/policy/semantic_thresholds.json` is v2 with
+gold_validation_status=GOLD_VALIDATED.
 
 ---
 

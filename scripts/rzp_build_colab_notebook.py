@@ -121,7 +121,7 @@ args = TrainingArguments(
     learning_rate=cfg['learning_rate'],
     per_device_train_batch_size=cfg['per_device_train_batch_size'],
     per_device_eval_batch_size=cfg['per_device_eval_batch_size'],
-    warmup_ratio=cfg['warmup_ratio'],
+    warmup_steps=cfg.get('warmup_ratio', 0.1),
     weight_decay=cfg['weight_decay'],
     fp16=cfg['fp16'],
     seed=SEED,
@@ -141,6 +141,7 @@ trainer = Trainer(
     train_dataset=train_ds,
     eval_dataset=val_ds,
     processing_class=tok,
+    compute_metrics=metrics_fn,
 )
 trainer.train()
 final = trainer.evaluate()

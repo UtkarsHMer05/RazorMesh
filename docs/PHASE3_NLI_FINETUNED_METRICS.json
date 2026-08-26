@@ -1,0 +1,241 @@
+{
+  "model_artifact": "/Users/utkarshkhajuria/Desktop/RazorMesh/artifacts/models/incoming/phase3-finetuned",
+  "base_model": "cross-encoder/nli-deberta-v3-base",
+  "transformers_version": "5.15.1",
+  "label_map": {
+    "0": "contradiction",
+    "1": "entailment",
+    "2": "neutral"
+  },
+  "artifact_metrics": {
+    "eval_loss": 0.13221846520900726,
+    "eval_accuracy": 0.9824561403508771,
+    "eval_macro_f1": 0.9825612252634771
+  },
+  "generated_at_utc": "2026-08-26T17:40:18.086704+00:00",
+  "splits": {
+    "val": {
+      "n": 171,
+      "accuracy": 0.982456,
+      "macro_f1": 0.982561,
+      "per_class": {
+        "entailment": {
+          "precision": 0.983333,
+          "recall": 0.967213,
+          "f1": 0.975207,
+          "support": 61
+        },
+        "neutral": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 56
+        },
+        "contradiction": {
+          "precision": 0.963636,
+          "recall": 0.981481,
+          "f1": 0.972477,
+          "support": 54
+        }
+      },
+      "confusion": {
+        "entailment": {
+          "entailment": 59,
+          "neutral": 0,
+          "contradiction": 2
+        },
+        "neutral": {
+          "entailment": 0,
+          "neutral": 56,
+          "contradiction": 0
+        },
+        "contradiction": {
+          "entailment": 1,
+          "neutral": 0,
+          "contradiction": 53
+        }
+      },
+      "labels_sha256": null,
+      "unsafe_entail_on_contradiction": 1
+    },
+    "test": {
+      "n": 127,
+      "accuracy": 0.984252,
+      "macro_f1": 0.984004,
+      "per_class": {
+        "entailment": {
+          "precision": 0.975,
+          "recall": 0.975,
+          "f1": 0.975,
+          "support": 40
+        },
+        "neutral": {
+          "precision": 1.0,
+          "recall": 0.977273,
+          "f1": 0.988506,
+          "support": 44
+        },
+        "contradiction": {
+          "precision": 0.977273,
+          "recall": 1.0,
+          "f1": 0.988506,
+          "support": 43
+        }
+      },
+      "confusion": {
+        "entailment": {
+          "entailment": 39,
+          "neutral": 0,
+          "contradiction": 1
+        },
+        "neutral": {
+          "entailment": 1,
+          "neutral": 43,
+          "contradiction": 0
+        },
+        "contradiction": {
+          "entailment": 0,
+          "neutral": 0,
+          "contradiction": 43
+        }
+      },
+      "labels_sha256": null,
+      "unsafe_entail_on_contradiction": 0
+    },
+    "human_gold_heldout": {
+      "n": 79,
+      "accuracy": 0.936709,
+      "macro_f1": 0.938032,
+      "per_class": {
+        "entailment": {
+          "precision": 0.956522,
+          "recall": 0.846154,
+          "f1": 0.897959,
+          "support": 26
+        },
+        "neutral": {
+          "precision": 1.0,
+          "recall": 0.954545,
+          "f1": 0.976744,
+          "support": 22
+        },
+        "contradiction": {
+          "precision": 0.885714,
+          "recall": 1.0,
+          "f1": 0.939394,
+          "support": 31
+        }
+      },
+      "confusion": {
+        "entailment": {
+          "entailment": 22,
+          "neutral": 0,
+          "contradiction": 4
+        },
+        "neutral": {
+          "entailment": 1,
+          "neutral": 21,
+          "contradiction": 0
+        },
+        "contradiction": {
+          "entailment": 0,
+          "neutral": 0,
+          "contradiction": 31
+        }
+      },
+      "labels_sha256": null,
+      "unsafe_entail_on_contradiction": 0,
+      "excluded_count": 0
+    },
+    "human_gold_in_train": {
+      "n": 241,
+      "accuracy": 0.966805,
+      "macro_f1": 0.965692,
+      "per_class": {
+        "entailment": {
+          "precision": 0.971014,
+          "recall": 0.930556,
+          "f1": 0.950355,
+          "support": 72
+        },
+        "neutral": {
+          "precision": 0.975,
+          "recall": 0.962963,
+          "f1": 0.968944,
+          "support": 81
+        },
+        "contradiction": {
+          "precision": 0.956522,
+          "recall": 1.0,
+          "f1": 0.977778,
+          "support": 88
+        }
+      },
+      "confusion": {
+        "entailment": {
+          "entailment": 67,
+          "neutral": 2,
+          "contradiction": 3
+        },
+        "neutral": {
+          "entailment": 2,
+          "neutral": 78,
+          "contradiction": 1
+        },
+        "contradiction": {
+          "entailment": 0,
+          "neutral": 0,
+          "contradiction": 88
+        }
+      },
+      "labels_sha256": null,
+      "unsafe_entail_on_contradiction": 0,
+      "excluded_count": 0
+    },
+    "human_gold_all": {
+      "n": 320,
+      "accuracy": 0.959375,
+      "macro_f1": 0.958303,
+      "per_class": {
+        "entailment": {
+          "precision": 0.967391,
+          "recall": 0.908163,
+          "f1": 0.936842,
+          "support": 98
+        },
+        "neutral": {
+          "precision": 0.980198,
+          "recall": 0.961165,
+          "f1": 0.970588,
+          "support": 103
+        },
+        "contradiction": {
+          "precision": 0.937008,
+          "recall": 1.0,
+          "f1": 0.96748,
+          "support": 119
+        }
+      },
+      "confusion": {
+        "entailment": {
+          "entailment": 89,
+          "neutral": 2,
+          "contradiction": 7
+        },
+        "neutral": {
+          "entailment": 3,
+          "neutral": 99,
+          "contradiction": 1
+        },
+        "contradiction": {
+          "entailment": 0,
+          "neutral": 0,
+          "contradiction": 119
+        }
+      },
+      "labels_sha256": null,
+      "unsafe_entail_on_contradiction": 0,
+      "excluded_count": 0
+    }
+  }
+}

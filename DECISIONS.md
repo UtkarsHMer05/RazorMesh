@@ -989,3 +989,97 @@ recorded exclusion reason. Rules:
 
 Security consequences: none new; strengthens P3-S09/S12 honesty by preventing
 garbage pairs from becoming gold truth.
+
+
+## D-046 — Select fine-tuned cross-encoder as production SemanticVerifier (P3-M36)
+
+Date: 2026-08-26
+Milestone: P3-M36 (fine-tuned vs baseline evaluation)
+Status: Accepted
+Supersedes: D-044 (provisional baseline B selection) — provisional was
+correctly held pending this evidence; baseline B is now retained only as a
+documented fallback for parity regression checks.
+Affected docs: PHASE3_STATUS.md (M36 row), docs/PHASE3_NLI_FINETUNE_EVAL.md
+(new), docs/PHASE3_NLI_FINETUNED_METRICS.json (new), data/phase3/policy/
+semantic_thresholds.json (v2 re-frozen with fine-tuned softmax + status
+flipped to GOLD_VALIDATED), scripts/rzp_run_e2e_benchmark.py (model
+swapped), services/api/src/razormesh_api/semantic_verifier.py (label_map
+read from artifact).
+
+Context: D-044 selected baseline B (`cross-encoder/nli-deberta-v3-base`,
+Apache-2.0) provisionally because the zero-shot numbers on the frozen val
+set (acc 0.637, macroF1 0.607, contra recall 0.704) were the strongest
+of the two candidates. M26 (gold review) later exposed that on the 320
+human-labeled cards baseline B only reached 56.25% accuracy with 29
+unsafe entailments on human contradictions — a large gap. M34 ran
+3 epochs of fine-tuning on the frozen_v1 train split (723 records) using
+the canonical notebook (transformers 5.15.1, AdamW, lr 2e-5, batch 16,
+eval_macro_f1-best model selection). M35 verified the artifact
+(`phase3-finetuned.zip` sha256 54d0fa01…, unzipped to
+artifacts/models/incoming/phase3-finetuned/, label_map = {0: contradiction,
+1: entailment, 2: neutral}, metrics.json: eval_macro_f1 = 0.9826). M36
+ran the same harness on val/test/human_gold_heldout and got:
+
+| split | baseline B acc/F1 | fine-tuned acc/F1 | contra recall B → FT |
+| val 171 | 0.637/0.607 | 0.982/0.983 | 0.704 → 0.981 |
+| test 127 | 0.606/0.589 | 0.984/0.984 | — → 1.000 |
+| human_gold_heldout 79 | 0.595/0.554 | 0.937/0.938 | 0.645 → 1.000 |
+| unsafe_entail on human contradictions | 8 (heldout) / 29 (all) | 0 / 0 | — |
+
+Decision: select the fine-tuned model as the production
+`DebertaNLISemanticVerifier`. Recalibrate thresholds on val with the
+fine-tuned softmax (τ_block=0.30, τ_entail=0.40, contra recall 0.9815,
+block precision 0.9636, F2=0.978, 2/61=0.033 false blocks on val entail
+rows, well within the 0.05 cap). Flip gold_validation_status →
+GOLD_VALIDATED. Re-run the e2e benchmark + ablation with the new
+verifier; M47 CPU/MPS timing recorded.
+
+Rationale: every P3-S20 number above is traceable to a committed
+artifact (`docs/PHASE3_NLI_FINETUNED_METRICS.json`,
+`docs/PHASE3_NLI_BASELINE_B_METRICS.json`, `data/phase3/gold/
+gold_frozen.json`, `data/phase3/policy/semantic_thresholds.json`). The
+fine-tuned model closes the M26 gap (0 unsafe entailments on 31
+heldout human contradictions; baseline B had 8/31). The heldout false-
+block rate (4/26=0.154) is above the 0.05 calibration cap but
+preserves the conservative-fusion invariant: every false block is a
+refusal, not an unsafe allow. Calibration is on val; the heldout
+behavior is recorded for transparency. License chain: base
+cross-encoder/nli-deberta-v3-base is Apache-2.0; gold was never leaked
+into training (P3-S09/S12); the training pool (frozen_v1/train.jsonl,
+723 records) is template/seed-derived.
+
+Alternatives considered:
+- Keep baseline B as production: rejected on safety grounds (29 unsafe
+  entailments on human contradictions = release-blocking per
+  master prompt §12).
+- Re-collect more training data first: unnecessary; val acc already
+  0.982, test 0.984, the only known headroom is on adversarial
+  lookalikes, addressed by the M41 lab scenarios.
+- Train a larger base model: out of Phase-3 scope (D-038 no Qwen
+  finetune; transformer budget is 0.2B).
+
+Security/product consequences: P3-S01 (backend-only, no browser
+exposure) preserved; P3-S03 (proposal not authority) preserved;
+P3-S06/S16 (no payment network) preserved; P3-S08 (fail-closed on any
+model error) preserved; P3-S09/S12 (gold never in training) preserved;
+P3-S20 (no fabricated numbers) preserved — every cell in the table
+above names the committed artifact. model_id in SEMANTIC_VERIFICATION_RUN
+audit events now reports `phase3-finetuned-cross-encoder`.
+
+Validation/evidence:
+- `docs/PHASE3_NLI_FINETUNED_METRICS.json` (this milestone, generated
+  2026-08-26T17:40 UTC)
+- `docs/PHASE3_NLI_FINETUNE_EVAL.md` (one-page comparison)
+- `data/phase3/policy/semantic_thresholds.json` (semantic-thresholds-v2,
+  status GOLD_VALIDATED, recalibration evidence in manifest)
+- `docs/PHASE3_END_TO_END_BENCHMARK.json` (re-run with fine-tuned
+  verifier: block P=0.977 R=1.000 F1=0.989, 1 conservative unsafe-allow
+  on a gold=neutral row)
+- direct real-artifact smoke: BLOCK on a clear contradiction
+  (p_c=1.000), PASS on a clear entailment (p_e=0.999), model_id
+  resolves correctly from the policy manifest
+
+Follow-up: M37 re-freeze + status flip (done in this same turn);
+M38 verifier wiring (label_map read from artifact, done in this turn);
+M45/M46/M47 e2e re-run (done in this turn); M48/M49 full battery
++ clean-room rerun; M50 completion report.

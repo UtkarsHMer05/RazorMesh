@@ -100,9 +100,7 @@ def analyze(
                 duplicate_of[member_id] = canonical_id
 
     canonical_ids = frozenset(
-        record.record_id
-        for record in unique
-        if record.record_id not in duplicate_of
+        record.record_id for record in unique if record.record_id not in duplicate_of
     )
     return DedupReport(
         canonical_ids=canonical_ids,

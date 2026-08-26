@@ -116,6 +116,9 @@ class DebertaNLISemanticVerifier:
         self._model: Any = None
         self._tokenizer: Any = None
         self._torch: Any = None
+        self._idx_contra: int | None = None
+        self._idx_entail: int | None = None
+        self._idx_neutral: int | None = None
 
     @property
     def policy_version(self) -> str:
@@ -137,6 +140,24 @@ class DebertaNLISemanticVerifier:
         self._torch = torch
         self._tokenizer = tok
         self._model = mdl
+        # Read label_map from artifact (P3-M38) so the index→label projection
+        # is data-driven, never hard-coded. Fall back to the policy manifest
+        # if the artifact has no label_map.json (legacy/zero-shot baseline).
+        label_map = self._read_label_map()
+        self._idx_contra = next((i for i, v in label_map.items() if v == "contradiction"), 0)
+        self._idx_entail = next((i for i, v in label_map.items() if v == "entailment"), 1)
+        self._idx_neutral = next((i for i, v in label_map.items() if v == "neutral"), 2)
+
+    def _read_label_map(self) -> dict[int, str]:
+        lm_path = self._model_dir / "label_map.json"
+        if lm_path.exists():
+            raw = json.loads(lm_path.read_text())
+            return {int(k): v for k, v in raw.items()}
+        manifest_lm = self._policy.get("label_map")
+        if manifest_lm:
+            return {int(k): v for k, v in manifest_lm.items()}
+        # Legacy fallback: cross-encoder/nli-deberta-v3-base baseline order.
+        return {0: "contradiction", 1: "entailment", 2: "neutral"}
 
     def _score_local(self, premise: str, hypothesis: str) -> tuple[float, float, float]:
         self._ensure_loaded()
@@ -150,8 +171,14 @@ class DebertaNLISemanticVerifier:
         )
         with self._torch.no_grad():
             probs = self._torch.softmax(self._model(**feats).logits, -1)[0]
-        # cross-encoder/nli-deberta-v3-base project-space order: C, E, N
-        return float(probs[0]), float(probs[1]), float(probs[2])
+        assert self._idx_contra is not None
+        assert self._idx_entail is not None
+        assert self._idx_neutral is not None
+        return (
+            float(probs[self._idx_contra]),
+            float(probs[self._idx_entail]),
+            float(probs[self._idx_neutral]),
+        )
 
     def verify(self, *, premise: str, hypothesis: str) -> SemanticVerdict:
         try:
