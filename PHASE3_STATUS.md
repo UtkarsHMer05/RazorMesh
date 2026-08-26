@@ -53,7 +53,7 @@
 | M39 | SemanticEvidenceBuilder | PASS | semantic_evidence.py: deterministic pairs per verifiable aspect (budget/brand/condition/recurring) from CURRENT sanitized evidence; hypothesis text derived ONLY from confirmed authorization terms — hostile product text stays premise-side and can never become the claim; 3 tests incl. injection-in-product-title case |
 | M40 | Conservative policy fusion | NOT_STARTED | — |
 | M41 | End-to-end semantic attack scenarios | PASS | semantic_lab.py: 5 defensive scenarios through REAL policy rule + fusion with fake scorer (no model/network) — injection price-hike BLOCKED, disguised renewal BLOCKED, safe-lookalike stays ALLOW, deterministic CHALLENGE survives perfect PASS, deterministic BLOCK supreme; 3 tests; suite 516/516 |
-| M42 | Prompt-injection context-isolation tests | NOT_STARTED | — |
+| M42 | Prompt-injection context-isolation tests | PASS | transport-captured compile request proves ONLY [system prompt, verbatim trusted text] ride the wire (no merchant payload slot exists); hostile commerce text confined to premises; fusion tightens ALLOW->BLOCK on high contradiction while NO durable authority is touched anywhere in flow; 2 e2e tests |
 | M43 | Phase-3 UI integration | NOT_STARTED | — |
 | M44 | AI audit evidence events | NOT_STARTED | — |
 | M45 | End-to-end Phase-3 benchmark | NOT_STARTED | — |
