@@ -34,7 +34,7 @@
 | M20 | Qwen candidate generator | NOT_STARTED | — |
 | M21 | Candidate validation | NOT_STARTED | — |
 | M22 | Dedup / near-duplicate detection | PASS | dataset_dedup.py: exact dups via content hash; near-dups via token-Jaccard >=0.90 WITHIN (family,label) classes; union-find clusters w/ deterministic smallest-id canonical; cross-class collisions reported separately as suspected mislabels (never merged); 5 tests incl. determinism + ordering; generator also applies exact-normalized guard at generation time |
-| M23 | Leakage-safe split builder | NOT_STARTED | — |
+| M23 | Leakage-safe split builder | PASS | dataset_splits.py: groups from provenance.source_case_id (whole groups to ONE split via stable SHA256 hash -> 70/15/15); deterministic across runs; leakage_report catches any group spanning splits (contaminated-fixture test proves the gate FAILS) + UNASSIGNED accounting; assert_no_leakage helper for release gates; 5 tests |
 | M24 | Adversarial dataset expansion | NOT_STARTED | — |
 | M25 | Gold review pack generation | NOT_STARTED | — |
 | M26 | HUMAN GATE 1 — gold review | NOT_STARTED | — |
