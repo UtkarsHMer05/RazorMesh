@@ -296,7 +296,13 @@ def main() -> int:
         "adversarial": _load_jsonl(
             DATA / "dataset" / "adversarial" / "adversarial_dataset.jsonl"
         ),
-        "candidates": _load_jsonl(DATA / "dataset" / "candidates" / "candidates.jsonl"),
+        "candidates": _load_jsonl(
+            DATA
+            / "dataset"
+            / "candidates"
+            / "validation"
+            / "validated_candidates.jsonl"
+        ),
     }
     combined: list[AgentPayIRRecord] = []
     for rows in pools.values():

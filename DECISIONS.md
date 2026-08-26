@@ -1119,3 +1119,40 @@ Consequences: M21 remains responsible for rejecting semantically or structurally
 bad provisional rows; M22 remains responsible for fuzzy near-duplicate analysis;
 M24 must add independent adversarial/OOD families rather than treating these 18
 rows or any numerical quota as sufficient final-test evidence.
+
+
+## D-048 — Make candidate validation a filtering data boundary
+
+Date: 2026-08-27
+Milestone: P3-M21 standalone closure re-audit
+Status: Accepted
+Affected docs/code: `ARCHITECTURE.md`, `SECURITY.md`, `TESTING.md`,
+`PHASE3_STATUS.md`, `MEMORY.md`, `dataset_quality.py`,
+`rzp_validate_candidates.py`, gold/freeze dataset builders, and
+`data/phase3/dataset/candidates/validation/`.
+
+Context: the prior M21 implementation validated one already-parsed record at a
+time and checked only basic provenance, degenerate text and three warning-only
+family signals. It had no raw JSON/schema batch boundary, malformed-money or
+secret/generation-artifact checks, payment-authority misinformation rule,
+duplicate-id detection, rejection artifact, quality report, or downstream
+enforcement. Therefore it did not satisfy the original milestone gate.
+
+Decision: preserve the raw Qwen candidate file as immutable provisional
+evidence, but allow only the deterministic, hash-bound accepted output to enter
+gold-pack selection or a frozen dataset. Structural, provenance, secret,
+generation-artifact, malformed-money, false-authority, duplicate and clear
+family-signal failures are excluded with stable reason codes. Adversarial false
+authority text is allowed in the premise (untrusted evidence) but is rejected
+if promoted into the hypothesis (claimed human authorization).
+
+Observed result: 167/168 current candidates passed. One generated row claimed
+the `safe_lookalike` family while containing only consent and issuer
+pre-authorization evidence, so it was correctly excluded as
+`lookalike-family-without-identity-signal`. No accepted row had a duplicate id/
+content hash, secret-like value or residual generation artifact.
+
+Consequences: filtering is reproducible and order-independent; rejected rows
+remain traceable without their raw text being copied into rejection reports.
+M22 still owns fuzzy near-duplicate analysis, and M24 must add independent OOD
+families rather than relabeling this rejected row.

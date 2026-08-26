@@ -399,6 +399,10 @@ On top of all Phase-1/2 gates:
    across seed reorder/restart, bounded-run prefixes span semantic buckets, a
    no-op restart preserves candidate/cache bytes, generated labels are
    provisional, and persisted dataset/failure artifacts contain no credentials.
+   The M21 rejection matrix must prove malformed JSON/schema/text/money,
+   incomplete provenance, payment-authority misinformation, duplicated ids/
+   content, secret-like values and generation artifacts are excluded with stable
+   reason codes; downstream builders consume only the hash-bound accepted file.
 5. NLI harness: identical evaluation code across baselines with per-model
    pinned label maps unit-tested against card-declared orders (M28/M29).
 6. Fusion: exhaustive matrix test + Hypothesis property proving semantic

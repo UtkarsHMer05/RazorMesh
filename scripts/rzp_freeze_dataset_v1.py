@@ -79,7 +79,7 @@ def main() -> int:
         ("adversarial", "dataset/adversarial/adversarial_dataset.jsonl"),
         (
             "candidates",
-            "dataset/candidates/candidates.jsonl",
+            "dataset/candidates/validation/validated_candidates.jsonl",
         ),
     ):
         rows = _load_full(DATA / rel)

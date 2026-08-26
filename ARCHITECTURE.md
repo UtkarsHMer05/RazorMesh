@@ -627,4 +627,6 @@ complete, group-split, hash-manifested); training artifacts are manifests+
 hashes in Git with weights ignored locally. Generated candidate provenance is
 row-level and binds the reported generator model, prompt version, batch id,
 source case id and stable request id; provider failures are retained separately
-as sanitized metadata and generated labels remain provisional until validation.
+as sanitized metadata and generated labels remain provisional. Only the
+hash-bound M21 `validated_candidates.jsonl` output—not the immutable raw
+candidate source—is eligible for gold-pack selection or dataset freezing.

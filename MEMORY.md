@@ -30,16 +30,16 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust
 **Active phase:** Phase 3 ACTIVE (human-approved 2026-08-25)
-**Current milestone:** Phase-3 completion re-audit — P3-M20 standalone closure
-PASS; P3-M21 is next. M48/M49/M50 are intentionally reopened until every
+**Current milestone:** Phase-3 completion re-audit — P3-M21 standalone closure
+PASS; P3-M24 is next (M22/M23 regression evidence remains valid). M48/M49/M50 are intentionally reopened until every
 master-prompt gate and the owner's closure corrections pass.
-**Last updated:** 2026-08-27 (P3-M20 standalone closure re-audit)
-**Gate:** M20 now proves a stable, restartable, free-tier-only candidate runner
-with diversity-first OOD scheduling, atomic cache/results, sanitized failures,
-and complete model/prompt/batch/source provenance. All 150 legacy rows were
-canonicalized; 18 live v2 additions cover injection, safe-lookalike,
-seller-alias and renewal-trap families (10 hard). Candidate/cache no-op restart
-is byte-stable; lint/types/data regressions/security scan PASS. No push.
+**Last updated:** 2026-08-27 (P3-M21 standalone closure re-audit)
+**Gate:** M21 validates all 168 Qwen-provisional candidates against the original
+schema/text/provenance/label/money/misinformation/duplicate/secret/artifact
+criteria. 167 pass; one wrongly generated safe-lookalike-family row is retained
+in source evidence but excluded with a reason code. Validated/rejection/report
+artifacts are hash-bound and byte-stable; M25/M27 consumers now require only the
+validated pool. Lint/types/data regressions/security scan PASS. No push.
 
 ---
 
@@ -143,7 +143,7 @@ None recorded.
 
 # Active decisions
 
-See `DECISIONS.md`, currently D-001 through D-046. D-046 historically selected
+See `DECISIONS.md`, currently D-001 through D-048. D-046 historically selected
 the fine-tuned model but cited the 79-card human subset during selection; the
 closure audit must supersede that rationale with a leakage-safe selection rule
 and honest evaluation terminology. The former M48/M49/M50 claims are reopened.
@@ -160,9 +160,9 @@ and honest evaluation terminology. The former M48/M49/M50 claims are reopened.
 
 # Next action
 
-**PHASE 3 RE-CLOSURE AUDIT — M17 PASS; continue with standalone M20.**
+**PHASE 3 RE-CLOSURE AUDIT — M17/M20/M21 PASS; continue with standalone M24.**
 
-Known open closure items: standalone M20/M21/M24/M30/M31/M40 evidence and
+Known open closure items: standalone M24/M30/M31/M40 evidence and
 commits; training/gold terminology; a truly untouched OOD evaluation;
 M45 false-block semantics; full compiler metrics/coverage; then fresh M48,
 clean-room M49, and M50 only if all 50 rows have genuine evidence.

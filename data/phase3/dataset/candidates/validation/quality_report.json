@@ -1,0 +1,53 @@
+{
+  "milestone": "P3-M21",
+  "validator_version": "candidate-quality-v2",
+  "validated_at_utc": "2026-08-26T20:02:56.899814+00:00",
+  "source": "data/phase3/dataset/candidates/candidates.jsonl",
+  "source_sha256": "81a8a9bef1d23b7bd621018befa335cba1ec21f7099c0f650f71138fc9dd0c1d",
+  "input_rows": 168,
+  "accepted_rows": 167,
+  "rejected_rows": 1,
+  "acceptance_rate": 0.994048,
+  "quality_gate_status": "PASS_FILTERED",
+  "rejection_reason_counts": {
+    "lookalike-family-without-identity-signal": 1
+  },
+  "warning_record_count": 0,
+  "warning_reason_counts": {},
+  "accepted_by_family": {
+    "brand_identity": 1,
+    "budget_ceiling": 146,
+    "currency_binding": 9,
+    "injection_resistance": 3,
+    "safe_lookalike": 2,
+    "seller_alias": 3,
+    "trial_renewal_trap": 3
+  },
+  "accepted_by_label": {
+    "contradiction": 37,
+    "entailment": 70,
+    "neutral": 60
+  },
+  "accepted_by_difficulty": {
+    "easy": 154,
+    "hard": 9,
+    "medium": 4
+  },
+  "accepted_label_sources": {
+    "qwen_provisional": 167
+  },
+  "accepted_sha256": "2cf9f60339f56f65d871c659ea41a04170ae3b42c008918661fd0574768f8cf2",
+  "rejected_sha256": "d61212cfe42e55874f8aca6e98c13fc713083cded7ec20e4e6c6d9e54892d6f0",
+  "warnings_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "checks": [
+    "json_and_agentpay_schema",
+    "text_limits_and_control_characters",
+    "complete_generation_provenance",
+    "label_consistency_heuristics",
+    "malformed_money",
+    "payment_authority_misinformation",
+    "duplicated_record_ids_and_content",
+    "secret_like_values",
+    "generation_artifacts"
+  ]
+}

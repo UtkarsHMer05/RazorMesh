@@ -32,7 +32,7 @@
 | M18 | AgentPay-IR taxonomy/schema | PASS | agentpay_ir.py v0.1: fixed NLI orientation (premise=trusted evidence, hypothesis=confirmed-authorization statement), 18 semantic families, label/source/difficulty vocabularies, Provenance+Review blocks, content_sha256 integrity binding (any mutation detected), split reserved for M23; 10 tests incl. tamper-detection + vocabulary enforcement; suite 463/463 |
 | M19 | Deterministic seed dataset | PASS | data/phase3/dataset/seed: 915 AgentPay-IR records (307 golden cases × entailment/contradiction/neutral templates; content-dedup 921→915); labels balanced within 5%; all 18 families covered; deterministic regeneration byte-identical (fixed provenance ts + derived record ids); label_source=template_truth throughout; 6 tests incl. ≥600 floor + manifest-hash binding; suite 469/469 |
 | M20 | Qwen candidate generator | PASS (standalone closure re-audit) | Live free-tier runner independently re-audited/repaired: stable seed-bound request ids, immediate atomic cache persistence, diversity-first OOD scheduling, JSON mode for thinking-model reliability, bounded retry/backoff/dead-window exit, sanitized persisted failures, and canonical provisional AgentPay-IR with model/prompt/batch/source provenance; 150 legacy rows migrated + 18 genuinely new v2 rows (10 hard; injection/safe-lookalike/seller-alias/trial-renewal each 3); no-op restart byte-stability proven; schema/lint/type/tests/security PASS; D-047 |
-| M21 | Candidate validation | NOT_STARTED | — |
+| M21 | Candidate validation | PASS (standalone closure re-audit) | Original gate independently implemented and run over all 168 M20 rows: JSON/AgentPay schema+text limits, complete provenance, label/family heuristics, malformed money, payment-authority misinformation, duplicate ids/content, secret patterns and generation artifacts; 167 accepted, 1 correctly rejected (`safe_lookalike` without identity/lookalike signal), 0 warnings; hash-bound quality/rejection outputs; gold/freeze consumers now require the validated pool; negative matrix, data regressions, strict types/lint/security PASS; D-048 |
 | M22 | Dedup / near-duplicate detection | PASS | dataset_dedup.py: exact dups via content hash; near-dups via token-Jaccard >=0.90 WITHIN (family,label) classes; union-find clusters w/ deterministic smallest-id canonical; cross-class collisions reported separately as suspected mislabels (never merged); 5 tests incl. determinism + ordering; generator also applies exact-normalized guard at generation time |
 | M23 | Leakage-safe split builder | PASS | dataset_splits.py: groups from provenance.source_case_id (whole groups to ONE split via stable SHA256 hash -> 70/15/15); deterministic across runs; leakage_report catches any group spanning splits (contaminated-fixture test proves the gate FAILS) + UNASSIGNED accounting; assert_no_leakage helper for release gates; 5 tests |
 | M24 | Adversarial dataset expansion | NOT_STARTED | — |
@@ -919,6 +919,67 @@ no-op restart                                         PASS / candidate+cache byt
 ```
 
 Decision: D-047. Next standalone gate: M21 candidate validation.
+
+
+### M21 standalone closure re-audit — PASS (2026-08-27)
+
+Original acceptance: validate schema, text limits, label-consistency heuristics,
+malformed money, payment misinformation, duplicated ids, secret leakage and
+generation artifacts; reject bad rows with reason codes and emit a quality
+report.
+
+Implementation and rejection semantics:
+- `validate_candidate_jsonl` parses every line independently, rejects blank/
+  invalid JSON and Pydantic/AgentPay schema violations, then applies the full
+  deterministic record validator.
+- Provisional Qwen rows require generator, reported model, prompt version,
+  batch id, source case and request id. Checks also cover degenerate/short text,
+  control characters, secret-like values, thinking tags/Markdown/JSON or prompt
+  echoes, malformed currency expressions, and hypotheses that incorrectly make
+  an AI/merchant/system the payment authority.
+- Family-conditioned label consistency is release-filtering for renewal,
+  currency, budget, injection and safe-lookalike signals. Untrusted authority
+  claims remain permissible in the premise because adversarial merchant evidence
+  is exactly what the NLI layer must inspect; promotion into the hypothesis is
+  rejected.
+- Batch checks reject every occurrence of duplicate record ids or exact
+  content hashes, independent of input ordering. Every rejection carries stable
+  reason codes; raw text is not replicated into rejection/warning reports.
+- `rzp_validate_candidates.py` writes canonical accepted, rejected, warning and
+  aggregate quality artifacts atomically with SHA-256 bindings. M25 and M27
+  builders now consume only `validation/validated_candidates.jsonl`, making the
+  gate effective rather than documentary.
+
+Inspected real output:
+```text
+source candidates     168 (sha256 81a8a9be...9dd0c1d)
+accepted              167 (99.4048%; all qwen_provisional)
+rejected                1 air_6EAEB71C096E4C794F729E7D1C
+reason                  lookalike-family-without-identity-signal
+warnings                0
+accepted duplicate ids/content 0 / 0
+accepted secret hits    0
+filtered outputs rerun byte-stable true
+report/output hashes verified true
+```
+
+The rejected row described consent/issuer pre-authorization but no product or
+seller lookalike/identity evidence, so accepting it as `safe_lookalike` would
+misstate the family. It remains in the immutable provisional source for audit
+history and is absent from every downstream validated pool.
+
+Validation:
+```text
+ruff format/check + strict mypy                         PASS
+pytest dataset-quality negative/positive matrix         PASS (11)
+pytest relevant data/gold/freeze integration selection  PASS (46)
+pytest backend full regression                           PASS (529)
+make security-check                                      PASS (0 findings)
+real 168-row validation + artifact inspection            PASS_FILTERED
+```
+
+Decision: D-048. Next standalone gate: M24 adversarial dataset expansion (M22
+and M23 remain PASS and will be regression-checked against the expanded pool).
 
 
 ## M26 — HUMAN GATE 1: Gold Review (PENDING_HUMAN)

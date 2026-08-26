@@ -427,7 +427,9 @@ zero-shot baseline; otherwise the baseline remains.
 **P3-S11** Dataset splits are group-based; pair siblings and template/entity/
 lookalike families cannot cross splits; automated leakage tests are
 release-blocking.
-**P3-S12** Qwen-generated dataset labels are provisional, never automatic gold.
+**P3-S12** Qwen-generated dataset labels are provisional, never automatic gold;
+only rows accepted by the deterministic candidate-quality gate may enter a gold
+review pack or frozen dataset pool.
 **P3-S13** Model id/hash, prompt version/hash, schema version, and threshold
 manifest are audit-visible.
 **P3-S14** TokenRouter outage cannot bypass human confirmation; no silent
