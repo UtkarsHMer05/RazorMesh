@@ -1,0 +1,20 @@
+{
+  "format_version": "agentpay-ir-v0.1",
+  "dataset_role": "adversarial expansion (template_truth)",
+  "records": 38,
+  "sha256": "420e229a2a1a958583f0a1116faad3605c05e5a33344625e7b3483ac95cc6caa",
+  "by_label": {
+    "contradiction": 30,
+    "entailment": 8
+  },
+  "by_family": {
+    "bundle_obligation": 1,
+    "delivery_timing": 1,
+    "injection_resistance": 16,
+    "safe_lookalike": 2,
+    "seller_alias": 1,
+    "trial_renewal_trap": 16,
+    "variant_mismatch": 1
+  },
+  "generated_at_utc": "2026-08-26T00:14:36.430943+00:00"
+}
