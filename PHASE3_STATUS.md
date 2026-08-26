@@ -56,9 +56,9 @@
 | M42 | Prompt-injection context-isolation tests | PASS | transport-captured compile request proves ONLY [system prompt, verbatim trusted text] ride the wire (no merchant payload slot exists); hostile commerce text confined to premises; fusion tightens ALLOW->BLOCK on high contradiction while NO durable authority is touched anywhere in flow; 2 e2e tests |
 | M43 | Phase-3 UI integration | PASS | IntentDraftPanel renders optional semantic-verdict block (action, fail_closed flag, three probabilities, policy version, tighten-only note) when backend supplies it; tsc/eslint clean; vitest 12; trust copy unchanged |
 | M44 | AI audit evidence events | PASS | semantic_audit.py: SEMANTIC_VERIFICATION_RUN (model/policy/probabilities/fail-closed) + POLICY_FUSION_DECIDED (deterministic/semantic/final + stricten-only invariant); text_stored=false asserted; hostile premise never enters ledger; chain verify green; 1 test; suite 516/516 |
-| M45 | End-to-end Phase-3 benchmark | NOT_STARTED | — |
-| M46 | Ablation study | NOT_STARTED | — |
-| M47 | Local inference optimization / Modal decision | NOT_STARTED | — |
+| M45 | End-to-end Phase-3 benchmark | PASS | fusion on frozen TEST: BLOCK P=0.9355 R=0.6744 F1=0.7838, unsafe-allows=1 (docs/PHASE3_END_TO_END_BENCHMARK.md) |
+| M46 | Ablation study | PASS | rules-only vs never-fires control vs full fusion on identical rows; threshold sweep 0.30-0.70; NLI-only structurally cannot create authority |
+| M47 | Local inference / Modal decision | PASS | CPU 50.4 ms/pair, MPS 48.3 (127 rows); local adequate -> MODAL NOT_NEEDED; ONNX option via baseline-B exports |
 | M48 | Full Phase-3 security/quality gate | NOT_STARTED | — |
 | M49 | Clean-room Phase-3 acceptance | NOT_STARTED | — |
 | M50 | Completion report & STOP | NOT_STARTED | — |
