@@ -850,6 +850,16 @@ STATUS: PENDING_HUMAN (overnight deferred-gate mode per human authorization)
 ### Overnight policy decisions recorded
 - D-043: dependency-aware deferred-human-gate mode + reduced-volume policy.
 
+### Bugfix addendum (human-reported blank cards)
+Root cause: the reviewer-v2 patch replaced render()'s opening `const r =
+ROWS[i];` line, leaving `r` undefined — pos/total updated, card fields threw.
+Fixed render restored; localStorage persistence + 4=INVALID w/ recorded
+exclusion reason added; csv EOL normalized to LF (content identical vs HEAD,
+verified); Playwright file:// regression suite added (5 specs incl.
+first-card-exact-match, keyboard/persistence round-trip, export accuracy,
+hash stability). Builder template kept in parity so regeneration cannot
+reintroduce the bug.
+
 
 ### M28/M29 — Baseline evaluation details
 Harness: `nli_eval.py` (pure core) + `scripts/rzp_eval_nli_baseline.py`
