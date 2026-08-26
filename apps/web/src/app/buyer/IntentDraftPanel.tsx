@@ -165,6 +165,17 @@ export function IntentDraftPanel() {
             </>
           ) : null}
 
+          {(draft.payload.unspecified?.length ?? 0) > 0 && (
+            <>
+              <h3>Unspecified by you</h3>
+              <ul data-testid="draft-unspecified">
+                {draft.payload.unspecified!.map((item, i) => (
+                  <li key={i}>{item.field}</li>
+                ))}
+              </ul>
+            </>
+          )}
+
           {draft.superseded_by && (
             <p data-testid="superseded-note">Superseded by a newer draft.</p>
           )}
@@ -188,10 +199,6 @@ export function IntentDraftPanel() {
 
           {draft.state === "REJECTED" && (
             <p data-testid="rejected-note">Draft rejected. Nothing was authorized.</p>
-          )}
-
-          {draft.state === "CONFIRMED" && (
-            <p data-testid="confirmed-note">Authorization confirmed and bound to your account.</p>
           )}
 
           {draft.state === "CONFIRMED" && (

@@ -10,6 +10,7 @@ The compiler path receives ONLY the dedicated authorization-text field
 (P3-S02); merchant/product data cannot reach it by construction (M12).
 """
 
+from collections.abc import Iterator
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -20,7 +21,7 @@ from razormesh_api.confirmation_service import HumanConfirmationService
 from razormesh_api.domain.confirmation import ConfirmationError
 from razormesh_api.domain.ids import DraftId
 from razormesh_api.intent_compilation_service import IntentCompilationService
-from razormesh_api.intent_compiler import TokenRouterClient
+from razormesh_api.intent_compiler import build_tokenrouter_client
 from razormesh_api.intent_compiler_prompt import TrustedHumanAuthorization
 from razormesh_api.ledger import EvidenceLedger
 from razormesh_api.settings import Settings, get_settings
@@ -42,6 +43,28 @@ def _service(settings: Annotated[Settings, Depends(get_settings)]):  # type: ign
     return HumanConfirmationService(repos, ledger, _SystemClock())
 
 
+def _compilation_service(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Iterator[IntentCompilationService]:
+    """Request-scoped compiler dependency with deterministic client cleanup.
+
+    Keeping provider construction behind this dependency is also the test seam:
+    M17 API tests replace it with a fixture compiler, so the suite can prove the
+    complete route without making an accidental external request.
+    """
+    if not settings.tokenrouter_credentials_present:
+        raise HTTPException(status_code=503, detail={"code": "COMPILER_UNAVAILABLE"})
+    client = build_tokenrouter_client(settings)
+    try:
+        yield IntentCompilationService(
+            client,
+            model=settings.planner_model,
+            max_output_tokens=4000,
+        )
+    finally:
+        client.close()
+
+
 class CompileRequest(BaseModel):
     authorization_text: str = Field(min_length=3, max_length=2000)
     principal_id: str = Field(min_length=6, max_length=64)
@@ -61,24 +84,10 @@ class RejectRequest(BaseModel):
 def compile_draft(
     body: CompileRequest,
     settings: Annotated[Settings, Depends(get_settings)],
+    compiler: Annotated[IntentCompilationService, Depends(_compilation_service)],
 ) -> dict[str, Any]:
     """Compile trusted human text into a reviewable draft (P3-S03: proposal)."""
-    if not settings.tokenrouter_credentials_present:
-        raise HTTPException(
-            status_code=503,
-            detail={"code": "COMPILER_UNAVAILABLE"},
-        )
-    try:
-        client = TokenRouterClient(
-            api_key=settings.tokenrouter_api_key.get_secret_value(),
-            base_url=settings.tokenrouter_base_url,
-            timeout_seconds=settings.tokenrouter_timeout_seconds,
-        )
-        outcome = IntentCompilationService(
-            client, model=settings.planner_model, max_output_tokens=4000
-        ).compile(TrustedHumanAuthorization(text=body.authorization_text))
-    finally:
-        pass
+    outcome = compiler.compile(TrustedHumanAuthorization(text=body.authorization_text))
 
     rec = _service(settings).record_compilation(
         principal_id=_pid(body.principal_id),
@@ -88,7 +97,6 @@ def compile_draft(
         .hexdigest(),
         outcome=outcome,
     )
-    client.close()
     if rec.draft_id is None:
         raise HTTPException(
             status_code=502,

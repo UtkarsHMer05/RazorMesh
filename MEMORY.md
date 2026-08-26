@@ -30,11 +30,16 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust
 **Active phase:** Phase 3 ACTIVE (human-approved 2026-08-25)
-**Current milestone:** P3-M50 PASS (completion report finalized). All
-automatable scope complete; **Phase-4 approval is the only remaining
-human gate** per master prompt §15.
-**Last updated:** 2026-08-26 (P3-M35..M50 sweep closed)
-**Gate:** Independent master-prompt audit (2026-08-25) found and repaired gaps hidden by the prior green suite: provider create/fetch authority validation; exact callback attempt and cross-principal-session binding; current authorization/checkout revalidation at captured settlement; webhook amount/currency correlation; conservative failed-payment reservation hold preventing late-capture overspend; and strict `rzp_test_`/official-endpoint configuration. Final battery: Ruff + mypy clean; pytest 375/375; frontend lint/tsc, Vitest 11/11, build, Playwright 5/5; security-check zero findings; benchmark 20 pairs F1=1.0; migration down/up; live mock acceptance 10/10 with Security Lab 22/22; current Test auth diagnostic; trusted Test order create/fetch exact match, no checkout/payment. D-037 + PHASE2_STATUS final addendum are authoritative. Changes remain uncommitted; no push. Phase 3 still requires explicit human approval.
+**Current milestone:** Phase-3 completion re-audit — P3-M17 standalone closure
+PASS; P3-M20 is next. M48/M49/M50 are intentionally reopened until every
+master-prompt gate and the owner's closure corrections pass.
+**Last updated:** 2026-08-27 (P3-M17 standalone closure re-audit)
+**Gate:** M17 now proves the full compile→structured review (including
+ambiguities and unspecified fields)→confirm/reject UI, backend authority, and
+zero browser secret exposure. The closure also removed accidental external
+network use from API tests through request-scoped compiler dependency injection.
+Ruff/mypy clean; backend regression subset 33 passed; frontend 14 passed plus
+lint/typecheck/build; security scan and browser bundle scan 0 findings. No push.
 
 ---
 
@@ -138,11 +143,10 @@ None recorded.
 
 # Active decisions
 
-See `DECISIONS.md`, currently D-001 through D-046. D-046 (P3-M36) selects
-the fine-tuned model as production SemanticVerifier; baseline B retained
-as documented fallback for parity regression checks. P3-M34/M35/M36/M37
-/M38/M45/M46/M47/M48/M49/M50 all PASS this turn; full-307 compiler
-eval is the only recorded carry-forward obligation (D-041).
+See `DECISIONS.md`, currently D-001 through D-046. D-046 historically selected
+the fine-tuned model but cited the 79-card human subset during selection; the
+closure audit must supersede that rationale with a leakage-safe selection rule
+and honest evaluation terminology. The former M48/M49/M50 claims are reopened.
 
 ---
 
@@ -156,24 +160,12 @@ eval is the only recorded carry-forward obligation (D-041).
 
 # Next action
 
-**PHASE 3 RUNNING — M50 PASS; STOP for Phase-4 approval.**
+**PHASE 3 RE-CLOSURE AUDIT — M17 PASS; continue with standalone M20.**
 
-M35–M50 sweep (this turn): M35 artifact verify PASS (config +
-label_map{0:C,1:E,2:N} + metrics eval_macro_f1=0.9826 +
-base_model=cross-encoder/nli-deberta-v3-base + 738MB safetensors
-present). M36 fine-tuned vs baseline B: val 0.982/0.983, test
-0.984/0.984, human_gold_heldout (79) 0.937/0.938 with **0 unsafe
-entail on 31 human contradictions** (baseline B 8/31). D-046 selects
-the fine-tuned model. M37 re-frozen v2: τ_block=0.30, τ_entail=0.40,
-F2=0.978, status GOLD_VALIDATED. M38 verifier reads label_map from
-artifact (data-driven). M45/M46/M47 e2e + ablation re-run with fine-
-tuned verifier: block P=0.977 R=1.000 F1=0.989, CPU 69.8 ms/pair, MPS
-16.99s. M48 full battery 522 passed; M49 clean-room acceptance
-**522/522** on fresh volume with migrations to e7a1c4f9b2d5. M50
-report finalized. Honest limitation: heldout false-block rate
-4/26=0.154 is above the 0.05 calibration cap — these are conservative
-refusals, not unsafe allows; the cap is the CALIBRATION constraint
-satisfied on val, the heldout is reported for transparency.
+Known open closure items: standalone M20/M21/M24/M30/M31/M40 evidence and
+commits; training/gold terminology; a truly untouched OOD evaluation;
+M45 false-block semantics; full compiler metrics/coverage; then fresh M48,
+clean-room M49, and M50 only if all 50 rows have genuine evidence.
 
 Standing notes: `make test-db` must re-provision razormesh_test after
 any `docker compose down -v` (migrate alone does NOT create it). The

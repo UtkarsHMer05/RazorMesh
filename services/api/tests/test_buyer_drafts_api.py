@@ -6,7 +6,6 @@ HumanConfirmationService + dev PostgreSQL. No secrets reach responses.
 """
 
 import json
-from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,8 +13,8 @@ from fastapi.testclient import TestClient
 from razormesh_api.api.main import app
 from razormesh_api.api.routes import buyer_drafts as drafts_route
 from razormesh_api.domain.ids import PrincipalId, new_ulid
+from razormesh_api.intent_compilation_service import IntentCompilationService
 from razormesh_api.intent_compiler import TokenRouterClient
-from razormesh_api.intent_compiler_prompt import TrustedHumanAuthorization
 from razormesh_api.settings import Settings, get_settings
 
 SECRET = "tr_test_key_placeholder"
@@ -37,99 +36,37 @@ def _settings() -> Settings:
 
 
 @pytest.fixture()
-def api(monkeypatch):  # type: ignore[no-untyped-def]
-    good = (
-        '{"schema_version":"agentpay-intent-draft-v1",'
-        '"product_summary":"wireless headphones",'
-        '"hard":{"max_amount":{"amount_minor":500000,"currency":"INR"}}}'
-    )
-    monkeypatch.setattr(
-        drafts_route,
-        "_service",
-        lambda settings: _make_service_with_stub_client(settings, good),
-    )
-
+def api():  # type: ignore[no-untyped-def]
     def _override() -> Settings:
         return _settings()
 
+    def _compiler_override() -> IntentCompilationService:
+        return IntentCompilationService(_StubClient(), model="stub")
+
     get_settings.cache_clear()
     app.dependency_overrides[get_settings] = _override
+    app.dependency_overrides[drafts_route._compilation_service] = _compiler_override
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
     get_settings.cache_clear()
 
 
-def _make_service_with_stub_client(settings: Settings, content: str):  # type: ignore[no-untyped-def]
-    from razormesh_api.confirmation_service import HumanConfirmationService
-    from razormesh_api.intent_compilation_service import IntentCompilationService
-    from razormesh_api.ledger import EvidenceLedger
-    from razormesh_api.persistence.db import create_session_factory
-    from razormesh_api.persistence.repositories import Repositories
+class _StubClient(TokenRouterClient):
+    def __init__(self) -> None:
+        pass  # no HTTP client exists in this fixture
 
-    repos = Repositories(create_session_factory(create_db_engine()))
-    ledger = EvidenceLedger(repos)
+    def chat_completion(self, **kwargs):  # type: ignore[no-untyped-def]
+        from razormesh_api.intent_compiler import ChatCompletionResult
 
-    class _Clock:
-        def now_utc(self):  # type: ignore[no-untyped-def]
-            return datetime.now(UTC)
-
-    class _Client(TokenRouterClient):
-        def __init__(self) -> None:
-            pass  # skip HTTP client entirely
-
-        def chat_completion(self, **kwargs):  # type: ignore[no-untyped-def]
-            from razormesh_api.intent_compiler import ChatCompletionResult
-
-            return ChatCompletionResult(
-                content=_STUB_CONTENT["value"],
-                model_reported="stub",
-                finish_reason="stop",
-                prompt_tokens=1,
-                completion_tokens=1,
-                request_id="req-stub",
-            )
-
-    svc = HumanConfirmationService(repos, ledger, _Clock())
-    original_record = svc.record_compilation
-
-    def record(*, principal_id, agent_id, source_text_sha256, outcome):  # type: ignore[no-untyped-def]
-        # swap the outcome's payload through the REAL service unchanged;
-        # the stub client already produced the content via compile service below
-        return original_record(
-            principal_id=principal_id,
-            agent_id=agent_id,
-            source_text_sha256=source_text_sha256,
-            outcome=outcome,
+        return ChatCompletionResult(
+            content=_STUB_CONTENT["value"],
+            model_reported="stub",
+            finish_reason="stop",
+            prompt_tokens=1,
+            completion_tokens=1,
+            request_id="req-stub",
         )
-
-    svc.record_compilation = record  # type: ignore[method-assign]
-
-    compiled = IntentCompilationService(_Client(), model="stub")
-    return _ProxyService(svc, compiled)
-
-
-class _ProxyService:
-    """Routes compile() through the real validation pipeline using the stub
-    client; everything else delegates to the REAL confirmation service."""
-
-    def __init__(self, real, compiled) -> None:  # type: ignore[no-untyped-def]
-        self._real = real
-        self._compiled = compiled
-
-    def record_compilation(self, **kwargs):  # type: ignore[no-untyped-def]
-        outcome = self._compiled.compile(TrustedHumanAuthorization(text=_LAST_TEXT["value"]))
-        kwargs["outcome"] = outcome
-        return self._real.record_compilation(**kwargs)
-
-    def confirm_draft(self, **kwargs):  # type: ignore[no-untyped-def]
-        return self._real.confirm_draft(**kwargs)
-
-    def reject_draft(self, **kwargs):  # type: ignore[no-untyped-def]
-        return self._real.reject_draft(**kwargs)
-
-    def get_draft(self, draft_id):  # type: ignore[no-untyped-def]
-        return self._real.get_draft(draft_id)
 
 
 _LAST_TEXT: dict[str, str] = {"value": ""}
@@ -140,14 +77,6 @@ _STUB_CONTENT: dict[str, str] = {
         '"hard":{"max_amount":{"amount_minor":500000,"currency":"INR"}}}'
     )
 }
-
-
-def create_db_engine():  # type: ignore[no-untyped-def]
-    from sqlalchemy import create_engine
-
-    from razormesh_api.persistence.db import create_session_factory  # noqa: F401
-
-    return create_engine(get_settings().database_url, future=True)
 
 
 def _compile_body() -> dict[str, str]:

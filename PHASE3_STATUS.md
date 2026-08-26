@@ -28,7 +28,7 @@
 | M14 | Compiler golden evaluation set | PASS | data/phase3/compiler_golden/golden_set.jsonl: 307 manual-truth cases across 25 categories (easy 234/medium 43/hard 30) from hand-authored template families with truth computed BY CONSTRUCTION (never Qwen); manifest w/ SHA256 + truth_source=human-authored; compiler_eval.py evaluator (Expectation schema, omission/invention/mismatch taxonomy incl. money-without-human-statement sentinel + declared invention bans); structural honesty test forbidding model-label fields in rows; 13 tests; suite 433/433 |
 | M15 | Real compiler evaluation | PASS | REAL Qwen run on stratified **N=90/307** sample (D-041 human-approved scope; full-307 = pre-M48 obligation). Schema validity 90/90=100%; bounded repair 7/90 all repaired to valid; **case pass 71/90=78.9%** (easy 77.5/medium 90.9/hard 71.4); field recall brands/merchants/quantity 1.0, currency 0.96, semantic 0.9706, recurring_forbidden 0.9231, max_amount_minor 0.8533; **money precision 1.0, 0 mismatches, 0 invented amounts** (all money errors are fail-closed omissions); ambiguity 6/6; injection 2/3 (one warranty semantic leak). Prompt v1→v2 (v1 long-form made the thinking model hit finish=length w/ empty content at 4000 tokens; v2 schema-forward compiles reliably). Two golden-truth defects fixed transparently (F1 rupee→INR pre-measurement; F13-002 recurring_forbidden removed post-measurement + re-measured, sha256 eef70c9c→9164f04c, stale rows preserved). Budget-2000 harness contamination discarded + re-measured at 4000 (F10-001/003 then passed). Provider-noise rows retried, never counted. Docs: docs/PHASE3_INTENT_COMPILER_EVAL.md |
 | M16 | Human confirmation domain flow | PASS | domain/confirmation.py (DraftState DRAFT/NEEDS_CLARIFICATION/CONFIRMED/REJECTED; fail-closed build_confirmed_contract: no-stated-money -> DRAFT_MISSING_MONEY, conservative terms aggregate=threshold=cap, quantity default 1, recurring forbidden unless explicit) + confirmation_service.py (advisory lineage locks, compile supersession, idempotent same-nonce replay, replay-mismatch rejection, NEEDS_CLARIFICATION unconfirmable, generation bump reusing intent_id w/ DRAFT_BELOW_COMMITTED_SPEND capacity guard, INTENT_COMPILED/CONFIRMED/REJECTED/SUPERSEDED/COMPILE_FAILED ledger events); migration e7a1c4f9b2d5; raw human text never stored (sha256 only); 17 tests incl. 8-thread concurrent single-authority proof; suite 449/449; D-042 |
-| M17 | Human confirmation UI | NOT_STARTED | — |
+| M17 | Human confirmation UI | PASS (standalone closure re-audit) | Natural-language compile→review→confirm/reject UI re-audited against the original M17 gate; structured hard/semantic/ambiguity/**unspecified** fields render; NEEDS_CLARIFICATION cannot confirm; backend remains source of truth; accidental real-network use in API tests removed via request-scoped compiler DI + deterministic cleanup; duplicate confirmation copy removed; backend 33-test regression subset, frontend 14/14, lint/tsc/build, mypy/Ruff, security scan all PASS; browser/build TokenRouter scan 0 hits |
 | M18 | AgentPay-IR taxonomy/schema | PASS | agentpay_ir.py v0.1: fixed NLI orientation (premise=trusted evidence, hypothesis=confirmed-authorization statement), 18 semantic families, label/source/difficulty vocabularies, Provenance+Review blocks, content_sha256 integrity binding (any mutation detected), split reserved for M23; 10 tests incl. tamper-detection + vocabulary enforcement; suite 463/463 |
 | M19 | Deterministic seed dataset | PASS | data/phase3/dataset/seed: 915 AgentPay-IR records (307 golden cases × entailment/contradiction/neutral templates; content-dedup 921→915); labels balanced within 5%; all 18 families covered; deterministic regeneration byte-identical (fixed provenance ts + derived record ids); label_source=template_truth throughout; 6 tests incl. ≥600 floor + manifest-hash binding; suite 469/469 |
 | M20 | Qwen candidate generator | NOT_STARTED | — |
@@ -752,6 +752,56 @@ exists to prevent. Fixes:
    IntegrityError into either an honest replay (identical nonce re-read of the
    committed winner) or CONFIRMATION_REPLAY_MISMATCH.
 Validation: module green 4/4 consecutive rounds + full suite 463/463 twice.
+
+
+## M17 — Human Confirmation UI — Standalone Closure Re-audit
+
+MILESTONE: M17
+STATUS: PASS
+
+Requirements: master prompt M17 — natural-language authorization UI with
+compile → structured hard/semantic/ambiguity/unspecified review → edit/recompile
+or explicit confirm/reject; backend truth; responsive/accessibility checks;
+no model/API secret in the browser. Invariants: P3-S01, P3-S02, P3-S03,
+P3-S14, P3-S17.
+
+### Inspection and repairs
+- Re-inspected the original M17 implementation (`IntentDraftPanel` plus
+  `/buyer/intent-drafts/*`) instead of promoting the stale table row.
+- Added the missing **unspecified-fields** review block required by M17/§21.
+  Ambiguous drafts expose clarification copy and no confirmation action;
+  editable text can be recompiled into a superseding backend draft.
+- Removed duplicated CONFIRMED copy that rendered the same state twice.
+- Replaced route-local TokenRouter construction with a request-scoped compiler
+  dependency. The client closes in `finally`; API tests override the dependency
+  with a fixture compiler and therefore make zero accidental network requests.
+- Expanded component tests across proposal review, unspecified fields,
+  explicit confirmation, and NEEDS_CLARIFICATION refusal. Durable authority,
+  stale/replay/idempotency and context-isolation remain covered by the real
+  backend services.
+
+### Exact validation / inspected output
+```text
+ruff format --check services/api/src services/api/tests  -> 144 files formatted
+ruff check services/api/src services/api/tests           -> clean
+mypy -p razormesh_api                                    -> 71 files clean
+pytest buyer_drafts + confirmation + injection + inherited buyer routes
+                                                           -> 33 passed
+pnpm lint / typecheck                                     -> clean / clean
+pnpm test                                                 -> 14 passed
+pnpm build                                                -> 6 app routes built
+make security-check                                       -> PASS, 0 findings
+TokenRouter/provider pattern scan over src + .next/static -> 0 hits
+```
+
+External API use: NONE. The closure specifically removed an accidental
+test-time provider attempt. No secret was read or emitted.
+
+Limitations: identity/authentication remains the existing local-prototype
+fixture boundary; the browser is presentation only and all transitions are
+revalidated by the backend.
+
+Next: M20 standalone closure re-audit.
 
 
 ## M18 — AgentPay-IR Taxonomy/Schema
