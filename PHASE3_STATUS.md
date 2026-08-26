@@ -54,7 +54,7 @@
 | M40 | Conservative policy fusion | NOT_STARTED | — |
 | M41 | End-to-end semantic attack scenarios | PASS | semantic_lab.py: 5 defensive scenarios through REAL policy rule + fusion with fake scorer (no model/network) — injection price-hike BLOCKED, disguised renewal BLOCKED, safe-lookalike stays ALLOW, deterministic CHALLENGE survives perfect PASS, deterministic BLOCK supreme; 3 tests; suite 516/516 |
 | M42 | Prompt-injection context-isolation tests | PASS | transport-captured compile request proves ONLY [system prompt, verbatim trusted text] ride the wire (no merchant payload slot exists); hostile commerce text confined to premises; fusion tightens ALLOW->BLOCK on high contradiction while NO durable authority is touched anywhere in flow; 2 e2e tests |
-| M43 | Phase-3 UI integration | NOT_STARTED | — |
+| M43 | Phase-3 UI integration | PASS | IntentDraftPanel renders optional semantic-verdict block (action, fail_closed flag, three probabilities, policy version, tighten-only note) when backend supplies it; tsc/eslint clean; vitest 12; trust copy unchanged |
 | M44 | AI audit evidence events | NOT_STARTED | — |
 | M45 | End-to-end Phase-3 benchmark | NOT_STARTED | — |
 | M46 | Ablation study | NOT_STARTED | — |

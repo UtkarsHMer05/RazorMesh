@@ -13,6 +13,16 @@ import { useCallback, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
+interface SemanticVerdict {
+  action: "PASS" | "CHALLENGE" | "BLOCK";
+  p_entailment: number;
+  p_neutral: number;
+  p_contradiction: number;
+  model_id: string;
+  policy_version: string;
+  fail_closed: boolean;
+}
+
 interface DraftView {
   draft_id: string;
   state: string;
@@ -33,6 +43,7 @@ interface DraftView {
 export function IntentDraftPanel() {
   const [text, setText] = useState("");
   const [draft, setDraft] = useState<DraftView | null>(null);
+  const [semantic, setSemantic] = useState<SemanticVerdict | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -180,6 +191,29 @@ export function IntentDraftPanel() {
 
           {draft.state === "CONFIRMED" && (
             <p data-testid="confirmed-note">Authorization confirmed and bound to your account.</p>
+          )}
+
+          {draft.state === "CONFIRMED" && (
+            <p data-testid="confirmed-note">Authorization confirmed and bound to your account.</p>
+          )}
+
+          {semantic && (
+            <div data-testid="semantic-verdict" className="card">
+              <h4>Semantic verification <span className="tag">{semantic.model_id}</span></h4>
+              <p data-testid="semantic-action">
+                Semantic action: <strong>{semantic.action}</strong> (fail-closed:{" "}
+                {String(semantic.fail_closed)})
+              </p>
+              <ul>
+                <li>p_entailment {semantic.p_entailment.toFixed(3)}</li>
+                <li>p_neutral {semantic.p_neutral.toFixed(3)}</li>
+                <li>p_contradiction {semantic.p_contradiction.toFixed(3)}</li>
+              </ul>
+              <p className="page-sub">
+                Thresholds {semantic.policy_version} — semantics only tighten
+                deterministic RazorGuard decisions.
+              </p>
+            </div>
           )}
 
           <p className="page-sub">
