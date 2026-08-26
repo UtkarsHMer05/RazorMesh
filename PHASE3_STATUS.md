@@ -44,7 +44,7 @@
 | M30 | Baseline selection | NOT_STARTED | — |
 | M31 | Reproducible training bundle | NOT_STARTED | — |
 | M32 | Colab notebook | PASS | notebooks/RazorGuard_NLI_Phase3_Training.ipynb (13 cells): GPU assert, pinned installs, bundle upload+hash verification BEFORE training, config-driven Trainer (seed 42, macro_f1 best-model selection), artifact packaging w/ label_map.json+metrics.json+base_model.txt; LOCAL SMOKE of identical logic PASSED on CPU (24 rows/1 epoch, train 29.2s, eval_loss 0.06) via services/ml-venv |
-| M33 | Colab preflight bundle | NOT_STARTED | — |
+| M33 | Colab preflight bundle | PASS | artifacts/phase3_colab_training_bundle.zip (755KB, 8 entries): notebook + frozen train/val + config + manifest + requirements-frozen + verify script; bundle VERIFY PASS; ready for human upload at M34 |
 | M34 | HUMAN GATE 2 — Colab training | NOT_STARTED | — |
 | M35 | Training artifact verification | NOT_STARTED | — |
 | M36 | Fine-tuned vs baseline evaluation | NOT_STARTED | — |
@@ -862,3 +862,17 @@ Honest finding: absolute numbers are low for BOTH baselines because the
 frozen set is deliberately adversarial-flavored (session-context premises,
 injection-style text). This is exactly what M30 selection + M37 calibration
 are for; zero-shot weakness on this domain is recorded, not hidden.
+
+
+### M33 — preflight bundle contents
+```
+artifacts/phase3_colab_training_bundle.zip
+  training/phase3/train.jsonl            602KB (723 rows)
+  training/phase3/val.jsonl              142KB (171 rows)
+  training/phase3/RazorGuard_NLI_Phase3_Training.ipynb
+  training/phase3/train_config.json      (seed 42; macro_f1 selection)
+  training/phase3/requirements-frozen.txt
+  training/phase3/manifest.json          (sha256 per file)
+  training/phase3/rzp_verify_training.py (hash check runs INSIDE notebook too)
+VERIFY: PASS
+```
