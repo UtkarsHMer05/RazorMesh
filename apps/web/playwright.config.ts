@@ -1,4 +1,11 @@
+import * as nodePath from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
+
+const CONFIG_DIR = nodePath.dirname(fileURLToPath(import.meta.url));
+process.env.RAZORMESH_GOLD_DIR =
+  process.env.RAZORMESH_GOLD_DIR ??
+  nodePath.resolve(CONFIG_DIR, "../../data/phase3/gold");
 
 export default defineConfig({
   testDir: "./e2e",

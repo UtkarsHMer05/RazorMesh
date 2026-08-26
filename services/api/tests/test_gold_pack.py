@@ -59,8 +59,10 @@ def test_html_reviewer_wired() -> None:
 def test_reviewer_supports_invalid_exclusion_label() -> None:
     html = (GOLD / "gold_review.html").read_text()
     assert "decide('invalid'" in html
-    assert "e.key==='4'" in html
-    assert 'label:\'invalid\'' in html or 'label:"invalid"' in html
+    assert "decide('invalid')" in html  # keydown handler
+    assert "label === 'invalid'" in html  # decide() invalid branch
+    assert 'rm_gold_decisions_v1' in html  # localStorage persistence
+    assert "label: 'invalid'" in html  # decide() builds the exclusion entry
     assert "reason" in html  # exclusion-reason capture wired
     # CSV/cards untouched by the reviewer upgrade
     with (GOLD / "gold_review.csv").open(newline="", encoding="utf-8") as fh:

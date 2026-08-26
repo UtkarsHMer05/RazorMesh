@@ -50,6 +50,7 @@ export function IntentDraftPanel() {
   const compile = useCallback(async () => {
     setBusy(true);
     setError(null);
+    setSemantic(null); // fresh compile clears any prior verdict
     try {
       const res = await fetch(`${API}/buyer/intent-drafts/compile`, {
         method: "POST",

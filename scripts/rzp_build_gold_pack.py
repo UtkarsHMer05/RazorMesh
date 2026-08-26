@@ -121,7 +121,7 @@ def stratify(records: list[AgentPayIRRecord], n: int) -> list[AgentPayIRRecord]:
 
 def write_csv(records: list[AgentPayIRRecord], path: Path) -> None:
     with path.open("w", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh)
+        w = csv.writer(fh, lineterminator="\n")
         w.writerow(
             [
                 "record_id",
@@ -154,6 +154,7 @@ HTML_TEMPLATE = """<!doctype html>
 <div class="card"><b>Family:</b> <span class="tag" id="fam"></span>
 <b>Difficulty:</b> <span class="tag" id="diff"></span>
 <b>Suggested (do not anchor):</b> <span class="tag" id="sug"></span>
+<b>Saved decision:</b> <span class="tag" id="decided-label"></span>
 <p><b>PREMISE (evidence)</b></p><pre id="prem"></pre>
 <p><b>HYPOTHESIS (authorization claim)</b></p><pre id="hyp"></pre>
 <p>Your label: <kbd>1</kbd> entailment <kbd>2</kbd> neutral <kbd>3</kbd> contradiction
@@ -166,51 +167,82 @@ Invalid pairs are EXCLUDED from gold metrics — never force-labeled.</p>
 </div>
 <script>
 const ROWS = __ROWS__;
-const DECISIONS = {};
+const DECISIONS_KEY = 'rm_gold_decisions_v1';
+let DECISIONS = {};
+try {
+  const saved = localStorage.getItem(DECISIONS_KEY);
+  if (saved) { DECISIONS = JSON.parse(saved); }
+} catch (err) { /* private mode etc: start empty rather than crash */ }
 let i = 0;
-function render(){
-  document.getElementById('reason-row').style.display = 'none';
-  document.getElementById('reason').value = '';
-  document.getElementById('reason').placeholder = 'why is this pair unusable?';
-  document.getElementById('pos').textContent = i+1;
+
+function save() {
+  try { localStorage.setItem(DECISIONS_KEY, JSON.stringify(DECISIONS)); } catch (e) {}
+}
+
+function currentEntry() { return DECISIONS[ROWS[i].record_id] || null; }
+
+function decide(label, reason) {
+  const rec = ROWS[i].record_id;
+  let entry;
+  if (label === 'invalid') {
+    const r = (reason !== undefined ? reason : document.getElementById('reason').value).trim();
+    entry = { label: 'invalid',
+              reason: r || 'malformed_or_semantically_nonsensical',
+              decided_at_utc: new Date().toISOString() };
+  } else {
+    // 1/2/3 must never carry a stale invalid reason
+    entry = { label: label, decided_at_utc: new Date().toISOString() };
+  }
+  DECISIONS[rec] = entry;
+  save();
+  if (i < ROWS.length - 1) { i++; }
+  render();
+}
+
+function exportDecisions() {
+  const blob = new Blob([JSON.stringify(DECISIONS, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gold_decisions.json';
+  a.click();
+}
+
+function render() {
+  const r = ROWS[i];
+  const entry = currentEntry();
+
+  document.getElementById('pos').textContent = i + 1;
   document.getElementById('total').textContent = ROWS.length;
   document.getElementById('bar').style.width =
-    (100*Object.keys(DECISIONS).length/ROWS.length)+'%';
+    (100 * Object.keys(DECISIONS).length / ROWS.length) + '%';
+
   document.getElementById('fam').textContent = r.family;
   document.getElementById('diff').textContent = r.difficulty;
   document.getElementById('sug').textContent = r.suggested_label;
   document.getElementById('prem').textContent = r.premise;
   document.getElementById('hyp').textContent = r.hypothesis;
+
+  const isInvalid = !!(entry && entry.label === 'invalid');
+  document.getElementById('reason-row').style.display = isInvalid ? '' : 'none';
+  document.getElementById('reason').value = isInvalid ? (entry.reason || '') : '';
+
+  const decidedEl = document.getElementById('decided-label');
+  decidedEl.textContent = entry ? ('saved: ' + entry.label) : '';
 }
-function decide(label, reason){
-  if(label==='invalid'){
-    const r = document.getElementById('reason').value.trim();
-    DECISIONS[ROWS[i].record_id] = {label:'invalid',
-      reason: r || 'malformed_or_semantically_nonsensical',
-      decided_at_utc:new Date().toISOString()};
-  } else {
-    DECISIONS[ROWS[i].record_id] = {label, decided_at_utc:new Date().toISOString()};
-  }
-  if(i < ROWS.length-1){ i++; }
-  render();
-}
-document.addEventListener('keydown', e=>{
-  if(e.key==='1') decide('entailment');
-  else if(e.key==='2') decide('neutral');
-  else if(e.key==='3') decide('contradiction');
-  else if(e.key==='4') decide('invalid', document.getElementById('reason').value);
-  else if(e.key==='ArrowLeft' && i>0){ i--; render(); }
-  else if(e.key==='ArrowRight' && i<ROWS.length-1){ i++; render(); }
-  else if(e.key.toLowerCase()==='e'){
-    const blob = new Blob([JSON.stringify(DECISIONS,null,2)],{type:'application/json'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'gold_decisions.json';
-    a.click();
-  }
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === '1') { decide('entailment'); }
+  else if (e.key === '2') { decide('neutral'); }
+  else if (e.key === '3') { decide('contradiction'); }
+  else if (e.key === '4') { decide('invalid'); }   // reveals reason box w/ default
+  else if (e.key === 'ArrowLeft' && i > 0) { i--; render(); }
+  else if (e.key === 'ArrowRight' && i < ROWS.length - 1) { i++; render(); }
+  else if (e.key.toLowerCase() === 'e') { exportDecisions(); }
 });
+
 render();
-</script></body></html>
+</script>
+</body></html>
 """
 
 
