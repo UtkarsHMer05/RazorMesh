@@ -18,8 +18,10 @@
   },
   "families_covered": 18,
   "csv_sha256": "f7a98ca8e49f0e555e1a302a710f7130fd9f4399861c68f321a1096b61b795f0",
-  "status": "PENDING_HUMAN_REVIEW",
+  "status": "GOLD_VALIDATED",
   "created_at_utc": "2026-08-26T00:22:23.599574+00:00",
   "reviewer_version": "v2-invalid-exclusion",
-  "invalid_label_policy": "excluded from gold metrics; reason recorded; ids preserved"
+  "invalid_label_policy": "excluded from gold metrics; reason recorded; ids preserved",
+  "validated_at_utc": "2026-08-26T12:26:29.795895+00:00",
+  "gold_frozen_sha256": "c88cd44e2ed4029f487d7dac7299005fbe7ef208fb50dfe1418bbc690cad0f1c"
 }

@@ -163,9 +163,7 @@ truth corrections F1 rupee→INR + F13-002 recurring removed, sha256 9164f04c).
 
 # Next action
 
-PHASE 3 RUNNING — next milestone: **P3-M20** (Qwen candidate generator: resumable/idempotent/hash-cached, bounded volume ~600-800 per overnight policy, Retry-After aware).
-P3-M19 done: seed dataset 915 records (balanced thirds, 18 families, dedup 921→915, byte-identical regeneration).
-P3-M16 hardening committed (identity-map FOR UPDATE bypass was the flake root).
+PHASE 3 RUNNING — P3-M16 hardening committed (identity-map FOR UPDATE bypass was the flake root).
 tests; compiler output stays inert until human confirmation). Read DESIGN.md
 before M17 (UI).
 

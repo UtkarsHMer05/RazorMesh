@@ -1,0 +1,21 @@
+{
+  "format_version": "agentpay-gold-v1",
+  "frozen_at_utc": "2026-08-26T12:26:29.795895+00:00",
+  "reviewer": "human-owner",
+  "total": 320,
+  "labels": {
+    "contradiction": 119,
+    "entailment": 98,
+    "neutral": 103
+  },
+  "excluded": {},
+  "decisions_sha256": "cfc143b995ad9c9847aec4dafeaca2eea1085bfe3a9e366f34ba2a877c5ad75c",
+  "baseline_b_agreement": {
+    "accuracy": 0.5625,
+    "contradiction_recall_vs_human": 0.6134,
+    "unsafe_entail_on_human_contradiction": 29,
+    "inference_seconds": 31.6,
+    "note": "zero-shot cross-encoder/nli-deberta-v3-base vs human labels"
+  },
+  "suggested_label_agreement_with_human": 0.9781
+}

@@ -37,7 +37,7 @@
 | M23 | Leakage-safe split builder | PASS | dataset_splits.py: groups from provenance.source_case_id (whole groups to ONE split via stable SHA256 hash -> 70/15/15); deterministic across runs; leakage_report catches any group spanning splits (contaminated-fixture test proves the gate FAILS) + UNASSIGNED accounting; assert_no_leakage helper for release gates; 5 tests |
 | M24 | Adversarial dataset expansion | NOT_STARTED | — |
 | M25 | Gold review pack generation | PASS | data/phase3/gold/: gold_review.csv 320 rows stratified across all 18 families (labels 121C/98E/101N), suggested_label column LAST for anti-anchoring; self-contained keyboard-driven HTML reviewer (1/2/3 labels, arrows, E-export to gold_decisions.json, localStorage persistence); INSTRUCTIONS.md with orientation + procedure; manifest PENDING_HUMAN_REVIEW + csv sha256; 5 tests; suite 495/495 |
-| M26 | HUMAN GATE 1 — gold review | PENDING_HUMAN | pack READY at data/phase3/gold/ (320 stratified cases, HTML keyboard reviewer, INSTRUCTIONS.md, export flow); human reviews on wake; downstream gates (final model selection, threshold freeze) stamped PENDING_GOLD_VALIDATION until then |
+| M26 | HUMAN GATE 1 — gold review | PASS | 320/320 reviewed by human owner; 0 invalid exclusions; labels 119C/98E/103N; template-truth agreement 97.8%; baseline-B zero-shot agreement vs human only 56.3% w/ 29 unsafe entailments on human contradictions -> quantifies the fine-tuning gap ahead of M34; manifest GOLD_VALIDATED; gold_frozen.json sha-bound | pack READY at data/phase3/gold/ (320 stratified cases, HTML keyboard reviewer, INSTRUCTIONS.md, export flow); human reviews on wake; downstream gates (final model selection, threshold freeze) stamped PENDING_GOLD_VALIDATION until then |
 | M27 | Finalize AgentPay-IR v1 | PASS | frozen_v1: 1021 records (train 723 / val 171 / test 127) from seed+adversarial+candidates-at-freeze; whole-group splits via P3-M23 builder; leakage gate PASSED; per-split sha256 in frozen_manifest; gold_validation_status=PENDING_GOLD_VALIDATION stamped honestly (refresh to v2 possible pre-M48 as candidates grow); 5 tests |
 | M28 | DeBERTa baseline A eval | PASS | MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli (MIT) zero-shot on frozen_v1: val acc 0.474 / macroF1 0.397 / contra_recall 0.389; test acc 0.417 / macroF1 0.349; card label map pinned+unit-tested; orientation sanity-checked with hand pairs; docs/PHASE3_NLI_BASELINE_A_METRICS.json |
 | M29 | DeBERTa baseline B eval | PASS | cross-encoder/nli-deberta-v3-base (Apache-2.0, ONNX available) identical harness: val acc 0.637 / macroF1 0.607 / contra_recall 0.704; test acc 0.606 / macroF1 0.589; docs/PHASE3_NLI_BASELINE_B_METRICS.json |
@@ -842,10 +842,13 @@ STATUS: PENDING_HUMAN (overnight deferred-gate mode per human authorization)
    `gold_decisions.json` into data/phase3/gold/.
 2. Tell the agent the file exists.
 
-### What stays blocked until then
-- FINAL model selection confirmation (M30 provisional stands);
-- FINAL threshold freeze (M37 provisional from validation split only);
-- any metric described as final gold-test performance.
+### Gold review results (completed)
+Human labels now frozen (`gold_frozen.json`, sha-bound in manifest, status
+GOLD_VALIDATED). Final quality metrics on this subset are no longer pending:
+- baseline B zero-shot agreement vs human: 56.25% accuracy,
+  contradiction recall 61.3%, unsafe entailments on human-contradictions: 29;
+- suggested/template truth agreement vs human: 97.81% -> dataset truth pipeline validated;
+- remaining model-side improvements route through M34 Colab fine-tuning.
 
 ### Overnight policy decisions recorded
 - D-043: dependency-aware deferred-human-gate mode + reduced-volume policy.
