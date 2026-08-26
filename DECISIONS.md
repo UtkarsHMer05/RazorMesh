@@ -975,6 +975,31 @@ required evidence. Morning report required (PHASE3_OVERNIGHT_REPORT.md).
 Security consequences: preserves P3-S03/S09/S10/S12/S14/S20 verbatim.
 
 
+## D-044 — Select baseline B (cross-encoder/nli-deberta-v3-base) as provisional SemanticVerifier (P3-M30)
+
+Date: 2026-08-26
+Milestone: P3-M30 (baseline model selection)
+Status: Accepted (provisional, held pending gold review)
+Superseded by: D-046 (fine-tuned selected for production) — provisional retained
+  only as a documented fallback for parity regression checks.
+Affected docs: PHASE3_STATUS.md (M30 row), docs/PHASE3_NLI_BASELINE_SELECTION.md
+  (new), docs/PHASE3_NLI_BASELINE_A_METRICS.json,
+  docs/PHASE3_NLI_BASELINE_B_METRICS.json.
+
+Context: M28/M29 evaluated both zero-shot baselines on the identical frozen_v1
+harness. Security-first criteria (master prompt §12 order) compare contradiction
+recall, neutral recall, safe-lookalike FPR (neutral precision), macro F1,
+calibration and resource cost.
+
+Decision: select **B — `cross-encoder/nli-deberta-v3-base` (Apache-2.0)** as the
+provisional SemanticVerifier backbone. B wins contradiction recall (0.704 vs
+0.389), neutral recall (0.232 vs 0.018), neutral precision / safe-lookalike FPR
+proxy (0.684 vs 0.056), macro-F1 (0.607 vs 0.397) and latency (~53 ms vs ~178
+ms/row on MPS). Selected by measured security/utility criteria, **not by
+reputation**. Held PROVISIONAL / PENDING_GOLD_VALIDATION; M36 (D-046) later
+selected the fine-tuned model on held-out evidence, preserving this A/B gate as
+the documented baseline comparison.
+
 ## D-045 — Gold review INVALID exclusion label (human-requested, 2026-08-26)
 
 The human gold reviewer gained a fourth action: 4=INVALID/BAD EXAMPLE with a
@@ -1188,3 +1213,53 @@ template truth—not human gold and not an untouched final OOD evaluation. It ma
 enter training/validation only through later freeze gates. The owner-requested
 additional untouched human-reviewed OOD set must be constructed and frozen
 separately, and no retraining/model selection/calibration may use its labels.
+
+## D-050 — Correct gold-data training/heldout semantics (supersedes D-046 leakage wording)
+
+Date: 2026-08-27
+Milestone: P3 closure audit (owner correction #2)
+Status: Accepted
+Supersedes (retracts/corrects): two clauses in D-046 —
+  (a) D-046 evidence line "1 conservative unsafe-allow on a gold=neutral row"
+      and "gold was never leaked into training (P3-S09/S12); the training pool
+      (frozen_v1/train.jsonl, 723 records) is template/seed-derived."
+  (b) The parallel claim in `docs/PHASE3_NLI_FINETUNE_EVAL.md` §5 ("gold was
+      never leaked into training … train.jsonl contains template/seed-derived
+      labels, not human gold labels").
+Affected docs: DECISIONS.md (this entry), docs/PHASE3_NLI_FINETUNE_EVAL.md (§5
+  corrected), docs/PHASE3_END_TO_END_BENCHMARK.md (unsafe-allow → over-block),
+  PHASE3_STATUS.md (M45 row terminology; M26 row split note), MEMORY.md.
+
+Corrections (facts, not relabeling):
+1. **Terminology.** `gold=neutral / model=BLOCK / fusion BLOCK` is a
+   **conservative over-block (false block)**, NOT an unsafe allow. BLOCK is the
+   fail-closed safe outcome. The prior "1 conservative unsafe-allow" wording in
+   D-046 and the benchmark doc is retracted; the true count of unsafe allows on
+   the frozen test split is **0**.
+2. **Training composition.** Of the 320 human-reviewed gold cards (M26),
+   **241 (`human_gold_in_train`) are in `frozen_v1/train.jsonl`** and therefore
+   DID enter fine-tuning. **79 (`human_gold_heldout`) are in val/test and were
+   NEVER seen during training.** The earlier "gold never leaked into training"
+   claim is false and is hereby corrected. We distinguish explicitly:
+   - `human_reviewed_training` = 241 gold cards used for training.
+   - `human_gold_heldout` = 79 gold cards held out, never in training.
+3. **Leakage-safe selection (honest re-statement).** The 79-card heldout labels
+   never influenced (i) training (train split only), (ii) threshold calibration
+   (M37 used val split only), or (iii) model-selection parameters (best
+   eval_macro_f1 checkpoint chosen on the non-gold val split). The fine-tuned
+   selection is independently decisive from the non-gold val split alone
+   (macro-F1 0.607 → 0.982). The 79-card numbers were reported for transparency
+   only; they did not tune any selection/calibration parameter. P3-S09/S12 is
+   therefore satisfied for the heldout, not for the 241 in-train gold cards.
+4. **Untouched OOD evaluation (owner correction #3).** The 79-card heldout is the
+   only human-reviewed untouched-by-training set. It is adequate but small; an
+   additional untouched-by-training OOD evaluation set is constructed from the
+   M24 curated adversarial matrix (129 template-truth rows, never in training)
+   and frozen separately as `data/phase3/eval/untouched_ood/`. It is
+   **template-truth, not human-reviewed** — disclosed honestly; human review of
+   that set is a recommended pre-Phase-4 gate. Its labels are NOT used for
+   retraining, selection, or calibration (per D-049).
+
+Invariant preserved: no execution is authorized on a contradiction; every BLOCK
+is a safe refusal; the 241 in-train gold cards are disclosed, not laundered into
+a "pristine gold" claim.

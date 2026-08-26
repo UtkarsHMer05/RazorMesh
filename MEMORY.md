@@ -30,9 +30,12 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust
 **Active phase:** Phase 3 ACTIVE (human-approved 2026-08-25)
-**Current milestone:** Phase-3 completion re-audit — P3-M24 standalone closure
-PASS; P3-M30 is next. M48/M49/M50 are intentionally reopened until every
-master-prompt gate and the owner's closure corrections pass.
+**Current milestone:** Phase-3 closure audit complete except D-041 full-307
+compiler eval (115/307). M17/M20/M21/M24/M30/M31/M40 closed as standalone gates;
+gold semantics corrected (D-050); untouched OOD eval built (4 OOD unsafe-allows
+found); M45 terminology fixed; compiler trust metrics added; M48 backend+security
+rerun green (531 passed, 0 findings); M49 re-verified; M50 regenerated honest.
+Phase-4 approval pending (human gate).
 **Last updated:** 2026-08-27 (P3-M24 standalone closure re-audit)
 **Gate:** M24 replaced the old 38-row/two-template-dominated artifact with 129
 hard truth-by-construction rows: 43 independently authored scenario groups ×
@@ -160,12 +163,12 @@ and honest evaluation terminology. The former M48/M49/M50 claims are reopened.
 
 # Next action
 
-**PHASE 3 RE-CLOSURE AUDIT — M17/M20/M21/M24 PASS; continue with standalone M30.**
-
-Known open closure items: standalone M30/M31/M40 evidence and
-commits; training/gold terminology; a truly untouched OOD evaluation;
-M45 false-block semantics; full compiler metrics/coverage; then fresh M48,
-clean-room M49, and M50 only if all 50 rows have genuine evidence.
+**PHASE 3 CLOSURE AUDIT — DONE except full-307 compiler eval (D-041, 115/307).**
+All owner closure items addressed: M30/M31/M40 closed; D-050 gold semantics;
+untouched OOD eval (docs/PHASE3_OOD_UNTOUCHED_EVAL.md); M45 over-block fix;
+compiler trust metrics; M48 backend+security green; M49 re-verified; M50 honest.
+REMAINING: run full 307-case compiler eval (real provider) to finally close M48/
+M50, then human Phase-4 approval. UI files owned by a parallel agent — untouched.
 
 Standing notes: `make test-db` must re-provision razormesh_test after
 any `docker compose down -v` (migrate alone does NOT create it). The

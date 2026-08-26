@@ -69,10 +69,16 @@ fallback for parity regression checks only.
 4. **Calibration:** deferred to M37 — both emit softmax; FT outputs are
    confident (M47 already proved CPU feasibility on a 0.2B model).
 5. **License / origin:** FT base is Apache-2.0; FT artifact derived from
-   RazorMesh training pipeline (P3-S09/S12: gold was never leaked into
-   training — the gold decisions are an EVALUATION surface only;
-   `data/phase3/dataset/frozen_v1/train.jsonl` contains
-   template/seed-derived labels, not human gold labels).
+   the RazorMesh training pipeline. **Gold-data semantics (corrected, D-050):**
+   the 320 human-reviewed gold cards were split at freeze into
+   `human_gold_in_train` (241) which **are** in `frozen_v1/train.jsonl` and
+   therefore DID influence training, and `human_gold_heldout` (79) which are
+   in val/test and were **never** seen during training. The 79-card heldout
+   labels never influenced training, threshold calibration (M37 used val
+   only), or model-selection parameters (best-checkpoint by val macro-F1);
+   the heldout numbers above are transparent evaluation reporting, not
+   tuning inputs. P3-S09/S12 is satisfied specifically for the heldout, not
+   for the 241 in-train gold cards (disclosed here, not hidden).
 6. **Reproducibility:** artifact sha256 recorded; transformer
    version (5.15.1) recorded; deterministic re-load possible.
 

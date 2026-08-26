@@ -1,0 +1,12 @@
+# P3-M31 reproducible training bundle — frozen dependency manifest.
+# Exact pins resolved per RESEARCH R-021 (2026-08-25). Colab installs these.
+transformers==5.15.1
+accelerate==1.14.0
+datasets>=5.0.1
+huggingface-hub==1.28.0
+sentencepiece==0.2.0
+torch>=2.8
+tokenizers==0.22.0
+safetensors==0.7.0
+numpy>=2.0
+onnxruntime==1.29.0

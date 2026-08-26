@@ -1,0 +1,28 @@
+{
+  "artifact": "phase3-finetuned-cross-encoder",
+  "eval_set": "data/phase3/eval/untouched_ood/ood_adversarial_129.jsonl",
+  "eval_set_origin": "M24 curated adversarial/OOD (template-truth, post-freeze, NOT in frozen_v1 training)",
+  "n": 129,
+  "correct_action": 87,
+  "accuracy": 0.6744,
+  "TRUE_unsafe_allows (gold=contradiction -> model PASS)": 4,
+  "conservative_over_blocks (gold=neutral -> model BLOCK)": 30,
+  "action_confusion_by_gold": {
+    "entailment": {
+      "PASS": 30,
+      "CHALLENGE": 6,
+      "BLOCK": 7
+    },
+    "neutral": {
+      "BLOCK": 30,
+      "CHALLENGE": 3,
+      "PASS": 10
+    },
+    "contradiction": {
+      "BLOCK": 38,
+      "PASS": 4,
+      "CHALLENGE": 1
+    }
+  },
+  "honest_read": "This is a HARD OOD set the model was NOT trained on. 0 true unsafe allows would be ideal; any contradiction->PASS is a real safety gap. Over-blocks are conservative refusals (safe)."
+}

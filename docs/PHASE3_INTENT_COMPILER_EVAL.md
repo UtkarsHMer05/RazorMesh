@@ -76,6 +76,31 @@ would not). The hallucination cluster is `condition` invention (6 cases).
 | max_amount_minor | 0.8533 |
 | unspecified | n/a (no sample coverage — see §8) |
 
+### 2.1 Compiler trust-quality metrics (closure-audit requirement)
+
+The report must cover more than schema validity and money accuracy. The
+following five trust-quality dimensions are computed from the N=90/307 sample
+(definitions fixed so the full-307 run reuses them verbatim).
+
+| Metric | Definition | Value (N=90) |
+|---|---|---|
+| **Unsafe omission rate** | cases where a *stated* hard/semantic constraint was dropped (fail-closed) ÷ evaluated cases | 11/90 = 12.2% (§3.A) |
+| **Hallucinated constraint rate** | cases where a constraint absent from the source was invented ÷ evaluated cases | 6/90 = 6.7% (§3.B `condition` invention) |
+| **Over-constraint rate** | cases where the model added any constraint beyond human truth (invented `condition`, or invented constraint while also surfacing ambiguity) ÷ evaluated cases | 6/90 = 6.7% (superset of hallucinated; includes F12-001/002/005) |
+| **Ambiguity handling** | genuine ambiguities correctly surfaced as NEEDS_CLARIFICATION ÷ ambiguities present | 6/6 = 100% (satisfied) |
+| **Field precision** | correct-present fields ÷ model-present fields (no fabricated value where none stated) | 1.0 for brands/merchants/quantity/currency/semantic/recurring/max_amount (0 mismatches, 0 invented amounts) |
+
+Notes:
+- Unsafe omissions fail **closed** downstream (a missing bound is rejected, an
+  invented bound would not) — the safe direction for a trust compiler.
+- Hallucinated/over-constraint cases are exactly the semantic errors the
+  Phase-3 DeBERTa verifier + conservative fusion (M38/M40) later police; they
+  are not execution-authorizing on their own because the deterministic hard-rule
+  layer still gates the ticket.
+- The "1 conservative unsafe" wording that appeared in earlier M45 copy was a
+  **terminology error**: that single case is gold=neutral / model=BLOCK (a
+  conservative over-block), not an unsafe allow. See M45 correction below.
+
 ---
 
 ## 3. Failure taxonomy (19 failed cases)

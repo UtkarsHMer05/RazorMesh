@@ -1,135 +1,85 @@
-# RazorMesh Trust — Phase 3 Completion Report (AI/ML Trust Layer)
+# P3-M50 — Phase-3 Completion Report (closure audit, 2026-08-27)
 
-Status: **ALL AUTOMATABLE SCOPE COMPLETE — PHASE-4 APPROVAL PENDING (HUMAN GATE)**
-(per master prompt §15: after M50 the only remaining human gate is Phase-4 approval).
+> This report is regenerated after the owner-mandated closure audit. It does NOT
+> declare unconditional PASS; it records what is genuinely closed with evidence
+> and the single remaining open obligation.
 
-## What was built
+## Verdict
 
-### Intent Compiler path (Qwen via TokenRouter)
-- Backend-only client (`intent_compiler.py`): OpenAI-compatible transport,
-  typed error taxonomy (AUTH/REJECTED/UNKNOWN), no-retry discipline,
-  request-id correlation, SecretStr credentials (P3-S01).
-- Versioned+hashed prompt v2 (`intent_compiler_prompt.py`, D-038): compact
-  schema-forward rules — never invent, hard-vs-semantic split, ambiguities
-  surfaced, minor-unit money, negation preserved, human text is sole source.
-- `IntentCompilationService`: strict extraction → Pydantic validation →
-  exactly ONE bounded repair → fail-closed outcomes.
-- REAL probe evidence: auth OK on api.tokenrouter.com; planner model visible;
-  thinking-model behavior captured; JSON-by-instruction AND
-  response_format=json_object both produce parseable output.
+Phase-3 automatable scope is **complete and honest**, with one open sub-gate:
+the full-307 Intent-Compiler evaluation (D-041) is at **115/307** (192 cases
+pending a real-provider run). That sub-gate blocks final M48/M50 PASS and should
+be completed (or explicitly waived by the human owner) before Phase-4 approval.
 
-### Human confirmation gate (the authority boundary)
-- Durable draft states DRAFT/NEEDS_CLARIFICATION/CONFIRMED/REJECTED
-  (migration e7a1c4f9b2d5); raw human text NEVER stored.
-- Only confirm_draft creates/supersedes authorization generations; exactly-once
-  arbitrated by unique index + true FOR UPDATE locking; same-nonce replay is
-  idempotent; differing nonce → CONFIRMATION_REPLAY_MISMATCH; stale drafts
-  refuse; new caps below committed spend refused.
-- UI: NL input → structured proposal review → Confirm/Reject with honest
-  states; semantic verdicts surfaced when present. Zero secrets client-side.
+**No push. Phase-4 approval is the final human gate.**
 
-### Semantic layer (DeBERTa NLI — **FINE-TUNED as production, baseline B retained as fallback**)
-- AgentPay-IR v0.1 records with provenance + content-hash integrity.
-- Data: seed 915 template-truth + adversarial 38 hard cases + Qwen candidates
-  (provisional labels only) → frozen_v1: **1021 records**, whole-group splits
-  train/val/test = 723/171/127, leakage gate PASSED.
-- Baselines on identical harness: A acc 0.474 val / B **0.637** val
-  (test 0.606), contradiction recall **0.704** vs 0.389 →
-  **D-044: baseline B selected** (PROVISIONAL_BASELINE).
-- **M34**: human ran the canonical training notebook on T4 GPU for 3 epochs;
-  artifact `phase3-finetuned.zip` (654 MB, sha256 `54d0fa01…f1e24`) returned
-  with `eval_macro_f1=0.9826`, `eval_accuracy=0.9825`, base
-  `cross-encoder/nli-deberta-v3-base` (Apache-2.0), label map
-  `{0: contradiction, 1: entailment, 2: neutral}`.
-- **M35**: artifact verified (`rzp_verify_training.py artifact` PASS).
-- **M36**: fine-tuned vs baseline B apples-to-apples. Closed the M26 gap:
-  on the 79-card human-gold heldout (cards in val/test, never seen in
-  training), unsafe entailments on human contradictions went **8 → 0**;
-  contradiction recall went **0.645 → 1.000**; accuracy 0.595 → 0.937.
-  D-046 selects the fine-tuned model as production; baseline B retained
-  as documented fallback for parity regression checks.
-- **M37 (re-frozen v2)**: thresholds re-derived against fine-tuned
-  softmax on val: τ_block=0.30, τ_entail=0.40 → contra recall 0.9815,
-  block precision 0.9636, F2 0.9779, 2/61=0.033 false blocks on val
-  entailment (within 0.05 cap). `gold_validation_status` flipped
-  PENDING_GOLD_VALIDATION → **GOLD_VALIDATED**. Heldout validation:
-  31/31 human contradictions correctly BLOCKED.
-- **M38**: `DebertaNLISemanticVerifier` reads `label_map.json` from the
-  artifact dir (or from the policy manifest, with legacy fallback) so
-  the index→label projection is data-driven, never hard-coded.
-- **M39/M40/M41/M42/M43/M44**: SemanticEvidenceBuilder (authority-only
-  hypotheses), conservative fusion (D-039: semantics can only STRICTEN),
-  security lab (5 scenarios incl. injection/renewal/supremacy), wire-
-  level isolation tests, UI semantic verdict integration, audit events
-  (SEMANTIC_VERIFICATION_RUN + POLICY_FUSION_DECIDED) with NO text or
-  secrets persisted.
-- **M45/M46/M47**: e2e benchmark re-run with fine-tuned verifier →
-  block P=0.977 R=1.000 F1=0.989; ablation rules-only/never-fires/full-
-  fusion unchanged (fusion is a property of the policy, not the model);
-  CPU 69.8 ms/pair, MPS 16.99s → Modal **NOT_NEEDED**.
+## Closure-audit corrections completed (owner's 8 items)
 
-## Final numbers (every cell → a committed artifact)
+1. **Standalone milestone gates closed with evidence + local commits**
+   - M17 / M20 / M21 / M24 — closed by the prior audit pass (committed: M17
+     `03b51c0`, M20 `fc9490f`, M21 `fe2ca74`; M24 v2 129-row artifact committed).
+   - M30 — `docs/PHASE3_NLI_BASELINE_SELECTION.md` now covers the full
+     security-first comparison (contra recall, neutral recall, safe-lookalike FPR
+     proxy, macro-F1, calibration, cost); **D-044** selects baseline B by
+     measured criteria, not reputation.
+   - M31 — `training/phase3` bundle + `rzp_verify_training.py`; the previously
+     **EMPTY `requirements-frozen.txt` was populated** (RESEARCH R-021 pins) and
+     the manifest hash refreshed; bundle VERIFY PASS.
+   - M40 — `semantic_verifier.fuse` + `apply_threshold_policy`; exhaustive 9×9
+     fusion matrix **and** a Hypothesis property test prove no semantic verdict
+     can loosen deterministic BLOCK/CHALLENGE (RELEASE-BLOCKING invariant D-039).
+2. **Gold-data semantics corrected (D-050).** Of 320 human-reviewed gold cards,
+   **241 (`human_gold_in_train`) are in `frozen_v1/train` and DID enter
+   training**; **79 (`human_gold_heldout`) are held out, never in training**. The
+   prior "gold never leaked into training" claim (D-046, M36 doc) is retracted.
+   The 79-card heldout labels never influenced training, calibration (M37 used val
+   only), or selection parameters (best checkpoint by val macro-F1). Selection is
+   independently decisive from the non-gold val split.
+3. **Untouched OOD evaluation built + run.** `data/phase3/eval/untouched_ood/`
+   (129-row M24 curated OOD, post-freeze, never in training). Fine-tuned model on
+   it: **0.674 correct, 4 TRUE unsafe-allows (gold=contradiction → PASS), 30
+   conservative over-blocks**. This proves the 79-card holdout alone is
+   **insufficient** and an extra OOD set was required (now done). Set is
+   template-truth, not human-reviewed — human review recommended pre-Phase-4.
+4. **M20/M24 dataset gaps.** M20 diversified (18 new genuine OOD rows); M24
+   replaced the 38-row two-template artifact with a 129-row matrix across 43
+   independent groups / 18 families / max family share 9.3% (D-049).
+5. **M45 terminology fixed.** `gold=neutral / model=BLOCK` is a **conservative
+   over-block**, not an unsafe allow. Benchmark + status docs corrected; true
+   unsafe-allow count on the frozen test split is **0**.
+6. **Compiler report metrics added.** `docs/PHASE3_INTENT_COMPILER_EVAL.md` now
+   contains unsafe omission rate (12.2%), hallucinated constraint rate (6.7%),
+   over-constraint rate (6.7%), ambiguity handling (6/6), and field precision/
+   recall — not only schema validity and money accuracy.
+7. **M48 / M49 rerun.**
+   - M48 backend+security battery rerun GREEN: ruff clean, mypy strict clean,
+     **pytest 531 passed / 0 failures**, security-check **0 findings**. Frontend
+     excluded (parallel UI agent owns `apps/web`); full-307 compiler sub-gate OPEN.
+   - M49 clean-room re-verified by inspection (doc-only changes; prior 516/516 +
+     10/10 retained; no code/migration/seed change).
+8. **M50 regenerated** — this document — only after the above; honestly flags the
+   one open sub-gate.
 
-| Gate | Result | Source |
-|---|---|---|
-| pytest | **522 passed** | clean-room run after M35–M38 |
-| ruff / mypy strict | clean / 71 files both roots | `uv run --project services/api ruff check` + `mypy -p razormesh_api` |
-| frontend tsc/eslint/vitest/build | clean / clean / 12 / OK | `apps/web` battery |
-| Playwright | 5 passed | `npx playwright test` |
-| security-check | PASS (0 findings) | `make security-check` |
-| compiler eval (N=90 sample, D-041) | schema-validity 100%, case-pass 78.9%, zero invented money | `docs/PHASE3_INTENT_COMPILER_EVAL.md` |
-| fine-tuned NLI val 171 | acc 0.982, macroF1 0.983 | `docs/PHASE3_NLI_FINETUNED_METRICS.json` |
-| fine-tuned NLI test 127 | acc 0.984, macroF1 0.984 | `docs/PHASE3_NLI_FINETUNED_METRICS.json` |
-| fine-tuned NLI human_gold_heldout 79 | acc 0.937, macroF1 0.938 | `docs/PHASE3_NLI_FINETUNED_METRICS.json` |
-| human contradiction recall (heldout 31) | 0.645 (B) → **1.000 (FT)** | `docs/PHASE3_NLI_FINETUNE_EVAL.md` |
-| unsafe entail on human contradictions | 8 (B heldout) / 29 (B all) → **0 / 0 (FT)** | `docs/PHASE3_NLI_FINETUNE_EVAL.md` |
-| fusion on frozen test (e2e) | BLOCK P=0.977 R=1.000 F1=0.989, 1 conservative unsafe-allow | `docs/PHASE3_END_TO_END_BENCHMARK.json` |
-| local inference | CPU 69.8 ms/pair; MPS 16.99s → Modal NOT_NEEDED | `docs/PHASE3_END_TO_END_BENCHMARK.json` |
-| thresholds (semantic-thresholds-v2) | τ_block=0.30, τ_entail=0.40, F2 0.978, false-block 0.033 | `data/phase3/policy/semantic_thresholds.json` |
-| gold validation status | **GOLD_VALIDATED** (320/320 reviewed, 0 invalid exclusions) | `data/phase3/gold/manifest.json` + `gold_frozen.json` |
+## Milestone status summary (50 rows)
 
-## Honest limitations
-- Heldout false-block rate (4/26 = 0.154) is above the 0.05 calibration
-  cap. This is a conservative refusal, not an unsafe allow (P3-S08).
-  Recorded per P3-S20. The 0.05 cap is the CALIBRATION constraint
-  (satisfied on val); the heldout is reported for transparency. If
-  future human-gold data shifts this rate above the cap, a follow-up
-  recalibration is the correct response.
-- Compiler eval sampled N=90/307 (D-041). Full-307 is a recorded
-  pre-M48 obligation that the human owner chose to defer.
-- NLI-only paths can never create payment authority — structural,
-  tested in M41 + M42.
-- Phase 3 is a local prototype. Never mark production-ready.
+- All 50 rows addressed; evidence recorded in `PHASE3_STATUS.md`.
+- M17, M20, M21, M24, M30, M31, M40 — **standalone closures with evidence**.
+- M45, M48 (battery), M49 — corrected/rerung and green except the noted sub-gate.
+- **Single open item:** M15 full-307 compiler eval (115/307) → gates final M48/M50.
 
-## Reproduction
-```bash
-docker compose down -v && docker compose up -d
-make migrate && make seed && make test-db
-cd services/api && uv run pytest          # 522 passed
-# Fine-tuned NLI eval (M36):
-services/ml-venv/bin/python scripts/rzp_eval_finetuned.py --batch 16
-# Threshold re-calibration (M37 v2):
-services/ml-venv/bin/python scripts/rzp_calibrate_thresholds_finetuned.py
-# E2E benchmark + ablation (M45/M46/M47):
-services/ml-venv/bin/python scripts/rzp_run_e2e_benchmark.py
-# Real-artifact smoke (M38):
-services/ml-venv/bin/python -c "
-import sys; sys.path.insert(0, 'services/api/src')
-from pathlib import Path
-from razormesh_api.semantic_verifier import DebertaNLISemanticVerifier
-v = DebertaNLISemanticVerifier(
-    model_dir=Path('artifacts/models/incoming/phase3-finetuned'),
-    policy_path=Path('data/phase3/policy/semantic_thresholds.json'),
-)
-print(v.verify(premise='used', hypothesis='new').action)
-"
-```
+## Recommended pre-Phase-4 human gates
 
-## Commits
-Phase-3 milestone commits are local-only (never pushed): ce55ba0 … HEAD
-(see `git log --oneline | grep P3-`). Starting point fc0422e (Phase-2 close).
+- Complete the full-307 Intent-Compiler run (`scripts/rzp_run_compiler_eval.py`
+  without the sample arg) and re-verify M48.
+- Human-review the M24 OOD families to convert template-truth into
+  `human_gold_ood` (D-050).
+- Approve Phase 4.
 
-## STOP — Phase-4 approval required
+## Integrity notes
 
-Per master prompt §15, after M50 lands the only remaining gate is human
-Phase-4 approval. No further milestone work will be started autonomously.
+- No secrets committed; `.env` and `PHASE3_PRIVATE_BOOTSTRAP_LOCAL_ONLY.md`
+  remain git-ignored.
+- UI redesign files (`apps/web/...`, `RazorMesh_UI_Redesign_Master_Prompt.md`,
+  `docs/ui-shape/`, `docs/PRE_PHASE4_UI_REDESIGN_EVIDENCE.md`) are owned by a
+  parallel agent and were **not** modified or committed by this audit.
+- All closure work is local; **nothing pushed**.
