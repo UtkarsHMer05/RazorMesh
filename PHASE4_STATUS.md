@@ -5,8 +5,11 @@
 
 | Milestone | Status | Notes |
 |---|---|---|
-| M01 Repository / Governance / UI Baseline Inspection | IN_PROGRESS | M01 inspection only, no code changes yet |
-| M02 Full Phase-1/2 Backend Revalidation | NOT_STARTED | |
+| M01 Repository / Governance / UI Baseline Inspection | PASS | 2026-08-27, commit 336f907; no code changes |
+| M02 Full Phase-1/2 Backend Revalidation | PASS | 2026-08-27; pytest 531/531, ruff 0, mypy 0; no code changes |
+| M03 Full Phase-3 AI/ML Revalidation | PASS | 2026-08-27; semantic/compiler/fusion/gold 67/67; no retraining; no code changes |
+| M04 Full Redesigned Frontend Revalidation | PASS | 2026-08-27; typecheck/lint/test 14/build PASS, 9/9 E2E, security-check 0 |
+| M05 Freeze Phase-4 Baseline | PASS | 2026-08-27; docs/PHASE4_BASELINE.md written; HEAD fab0ed6, M01 336f907 |
 | M03 Full Phase-3 AI/ML Revalidation | NOT_STARTED | |
 | M04 Full Redesigned Frontend Revalidation | NOT_STARTED | |
 | M05 Freeze Phase-4 Baseline | NOT_STARTED | |
