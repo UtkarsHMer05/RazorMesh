@@ -100,6 +100,11 @@ _ALLOWED_TEST_FIXTURES: dict[tuple[str, str], frozenset[str]] = {
         "services/api/tests/test_buyer_drafts_api.py",
         "credential-assignment",
     ): frozenset({"tr_test_key_placeholder"}),
+    # Synthetic key for the P3-M42 wire-capture isolation test.
+    (
+        "services/api/tests/test_injection_isolation_e2e.py",
+        "credential-assignment",
+    ): frozenset({"tr_test_key_placeholder"}),
     # Same synthetic key for the P3-M13 compilation-service tests (DI seam).
     (
         "services/api/tests/test_intent_compilation_service.py",

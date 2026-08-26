@@ -876,3 +876,10 @@ artifacts/phase3_colab_training_bundle.zip
   training/phase3/rzp_verify_training.py (hash check runs INSIDE notebook too)
 VERIFY: PASS
 ```
+
+
+### M48 — Full Phase-3 battery (recorded)
+ruff clean · mypy strict 71 files (both roots) · pytest **516 passed** ·
+frontend tsc/eslint/vitest 12/build/Playwright 5 · security-check PASS
+(0 findings; audits clean; allowlist extended for the M42 wire-capture
+fixture per established pinned-entry mechanism).
