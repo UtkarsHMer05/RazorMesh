@@ -973,3 +973,19 @@ list of reruns maintained, and no milestone ever marked PASS without its
 required evidence. Morning report required (PHASE3_OVERNIGHT_REPORT.md).
 
 Security consequences: preserves P3-S03/S09/S10/S12/S14/S20 verbatim.
+
+
+## D-045 — Gold review INVALID exclusion label (human-requested, 2026-08-26)
+
+The human gold reviewer gained a fourth action: 4=INVALID/BAD EXAMPLE with a
+recorded exclusion reason. Rules:
+- existing 1=entailment / 2=neutral / 3=contradiction and E=export unchanged;
+- invalid cards are EXCLUDED from gold metrics — never force-labeled;
+- existing cards/record IDs/order are preserved byte-for-byte (verified by
+  content digest before/after the reviewer upgrade);
+- downstream ingestion (dataset_quality.ingest_gold_decisions) splits
+  decisions into valid labels vs exclusions (reason mandatory-or-defaulted)
+  and unknown record ids are quarantined.
+
+Security consequences: none new; strengthens P3-S09/S12 honesty by preventing
+garbage pairs from becoming gold truth.

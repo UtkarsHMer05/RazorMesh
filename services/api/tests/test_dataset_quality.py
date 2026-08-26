@@ -90,3 +90,38 @@ def test_template_truth_rows_skip_provenance_strictness() -> None:
     # template truth rows have no request id — validator must NOT demand one
     res = validate_candidate(base)
     assert "missing_generator_request_id" not in res.fatal
+
+
+# ---------------------------------------------------------------------------
+# P3-M26 addendum: INVALID exclusion path
+# ---------------------------------------------------------------------------
+
+
+def test_gold_decisions_invalid_excluded_not_force_labeled() -> None:
+    from razormesh_api.dataset_quality import ingest_gold_decisions
+
+    decisions = {
+        "air_A": {"label": "entailment"},
+        "air_B": {"label": "invalid", "reason": "garbled sentence"},
+        "air_C": {"label": "invalid"},  # no reason -> default recorded
+        "air_D": {"label": "neutral"},
+    }
+    res = ingest_gold_decisions(decisions)
+    assert res.valid == {
+        "air_A": "entailment",
+        "air_D": "neutral",
+    }
+    assert res.excluded["air_B"] == "garbled sentence"
+    assert "malformed" in res.excluded["air_C"]
+    assert set(res.valid) & set(res.excluded) == set()
+
+
+def test_unknown_record_in_decisions_is_excluded() -> None:
+    from razormesh_api.dataset_quality import ingest_gold_decisions
+
+    res = ingest_gold_decisions(
+        {"air_X": {"label": "entailment"}, "ghost": {"label": "neutral"}},
+        known_record_ids={"air_X"},
+    )
+    assert res.valid == {"air_X": "entailment"}
+    assert res.excluded["ghost"] == "unknown_record_id"

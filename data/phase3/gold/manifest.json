@@ -19,5 +19,7 @@
   "families_covered": 18,
   "csv_sha256": "669e45cdea40b37e093f3bdd8c70cae1dfd1bcbe41a30ea371bc4c1cbffe7458",
   "status": "PENDING_HUMAN_REVIEW",
-  "created_at_utc": "2026-08-26T00:22:23.599574+00:00"
+  "created_at_utc": "2026-08-26T00:22:23.599574+00:00",
+  "reviewer_version": "v2-invalid-exclusion",
+  "invalid_label_policy": "excluded from gold metrics; reason recorded; ids preserved"
 }

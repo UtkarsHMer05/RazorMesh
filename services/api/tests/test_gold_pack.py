@@ -56,6 +56,18 @@ def test_html_reviewer_wired() -> None:
             assert hook in html
 
 
+def test_reviewer_supports_invalid_exclusion_label() -> None:
+    html = (GOLD / "gold_review.html").read_text()
+    assert "decide('invalid'" in html
+    assert "e.key==='4'" in html
+    assert 'label:\'invalid\'' in html or 'label:"invalid"' in html
+    assert "reason" in html  # exclusion-reason capture wired
+    # CSV/cards untouched by the reviewer upgrade
+    with (GOLD / "gold_review.csv").open(newline="", encoding="utf-8") as fh:
+        rows = list(csv.DictReader(fh))
+    assert len(rows) == 320 and all(r["suggested_label"] != "invalid" for r in rows)
+
+
 def test_status_marked_pending_human() -> None:
     manifest = json.loads((GOLD / "manifest.json").read_text())
     assert manifest["status"] == "PENDING_HUMAN_REVIEW"

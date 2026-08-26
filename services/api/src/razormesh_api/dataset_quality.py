@@ -79,3 +79,43 @@ def validate_candidate(record: AgentPayIRRecord) -> ValidationResult:
             warnings.append("entailment-without-numeric-price")
 
     return ValidationResult(passed=not fatal, fatal=tuple(fatal), warnings=tuple(warnings))
+
+
+# ---------------------------------------------------------------------------
+# P3-M26 addendum: human gold-decision ingestion with INVALID exclusion.
+# ---------------------------------------------------------------------------
+
+GOLD_VALID_LABELS = frozenset({"entailment", "neutral", "contradiction"})
+
+
+@dataclass(frozen=True)
+class GoldIngestResult:
+    """Human decisions split into usable gold labels vs excluded cards.
+
+    - valid: record_id -> label (entailment/neutral/contradiction only);
+    - excluded: record_id -> reason (label was 'invalid' or missing);
+      excluded cards NEVER enter gold metrics (they are not force-labeled).
+    """
+
+    valid: dict[str, str]
+    excluded: dict[str, str]
+
+
+def ingest_gold_decisions(
+    decisions: dict[str, dict[str, str]], known_record_ids: set[str] | None = None
+) -> GoldIngestResult:
+    valid: dict[str, str] = {}
+    excluded: dict[str, str] = {}
+    for record_id, entry in decisions.items():
+        if known_record_ids is not None and record_id not in known_record_ids:
+            excluded[record_id] = "unknown_record_id"
+            continue
+        label = str(entry.get("label", "")).lower() if isinstance(entry, dict) else ""
+        if label in GOLD_VALID_LABELS:
+            valid[record_id] = label
+        elif label == "invalid":
+            reason = str(entry.get("reason") or "").strip()
+            excluded[record_id] = reason or "malformed_or_semantically_nonsensical"
+        else:
+            excluded[record_id] = "unlabeled_or_unknown_label"
+    return GoldIngestResult(valid=valid, excluded=excluded)

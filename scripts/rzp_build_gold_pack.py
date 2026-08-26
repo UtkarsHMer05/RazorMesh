@@ -157,15 +157,21 @@ HTML_TEMPLATE = """<!doctype html>
 <p><b>PREMISE (evidence)</b></p><pre id="prem"></pre>
 <p><b>HYPOTHESIS (authorization claim)</b></p><pre id="hyp"></pre>
 <p>Your label: <kbd>1</kbd> entailment <kbd>2</kbd> neutral <kbd>3</kbd> contradiction
+<kbd>4</kbd> INVALID/BAD EXAMPLE
 | <kbd>&larr;</kbd> prev | <kbd>&rarr;</kbd> next | <kbd>E</kbd> export decisions</p>
-<p>Decisions saved locally in this browser until you press E.</p>
+<p id="reason-row" style="display:none"><label>Exclusion reason (required for 4):
+<input type="text" id="reason" style="width:60%"></label></p>
+<p>Decisions saved locally in this browser until you press E.
+Invalid pairs are EXCLUDED from gold metrics — never force-labeled.</p>
 </div>
 <script>
 const ROWS = __ROWS__;
 const DECISIONS = {};
 let i = 0;
 function render(){
-  const r = ROWS[i];
+  document.getElementById('reason-row').style.display = 'none';
+  document.getElementById('reason').value = '';
+  document.getElementById('reason').placeholder = 'why is this pair unusable?';
   document.getElementById('pos').textContent = i+1;
   document.getElementById('total').textContent = ROWS.length;
   document.getElementById('bar').style.width =
@@ -176,8 +182,15 @@ function render(){
   document.getElementById('prem').textContent = r.premise;
   document.getElementById('hyp').textContent = r.hypothesis;
 }
-function decide(label){
-  DECISIONS[ROWS[i].record_id] = {label, decided_at_utc:new Date().toISOString()};
+function decide(label, reason){
+  if(label==='invalid'){
+    const r = document.getElementById('reason').value.trim();
+    DECISIONS[ROWS[i].record_id] = {label:'invalid',
+      reason: r || 'malformed_or_semantically_nonsensical',
+      decided_at_utc:new Date().toISOString()};
+  } else {
+    DECISIONS[ROWS[i].record_id] = {label, decided_at_utc:new Date().toISOString()};
+  }
   if(i < ROWS.length-1){ i++; }
   render();
 }
@@ -185,6 +198,7 @@ document.addEventListener('keydown', e=>{
   if(e.key==='1') decide('entailment');
   else if(e.key==='2') decide('neutral');
   else if(e.key==='3') decide('contradiction');
+  else if(e.key==='4') decide('invalid', document.getElementById('reason').value);
   else if(e.key==='ArrowLeft' && i>0){ i--; render(); }
   else if(e.key==='ArrowRight' && i<ROWS.length-1){ i++; render(); }
   else if(e.key.toLowerCase()==='e'){
