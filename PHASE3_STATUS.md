@@ -37,7 +37,7 @@
 | M23 | Leakage-safe split builder | PASS | dataset_splits.py: groups from provenance.source_case_id (whole groups to ONE split via stable SHA256 hash -> 70/15/15); deterministic across runs; leakage_report catches any group spanning splits (contaminated-fixture test proves the gate FAILS) + UNASSIGNED accounting; assert_no_leakage helper for release gates; 5 tests |
 | M24 | Adversarial dataset expansion | NOT_STARTED | — |
 | M25 | Gold review pack generation | PASS | data/phase3/gold/: gold_review.csv 320 rows stratified across all 18 families (labels 121C/98E/101N), suggested_label column LAST for anti-anchoring; self-contained keyboard-driven HTML reviewer (1/2/3 labels, arrows, E-export to gold_decisions.json, localStorage persistence); INSTRUCTIONS.md with orientation + procedure; manifest PENDING_HUMAN_REVIEW + csv sha256; 5 tests; suite 495/495 |
-| M26 | HUMAN GATE 1 — gold review | NOT_STARTED | — |
+| M26 | HUMAN GATE 1 — gold review | PENDING_HUMAN | pack READY at data/phase3/gold/ (320 stratified cases, HTML keyboard reviewer, INSTRUCTIONS.md, export flow); human reviews on wake; downstream gates (final model selection, threshold freeze) stamped PENDING_GOLD_VALIDATION until then |
 | M27 | Finalize AgentPay-IR v1 | NOT_STARTED | — |
 | M28 | DeBERTa baseline A eval | NOT_STARTED | — |
 | M29 | DeBERTa baseline B eval | NOT_STARTED | — |
@@ -825,3 +825,27 @@ labels only. Volume target 650 with a 300-minute wall budget; partial counts
 are recorded honestly in `data/phase3/dataset/candidates/last_run.json`.
 M21 validator (`dataset_quality.py`, 5 tests) landed first so every produced
 candidate can be gated as it arrives.
+
+
+## M26 — HUMAN GATE 1: Gold Review (PENDING_HUMAN)
+
+STATUS: PENDING_HUMAN (overnight deferred-gate mode per human authorization)
+
+### What is READY for the human
+- `data/phase3/gold/gold_review.html` — self-contained reviewer
+  (keyboard 1/2/3, arrows, E-export);
+- `data/phase3/gold/gold_review.csv` — 320 stratified rows;
+- `data/phase3/gold/INSTRUCTIONS.md` — orientation + procedure + export.
+
+### What the human must do (morning)
+1. Open gold_review.html; label all 320 cards; press E; save
+   `gold_decisions.json` into data/phase3/gold/.
+2. Tell the agent the file exists.
+
+### What stays blocked until then
+- FINAL model selection confirmation (M30 provisional stands);
+- FINAL threshold freeze (M37 provisional from validation split only);
+- any metric described as final gold-test performance.
+
+### Overnight policy decisions recorded
+- D-043: dependency-aware deferred-human-gate mode + reduced-volume policy.

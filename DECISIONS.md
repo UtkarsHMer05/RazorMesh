@@ -955,3 +955,21 @@ outage cannot bypass the human), and preserves P3-S13/P3-S20 auditability.
 Recorded limitations: merchant-name→id resolution deferred (semantic layer);
 aggregate_budget/approval_threshold use conservative equals-max_total defaults
 until a later milestone lets the human state them explicitly.
+
+
+## D-043 — Overnight execution policy for Phase 3 (human-authorized 2026-08-26)
+
+Human authorized: (1) reduced Qwen candidate volume (~600-800 target, quality
+over quota) with resumable/idempotent/hash-cached generation, Retry-After
+respect, bounded backoff+jitter, dead-window circuit breaker, no paid-model
+fallback, no fabricated outputs; (2) full Colab/training PREPARATION tonight
+with zero-shot DeBERTa baseline as PROVISIONAL SemanticVerifier and every
+trained-artifact-dependent result marked PENDING_COLAB/PENDING_HUMAN; (3)
+complete gold-review PACK generated now with actual review deferred to morning
+— machine metrics marked PENDING_GOLD_VALIDATION until then, thresholds tuned
+on validation data only; (4) dependency-aware deferred-human-gate mode:
+automatable parts proceed with honest PENDING/BLOCKED statuses, a dependency
+list of reruns maintained, and no milestone ever marked PASS without its
+required evidence. Morning report required (PHASE3_OVERNIGHT_REPORT.md).
+
+Security consequences: preserves P3-S03/S09/S10/S12/S14/S20 verbatim.
