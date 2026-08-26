@@ -43,7 +43,7 @@
 | M29 | DeBERTa baseline B eval | PASS | cross-encoder/nli-deberta-v3-base (Apache-2.0, ONNX available) identical harness: val acc 0.637 / macroF1 0.607 / contra_recall 0.704; test acc 0.606 / macroF1 0.589; docs/PHASE3_NLI_BASELINE_B_METRICS.json |
 | M30 | Baseline selection | NOT_STARTED | — |
 | M31 | Reproducible training bundle | NOT_STARTED | — |
-| M32 | Colab notebook | NOT_STARTED | — |
+| M32 | Colab notebook | PASS | notebooks/RazorGuard_NLI_Phase3_Training.ipynb (13 cells): GPU assert, pinned installs, bundle upload+hash verification BEFORE training, config-driven Trainer (seed 42, macro_f1 best-model selection), artifact packaging w/ label_map.json+metrics.json+base_model.txt; LOCAL SMOKE of identical logic PASSED on CPU (24 rows/1 epoch, train 29.2s, eval_loss 0.06) via services/ml-venv |
 | M33 | Colab preflight bundle | NOT_STARTED | — |
 | M34 | HUMAN GATE 2 — Colab training | NOT_STARTED | — |
 | M35 | Training artifact verification | NOT_STARTED | — |
