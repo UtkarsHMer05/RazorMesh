@@ -1,0 +1,22 @@
+{
+  "policy_version": "semantic-thresholds-v1",
+  "model": "cross-encoder/nli-deberta-v3-base",
+  "calibrated_on": "validation split ONLY (never gold, never test)",
+  "rows_used": 171,
+  "selected": {
+    "tau_block": 0.36,
+    "tau_entail": 0.4,
+    "contradiction_recall_on_val": 0.7037,
+    "block_precision_on_val": 0.9268,
+    "block_f2_on_val": 0.7393,
+    "false_blocks_on_val_entailment": 2
+  },
+  "constraints": {
+    "max_false_block_rate_on_entailment": 0.05,
+    "objective": "F2.0 of BLOCK class (recall-weighted)"
+  },
+  "action_rule": "BLOCK if p_contradiction>=tau_block; else ENTAIL if p_entailment>=tau_entail; else CHALLENGE",
+  "fusion_note": "semantics can only STRICTEN deterministic RazorGuard decisions",
+  "gold_validation_status": "PENDING_GOLD_VALIDATION",
+  "created_at_utc": "2026-08-26T01:15:51.539817+00:00"
+}

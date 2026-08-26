@@ -48,7 +48,7 @@
 | M34 | HUMAN GATE 2 — Colab training | PENDING_COLAB | bundle verified at artifacts/phase3_colab_training_bundle.zip; human will run notebook on T4 GPU in the morning and hand back phase3-finetuned.zip; agent continues downstream with PROVISIONAL baseline B so no milestone is blocked |
 | M35 | Training artifact verification | PASS (harness) | rzp_verify_training.py artifact mode tested against synthetic fixtures (complete/incomplete/label-space violations); REAL artifact verification deferred to post-M34 hand-back — rerun required after Colab |
 | M36 | Fine-tuned vs baseline evaluation | NOT_STARTED | — |
-| M37 | Threshold calibration | NOT_STARTED | — |
+| M37 | Threshold calibration | PASS (PROVISIONAL) | calibrated on frozen VAL split ONLY: tau_block=0.36 tau_entail=0.40 -> contradiction recall 0.704 @ block precision 0.927, false-blocks on entailment 2/171 (<=5% cap); objective F2(BLOCK); first calibration attempt degenerate (tau=1.0/recall 0) -> reformulated honestly; policy manifest data/phase3/policy/semantic_thresholds.json stamped PENDING_GOLD_VALIDATION; single gold/test evaluation deferred to post-gold-review rerun list |
 | M38 | Production SemanticVerifier | NOT_STARTED | — |
 | M39 | SemanticEvidenceBuilder | NOT_STARTED | — |
 | M40 | Conservative policy fusion | NOT_STARTED | — |
