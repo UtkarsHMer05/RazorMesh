@@ -45,8 +45,8 @@
 | M31 | Reproducible training bundle | NOT_STARTED | — |
 | M32 | Colab notebook | PASS | notebooks/RazorGuard_NLI_Phase3_Training.ipynb (13 cells): GPU assert, pinned installs, bundle upload+hash verification BEFORE training, config-driven Trainer (seed 42, macro_f1 best-model selection), artifact packaging w/ label_map.json+metrics.json+base_model.txt; LOCAL SMOKE of identical logic PASSED on CPU (24 rows/1 epoch, train 29.2s, eval_loss 0.06) via services/ml-venv |
 | M33 | Colab preflight bundle | PASS | artifacts/phase3_colab_training_bundle.zip (755KB, 8 entries): notebook + frozen train/val + config + manifest + requirements-frozen + verify script; bundle VERIFY PASS; ready for human upload at M34 |
-| M34 | HUMAN GATE 2 — Colab training | NOT_STARTED | — |
-| M35 | Training artifact verification | NOT_STARTED | — |
+| M34 | HUMAN GATE 2 — Colab training | PENDING_COLAB | bundle verified at artifacts/phase3_colab_training_bundle.zip; human will run notebook on T4 GPU in the morning and hand back phase3-finetuned.zip; agent continues downstream with PROVISIONAL baseline B so no milestone is blocked |
+| M35 | Training artifact verification | PASS (harness) | rzp_verify_training.py artifact mode tested against synthetic fixtures (complete/incomplete/label-space violations); REAL artifact verification deferred to post-M34 hand-back — rerun required after Colab |
 | M36 | Fine-tuned vs baseline evaluation | NOT_STARTED | — |
 | M37 | Threshold calibration | NOT_STARTED | — |
 | M38 | Production SemanticVerifier | NOT_STARTED | — |
