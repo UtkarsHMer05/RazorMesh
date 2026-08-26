@@ -38,7 +38,7 @@
 | M24 | Adversarial dataset expansion | NOT_STARTED | — |
 | M25 | Gold review pack generation | PASS | data/phase3/gold/: gold_review.csv 320 rows stratified across all 18 families (labels 121C/98E/101N), suggested_label column LAST for anti-anchoring; self-contained keyboard-driven HTML reviewer (1/2/3 labels, arrows, E-export to gold_decisions.json, localStorage persistence); INSTRUCTIONS.md with orientation + procedure; manifest PENDING_HUMAN_REVIEW + csv sha256; 5 tests; suite 495/495 |
 | M26 | HUMAN GATE 1 — gold review | PENDING_HUMAN | pack READY at data/phase3/gold/ (320 stratified cases, HTML keyboard reviewer, INSTRUCTIONS.md, export flow); human reviews on wake; downstream gates (final model selection, threshold freeze) stamped PENDING_GOLD_VALIDATION until then |
-| M27 | Finalize AgentPay-IR v1 | NOT_STARTED | — |
+| M27 | Finalize AgentPay-IR v1 | PASS | frozen_v1: 1021 records (train 723 / val 171 / test 127) from seed+adversarial+candidates-at-freeze; whole-group splits via P3-M23 builder; leakage gate PASSED; per-split sha256 in frozen_manifest; gold_validation_status=PENDING_GOLD_VALIDATION stamped honestly (refresh to v2 possible pre-M48 as candidates grow); 5 tests |
 | M28 | DeBERTa baseline A eval | NOT_STARTED | — |
 | M29 | DeBERTa baseline B eval | NOT_STARTED | — |
 | M30 | Baseline selection | NOT_STARTED | — |

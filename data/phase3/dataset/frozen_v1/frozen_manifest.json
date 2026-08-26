@@ -1,0 +1,43 @@
+{
+  "format_version": "agentpay-ir-v0.1",
+  "frozen_version": "v1",
+  "frozen_at_utc": "2026-08-26T00:29:07.628770+00:00",
+  "sources": {
+    "seed": 915,
+    "adversarial": 38,
+    "candidates": 68
+  },
+  "total_records": 1021,
+  "counts_by_split": {
+    "train": 723,
+    "val": 171,
+    "test": 127
+  },
+  "labels_by_split": {
+    "train": {
+      "entailment": 243,
+      "contradiction": 248,
+      "neutral": 232
+    },
+    "val": {
+      "entailment": 61,
+      "contradiction": 54,
+      "neutral": 56
+    },
+    "test": {
+      "entailment": 40,
+      "contradiction": 43,
+      "neutral": 44
+    },
+    "UNASSIGNED": {}
+  },
+  "leakage_passed": true,
+  "leaked_groups": [],
+  "file_sha256": {
+    "train": "13cc5d6f130d61f1ae3040c4416072486711965a5a9bc739a7dd6ce7dbd4e552",
+    "val": "551c8b44752a5b09fd0085f0ad969def1fa770cf649932e26edfcfa6abaae13a",
+    "test": "1756a4fa9d78a0de4d7e05c8104a8412fdbbf59cf60ade34087749402d2abdaf"
+  },
+  "gold_validation_status": "PENDING_GOLD_VALIDATION",
+  "note": "splits are whole-group; qwen_provisional rows await human gold review"
+}
