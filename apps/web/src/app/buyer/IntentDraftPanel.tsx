@@ -99,7 +99,7 @@ export function IntentDraftPanel() {
 
   return (
     <section className="card" data-testid="intent-draft-panel">
-      <h2 className="page-title">AI authorization draft</h2>
+      <h2 className="card__title">AI authorization draft</h2>
       <p className="page-sub">
         Describe what you allow in your own words. The AI only drafts a
         structured proposal — nothing becomes authority until you confirm it.

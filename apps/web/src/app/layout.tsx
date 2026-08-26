@@ -1,37 +1,51 @@
-import type { Metadata } from "next";
-import { ClientNav } from "@/components/client-nav";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Outfit, Inter } from 'next/font/google';
+import { SiteNav } from '@/components/site-nav';
+import './globals.css';
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  weight: ['400', '500', '700', '900'],
+  display: 'swap',
+  variable: '--font-outfit',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  display: 'swap',
+  variable: '--font-inter',
+});
 
 export const metadata: Metadata = {
-  title: "RazorMesh Trust",
+  title: 'RazorMesh Trust — Intent-to-Execution Integrity',
   description:
-    "Runtime trust infrastructure for agentic commerce — local prototype (Test Mode, no real money).",
+    'RazorMesh verifies intent, semantics, and execution before an AI agent can move money. Local prototype (Test Mode, no real money).',
+  metadataBase: new URL('http://localhost:3000'),
+  openGraph: {
+    title: 'RazorMesh Trust',
+    description:
+      'Runtime trust infrastructure for agentic commerce. The AI proposes; RazorGuard authorizes; the trusted executor executes.',
+    type: 'website',
+  },
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
-        <div className="mock-banner" role="note" data-testid="mock-provider-banner">
-          TEST ENVIRONMENT — NO REAL MONEY — UNOFFICIAL PROTOTYPE (MOCK OR RAZORPAY
-          TEST MODE)
+    <html lang="en" className={`${outfit.variable} ${inter.variable}`} suppressHydrationWarning>
+      <body className={outfit.className}>
+        <div
+          className="mock-banner"
+          role="note"
+          data-testid="mock-provider-banner"
+        >
+          TEST ENVIRONMENT — NO REAL MONEY — UNOFFICIAL PROTOTYPE (MOCK OR
+          RAZORPAY TEST MODE)
         </div>
-        <header className="header">
-          <div className="container header-inner">
-            <div className="brand">
-              <span className="brand-name">RazorMesh Trust</span>
-              <span className="brand-sub">
-                Built for Razorpay Buildathon · unofficial prototype
-              </span>
-            </div>
-            <nav aria-label="Primary">
-              <ClientNav />
-            </nav>
-          </div>
-        </header>
-        <main className="main container">{children}</main>
+        <SiteNav />
+        <main className="main">{children}</main>
       </body>
     </html>
   );

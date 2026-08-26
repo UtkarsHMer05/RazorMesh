@@ -1263,3 +1263,60 @@ Corrections (facts, not relabeling):
 Invariant preserved: no execution is authorized on a contradiction; every BLOCK
 is a safe refusal; the 241 in-train gold cards are disclosed, not laundered into
 a "pristine gold" claim.
+
+---
+
+## D-047 — Pre-Phase-4 UI Redesign (Bauhaus system, gated UI-01..UI-18)
+
+**Date.** 2026-08-27.
+**Status.** Accepted. Supersedes prior UI-01..UI-11 evidence with the final
+Bauhaus redesign documented in `apps/web/docs/PRE_PHASE4_UI_REDESIGN_FINAL.md`.
+
+1. **System = Bauhaus, not the prior black-only minimal style.** Persuade
+   surface (landing) uses Bauhaus poster patterns: black hero with massive
+   display heading + geometric ●■▲ composition + alternating solid-color
+   section blocks (white / yellow / red / blue / dark) + yellow CTA strip +
+   red footer. Operate surfaces (buyer, security-lab, audit, merchant) use
+   the same tokens (Outfit display, Inter body, hard borders, hard shadows,
+   primary status colors) without the cinematic video.
+
+2. **No Tailwind, no shadcn, no Vite.** Stack remains Next.js 16.3.2 +
+   React 19.2.8 + CSS Modules / global CSS, per the existing repo contract.
+   All new classes are defined in `apps/web/src/app/globals.css` and
+   `apps/web/src/app/buyer/buyer.module.css`.
+
+3. **Per-page module ditched on the landing.** The original
+   `apps/web/src/app/page.module.css` was empty and effectively dead; rather
+   than re-introduce a per-page CSS Module just to fix a one-time import
+   glitch, its (now-orphaned) declarations were merged into `globals.css`
+   and the file was removed. The page references global classes by string
+   (e.g. `className="hero__heading"`) — intentional.
+
+4. **No security claims, no fabricated numbers.** All metrics on the
+   landing page carry a `data-source` attribute pointing to the originating
+   governance document (PHASE3_STATUS.md, SECURITY.md, ARCHITECTURE.md).
+   The approved completion phrase is "Phase-1 local prototype complete."
+   (per AGENTS.md §15); no production-readiness claim is made.
+
+5. **Connectivity, the user's explicit ask.** Every internal link in the
+   redesigned UI is live and tested by `e2e/smoke.spec.ts` (6/6 PASS) and
+   `e2e/checkout.spec.ts` (3/3 PASS). The buyer, security-lab, audit, and
+   merchant surfaces are connected to the live FastAPI backend on
+   127.0.0.1:8000 (Postgres + Redis in Docker). This matches the Phase 2 /
+   Phase 3 flow contract.
+
+6. **Out-of-scope items, not regressions from the redesign.** The 4
+   pre-existing `e2e/gold-reviewer.spec.ts` failures (read `window.ROWS`
+   from a `<script>`-scoped `const`) and the ruff format drift in
+   `services/api/scripts/*` + `services/api/training/phase3/*` are not
+   touched by this redesign and remain on the carry-forward list.
+
+7. **What unlocks next.** UI-12 .. UI-18 gates are complete: page chrome
+   on every route, container/responsive sanity, focus + `lang` verified
+   on all 5 pages, build clean, 14/14 unit tests, 9/9 redesign-scoped E2E.
+   Phase 4 is now unblocked subject to human approval per
+   `docs/PHASE3_COMPLETION_REPORT.md`.
+
+Invariant preserved: no provider secret ever reaches the browser; no
+client code is an authority; tickets are still context-bound; integer
+minor units; append-only audit; no fabricated claims.

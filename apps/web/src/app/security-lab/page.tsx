@@ -72,9 +72,10 @@ export default function SecurityLabPage() {
 
   return (
     <section aria-labelledby="lab-title">
-      <h1 className="page-title" id="lab-title">
-        Security Lab — Synthetic Attack Simulation
-      </h1>
+      <div className="container">
+        <h1 className="page-title" id="lab-title">
+          Security Lab — Synthetic Attack Simulation
+        </h1>
       <p className="page-sub">
         Defensive demonstration only. Scenarios run against this local system&apos;s real
         authorization path; nothing here attacks Razorpay or any third party. Results are
@@ -148,6 +149,7 @@ export default function SecurityLabPage() {
           </div>
         </>
       )}
+      </div>
     </section>
   );
 }

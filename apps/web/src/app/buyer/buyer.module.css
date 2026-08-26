@@ -1,0 +1,72 @@
+/* Operate-mode buyer page (UI-11).
+ * Steps + decision verdict — keeps the inline-class contract used by
+ * apps/web/src/app/buyer/page.tsx but localises the CSS so the global
+ * stylesheet does not grow per-page.
+ */
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-block: 8px;
+}
+
+.step h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--rm-fg);
+  font-family: var(--rm-font-display);
+}
+
+.step-done {
+  border-color: var(--rm-line);
+  background: var(--rm-white);
+}
+
+.step-active {
+  border-color: var(--rm-fg);
+  box-shadow: var(--rm-shadow-3);
+}
+
+.decision-allow {
+  display: inline-block;
+  color: var(--rm-white);
+  background: var(--rm-blue);
+  border: 3px solid var(--rm-line);
+  padding: 8px 14px;
+  font-family: var(--rm-font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 14px;
+  box-shadow: var(--rm-shadow-2);
+}
+.decision-challenge {
+  display: inline-block;
+  color: var(--rm-fg);
+  background: var(--rm-yellow);
+  border: 3px solid var(--rm-line);
+  padding: 8px 14px;
+  font-family: var(--rm-font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 14px;
+  box-shadow: var(--rm-shadow-2);
+}
+.decision-block {
+  display: inline-block;
+  color: var(--rm-white);
+  background: var(--rm-red);
+  border: 3px solid var(--rm-line);
+  padding: 8px 14px;
+  font-family: var(--rm-font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 14px;
+  box-shadow: var(--rm-shadow-2);
+}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { IntentDraftPanel } from "./IntentDraftPanel";
 import { loadRazorpayCheckout } from "@/lib/razorpay";
+import styles from "./buyer.module.css";
 
 type Product = {
   id: string;
@@ -272,21 +273,22 @@ export default function BuyerPage() {
   };
 
   const stepClass = (done: boolean, active: boolean) =>
-    `card step ${done ? "step-done" : ""} ${active ? "step-active" : ""}`;
+    `card ${styles.step} ${done ? styles['step-done'] : ''} ${active ? styles['step-active'] : ''}`;
 
   return (
     <section aria-labelledby="buyer-title">
-      <IntentDraftPanel />
-      <h1 className="page-title" id="buyer-title">
-        Buyer experience
-      </h1>
-      <p className="page-sub">
-        Fixture authorization → catalog → proposed checkout → RazorGuard decision →
-        simulated execution. Every decision is produced by the backend — never by this UI.
-      </p>
+      <div className="container">
+        <h1 className="page-title" id="buyer-title" style={{ marginBottom: 24 }}>
+          Buyer experience
+        </h1>
+        <IntentDraftPanel />
+        <p className="page-sub">
+          Fixture authorization → catalog → proposed checkout → RazorGuard decision →
+          simulated execution. Every decision is produced by the backend — never by this UI.
+        </p>
 
       {error && (
-        <div className="card" role="alert" data-testid="buyer-error" style={{ borderColor: "#b00" }}>
+        <div className="card" role="alert" data-testid="buyer-error">
           {error}
         </div>
       )}
@@ -352,7 +354,7 @@ export default function BuyerPage() {
           <>
             <p
               data-testid="decision-banner"
-              className={`decision-${decision.decision.toLowerCase()}`}
+              className={styles[`decision-${decision.decision.toLowerCase()}`]}
             >
               {decision.decision}
               {decision.reason_codes.length > 0 && <> — {decision.reason_codes.join(", ")}</>}
@@ -453,6 +455,7 @@ export default function BuyerPage() {
           This UI holds no privileges. Any execution attempt requires a signed,
           context-bound ticket that the backend re-verifies against durable state.
         </p>
+      </div>
       </div>
     </section>
   );

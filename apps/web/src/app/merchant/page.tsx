@@ -60,7 +60,8 @@ export default function MerchantPage() {
 
   return (
     <section aria-labelledby="merchant-title">
-      <h1 className="page-title" id="merchant-title">Merchant surface</h1>
+      <div className="container">
+        <h1 className="page-title" id="merchant-title">Merchant surface</h1>
       <p className="page-sub">
         Live synthetic catalog state used by the buyer flow and Security Lab. Merchant
         descriptions remain untrusted data; prices, condition, currency, fees and recurring
@@ -90,6 +91,7 @@ export default function MerchantPage() {
             ))}
           </tbody>
         </table>
+      </div>
       </div>
     </section>
   );

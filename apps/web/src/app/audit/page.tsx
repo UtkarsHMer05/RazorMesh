@@ -112,9 +112,10 @@ export default function AuditPage() {
 
   return (
     <section aria-labelledby="audit-title">
-      <h1 className="page-title" id="audit-title">
-        Audit dashboard
-      </h1>
+      <div className="container">
+        <h1 className="page-title" id="audit-title">
+          Audit dashboard
+        </h1>
       <p className="page-sub">
         Chronological evidence timeline with hashes and reason codes, reservation/execution
         state inspector, chain verification, and a visible tamper test. UI reflects stored
@@ -208,6 +209,7 @@ export default function AuditPage() {
             </li>
           ))}
         </ol>
+      </div>
       </div>
     </section>
   );
