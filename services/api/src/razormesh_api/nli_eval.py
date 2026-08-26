@@ -107,17 +107,17 @@ class EvalMetrics:
 def compute_metrics(gold: list[str], pred: list[str]) -> EvalMetrics:
     assert len(gold) == len(pred) and gold, "metric input mismatch/empty"
     confusion: dict[str, dict[str, int]] = {g: {p: 0 for p in LABELS} for g in LABELS}
-    for g, p in zip(gold, pred):
+    for g, p in zip(gold, pred, strict=True):
         confusion.setdefault(g, {q: 0 for q in LABELS})
         confusion[g][p] = confusion[g].get(p, 0) + 1
 
     per_class: dict[str, ClassMetrics] = {}
     f1s: list[float] = []
-    correct = sum(1 for g, p in zip(gold, pred) if g == p)
+    correct = sum(1 for g, p in zip(gold, pred, strict=True) if g == p)
     for label in LABELS:
-        tp = sum(1 for g, p in zip(gold, pred) if g == label and p == label)
-        fp = sum(1 for g, p in zip(gold, pred) if g != label and p == label)
-        fn = sum(1 for g, p in zip(gold, pred) if g == label and p != label)
+        tp = sum(1 for g, p in zip(gold, pred, strict=True) if g == label and p == label)
+        fp = sum(1 for g, p in zip(gold, pred, strict=True) if g != label and p == label)
+        fn = sum(1 for g, p in zip(gold, pred, strict=True) if g == label and p != label)
         support = sum(1 for g in gold if g == label)
         precision = tp / (tp + fp) if tp + fp else 0.0
         recall = tp / (tp + fn) if tp + fn else 0.0
@@ -135,7 +135,7 @@ def compute_metrics(gold: list[str], pred: list[str]) -> EvalMetrics:
     )
 
 
-def iter_split(path: Path):
+def iter_split(path: Path) -> Any:
     for line in path.read_text().splitlines():
         if line.strip():
             yield json.loads(line)

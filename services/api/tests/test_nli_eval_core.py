@@ -1,11 +1,12 @@
 """P3-M28/M29 core: label maps pinned to HF cards + metric math (no torch)."""
 
 import pytest
+
 from razormesh_api.nli_eval import (
     MODEL_LABEL_MAPS,
+    argmax_to_project_label,
     compute_metrics,
     normalize_label,
-    argmax_to_project_label,
 )
 
 
