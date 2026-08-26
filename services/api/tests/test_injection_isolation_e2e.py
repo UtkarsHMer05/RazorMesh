@@ -8,18 +8,19 @@
    and NO durable authority row is created or modified anywhere in the flow.
 """
 
-import httpx
 import json
+
+import httpx
 
 from razormesh_api.intent_compilation_service import IntentCompilationService
 from razormesh_api.intent_compiler import TokenRouterClient
+from razormesh_api.semantic_evidence import CommerceEvidence, build_pairs
 from razormesh_api.semantic_verifier import (
     DeterministicDecision,
     SemanticVerdict,
     apply_threshold_policy,
     fuse,
 )
-from razormesh_api.semantic_evidence import CommerceEvidence, build_pairs
 from razormesh_api.settings import get_settings
 
 
