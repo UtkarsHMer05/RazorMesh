@@ -58,6 +58,15 @@ class Provenance(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     generator: str = Field(min_length=3, max_length=64)
+    generator_model: str | None = Field(
+        default=None, max_length=160, exclude_if=lambda value: value is None
+    )
+    prompt_version: str | None = Field(
+        default=None, max_length=80, exclude_if=lambda value: value is None
+    )
+    batch_id: str | None = Field(
+        default=None, max_length=100, exclude_if=lambda value: value is None
+    )
     template_id: str | None = None
     source_case_id: str | None = None
     created_at_utc: datetime

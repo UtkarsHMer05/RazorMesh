@@ -69,7 +69,7 @@ def test_determinism_regenerate_identical_bytes(tmp_path, monkeypatch) -> None: 
             "/Users/utkarshkhajuria/.local/bin/uv",
             "run",
             "--project",
-            str(Path(__file__).resolve().parents[2]),
+            str(Path(__file__).resolve().parents[1]),
             "python",
             str(Path(__file__).resolve().parents[3] / "scripts" / "rzp_build_seed_dataset.py"),
         ],

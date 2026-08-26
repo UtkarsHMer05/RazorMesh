@@ -31,7 +31,7 @@
 | M17 | Human confirmation UI | PASS (standalone closure re-audit) | Natural-language compile→review→confirm/reject UI re-audited against the original M17 gate; structured hard/semantic/ambiguity/**unspecified** fields render; NEEDS_CLARIFICATION cannot confirm; backend remains source of truth; accidental real-network use in API tests removed via request-scoped compiler DI + deterministic cleanup; duplicate confirmation copy removed; backend 33-test regression subset, frontend 14/14, lint/tsc/build, mypy/Ruff, security scan all PASS; browser/build TokenRouter scan 0 hits |
 | M18 | AgentPay-IR taxonomy/schema | PASS | agentpay_ir.py v0.1: fixed NLI orientation (premise=trusted evidence, hypothesis=confirmed-authorization statement), 18 semantic families, label/source/difficulty vocabularies, Provenance+Review blocks, content_sha256 integrity binding (any mutation detected), split reserved for M23; 10 tests incl. tamper-detection + vocabulary enforcement; suite 463/463 |
 | M19 | Deterministic seed dataset | PASS | data/phase3/dataset/seed: 915 AgentPay-IR records (307 golden cases × entailment/contradiction/neutral templates; content-dedup 921→915); labels balanced within 5%; all 18 families covered; deterministic regeneration byte-identical (fixed provenance ts + derived record ids); label_source=template_truth throughout; 6 tests incl. ≥600 floor + manifest-hash binding; suite 469/469 |
-| M20 | Qwen candidate generator | NOT_STARTED | — |
+| M20 | Qwen candidate generator | PASS (standalone closure re-audit) | Live free-tier runner independently re-audited/repaired: stable seed-bound request ids, immediate atomic cache persistence, diversity-first OOD scheduling, JSON mode for thinking-model reliability, bounded retry/backoff/dead-window exit, sanitized persisted failures, and canonical provisional AgentPay-IR with model/prompt/batch/source provenance; 150 legacy rows migrated + 18 genuinely new v2 rows (10 hard; injection/safe-lookalike/seller-alias/trial-renewal each 3); no-op restart byte-stability proven; schema/lint/type/tests/security PASS; D-047 |
 | M21 | Candidate validation | NOT_STARTED | — |
 | M22 | Dedup / near-duplicate detection | PASS | dataset_dedup.py: exact dups via content hash; near-dups via token-Jaccard >=0.90 WITHIN (family,label) classes; union-find clusters w/ deterministic smallest-id canonical; cross-class collisions reported separately as suspected mislabels (never merged); 5 tests incl. determinism + ordering; generator also applies exact-normalized guard at generation time |
 | M23 | Leakage-safe split builder | PASS | dataset_splits.py: groups from provenance.source_case_id (whole groups to ONE split via stable SHA256 hash -> 70/15/15); deterministic across runs; leakage_report catches any group spanning splits (contaminated-fixture test proves the gate FAILS) + UNASSIGNED accounting; assert_no_leakage helper for release gates; 5 tests |
@@ -864,17 +864,61 @@ make security-check                         -> PASS
 - M20 — Qwen candidate generator (volume per overnight policy D-043).
 
 
-### M20 note — generator launched (IN_PROGRESS)
+### M20 standalone closure re-audit — PASS (2026-08-27)
 
-`scripts/rzp_generate_candidates.py` is running against the live free tier
-with the full overnight-policy control set: request-hash cache (idempotent
-restarts), immediate persistence, Retry-After respect, bounded exp backoff +
-jitter, dead-window circuit breaker (10 consecutive failures -> clean exit,
-resumable), exact-normalized near-dup guard at generation time, provisional
-labels only. Volume target 650 with a 300-minute wall budget; partial counts
-are recorded honestly in `data/phase3/dataset/candidates/last_run.json`.
-M21 validator (`dataset_quality.py`, 5 tests) landed first so every produced
-candidate can be gated as it arrives.
+Original acceptance: build a rate-limited, restartable Qwen generator for hard
+language, ambiguity, safe lookalikes and injection-like merchant text; labels
+must remain provisional; persist batch/model/prompt/failure provenance; never
+put secrets in dataset artifacts.
+
+Repairs and implementation evidence:
+- Replaced file-order/index identities with stable keys bound to prompt version
+  plus source record id/family/label/difficulty. A reorder test proves identity
+  stability; a no-op restart proved candidate and cache SHA-256 byte stability.
+- Added deterministic round-robin scheduling across
+  `(family,label,difficulty)` buckets, prioritizing injection resistance, safe
+  lookalikes, seller aliases, trial-renewal traps, membership insertion and
+  bundle obligations so a bounded free-tier run is useful even when interrupted.
+- Every provider success is atomically cached before row processing; accepted
+  rows and sanitized failures are flushed immediately. Retry-After, bounded
+  exponential backoff+jitter, a configurable dead-window circuit breaker, wall
+  budget and resumable exit evidence are retained. Provider bodies/credentials
+  are never persisted.
+- Qwen 3.8 JSON mode plus a sufficient token allowance repaired observed
+  thinking-model empty/malformed responses without switching to a paid model.
+- Extended optional provenance with `generator_model`, `prompt_version` and
+  `batch_id`; legacy template rows remain byte-identical because absent new
+  fields are excluded. Migrated all 150 compact candidate rows to canonical,
+  schema-validated AgentPay-IR with their real source record ids and retained
+  legacy request identities.
+
+Inspected live artifacts:
+- `candidates.jsonl`: 168/168 unique ids and hashes, all
+  `qwen_provisional`, none human-reviewed, complete per-row generator/model/
+  prompt/batch/source/request provenance.
+- v2 additions: 18 genuinely new records; labels 7 contradiction / 6 entailment
+  / 5 neutral; difficulty 10 hard / 4 medium / 4 easy; families include 3 each
+  injection-resistance, safe-lookalike, seller-alias and trial-renewal-trap,
+  plus brand/budget coverage. This is a bounded diversity repair, not a claim
+  that a raw 10k quota improves quality.
+- `manifest.json` binds the 168-row file hash and distributions;
+  `failures.jsonl` retains 8 malformed-response and 2 transient-503 attempts as
+  sanitized evidence; regex secret scan across all candidate artifacts = 0.
+
+Validation:
+```text
+ruff format/check (M20 paths)                         PASS
+mypy (schema + helpers + runner)                      PASS
+pytest candidate_generation + AgentPay-IR             PASS (13)
+pytest data/compiler/settings regression selection    PASS
+seed deterministic regeneration                       PASS
+pytest backend full regression                         PASS (525)
+make security-check                                    PASS (0 findings)
+live run target 168                                   PASS / target_reached
+no-op restart                                         PASS / candidate+cache byte-stable
+```
+
+Decision: D-047. Next standalone gate: M21 candidate validation.
 
 
 ## M26 — HUMAN GATE 1: Gold Review (PENDING_HUMAN)

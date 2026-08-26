@@ -30,16 +30,16 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust
 **Active phase:** Phase 3 ACTIVE (human-approved 2026-08-25)
-**Current milestone:** Phase-3 completion re-audit — P3-M17 standalone closure
-PASS; P3-M20 is next. M48/M49/M50 are intentionally reopened until every
+**Current milestone:** Phase-3 completion re-audit — P3-M20 standalone closure
+PASS; P3-M21 is next. M48/M49/M50 are intentionally reopened until every
 master-prompt gate and the owner's closure corrections pass.
-**Last updated:** 2026-08-27 (P3-M17 standalone closure re-audit)
-**Gate:** M17 now proves the full compile→structured review (including
-ambiguities and unspecified fields)→confirm/reject UI, backend authority, and
-zero browser secret exposure. The closure also removed accidental external
-network use from API tests through request-scoped compiler dependency injection.
-Ruff/mypy clean; backend regression subset 33 passed; frontend 14 passed plus
-lint/typecheck/build; security scan and browser bundle scan 0 findings. No push.
+**Last updated:** 2026-08-27 (P3-M20 standalone closure re-audit)
+**Gate:** M20 now proves a stable, restartable, free-tier-only candidate runner
+with diversity-first OOD scheduling, atomic cache/results, sanitized failures,
+and complete model/prompt/batch/source provenance. All 150 legacy rows were
+canonicalized; 18 live v2 additions cover injection, safe-lookalike,
+seller-alias and renewal-trap families (10 hard). Candidate/cache no-op restart
+is byte-stable; lint/types/data regressions/security scan PASS. No push.
 
 ---
 

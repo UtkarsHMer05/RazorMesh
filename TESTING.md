@@ -395,7 +395,10 @@ On top of all Phase-1/2 gates:
 4. Dataset gates: schema validators (M18), provenance/hash integrity, label-
    consistency heuristics (M21), duplicate contamination caught by tests (M22),
    group-split leakage tests that FAIL on intentionally contaminated fixtures
-   (M23).
+   (M23). Candidate generation additionally proves request identity is stable
+   across seed reorder/restart, bounded-run prefixes span semantic buckets, a
+   no-op restart preserves candidate/cache bytes, generated labels are
+   provisional, and persisted dataset/failure artifacts contain no credentials.
 5. NLI harness: identical evaluation code across baselines with per-model
    pinned label maps unit-tested against card-declared orders (M28/M29).
 6. Fusion: exhaustive matrix test + Hypothesis property proving semantic

@@ -1083,3 +1083,39 @@ Follow-up: M37 re-freeze + status flip (done in this same turn);
 M38 verifier wiring (label_map read from artifact, done in this turn);
 M45/M46/M47 e2e re-run (done in this turn); M48/M49 full battery
 + clean-room rerun; M50 completion report.
+
+
+## D-047 — Prefer bounded OOD diversity and complete provenance over a raw candidate quota
+
+Date: 2026-08-27
+Milestone: P3-M20 standalone closure re-audit
+Status: Accepted
+Affected docs/code: `PHASE3_STATUS.md`, `MEMORY.md`,
+`scripts/rzp_generate_candidates.py`, `agentpay_ir.py`,
+`candidate_generation.py`, `data/phase3/dataset/candidates/`.
+
+Context: the original resumable live run had produced 150 provisional rows, but
+141 were easy budget examples and 9 were easy currency examples. File-order
+iteration and index-derived request keys meant an interrupted run produced a
+low-diversity prefix and reordering the seed pool changed request identities.
+Compact result rows also omitted the source record id, actual reported model,
+prompt version and batch id; failures were printed rather than retained.
+
+Decision: keep Qwen labels strictly provisional and make every request identity
+stable from prompt version plus source semantic identity. Schedule seed buckets
+round-robin with OOD/adversarial families first, persist each successful response
+atomically, retain only sanitized failure metadata, and store complete per-row
+model/prompt/batch/source/request provenance. A finite high-quality batch is
+acceptable; Phase 3 does not claim that reaching an arbitrary 10k count would
+improve safety. The closure added 18 live v2 rows, including three each for
+injection resistance, safe lookalikes, seller aliases and trial-renewal traps.
+
+Compatibility: the 150 compact legacy rows were deterministically mapped back
+to their original seed records and migrated to canonical AgentPay-IR. New
+optional provenance fields serialize only when present, preserving byte-exact
+regeneration of pre-existing template-truth seed data.
+
+Consequences: M21 remains responsible for rejecting semantically or structurally
+bad provisional rows; M22 remains responsible for fuzzy near-duplicate analysis;
+M24 must add independent adversarial/OOD families rather than treating these 18
+rows or any numerical quota as sufficient final-test evidence.

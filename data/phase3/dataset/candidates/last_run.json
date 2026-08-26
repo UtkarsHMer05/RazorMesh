@@ -1,0 +1,17 @@
+{
+  "milestone": "P3-M20",
+  "start_count": 168,
+  "produced_total": 168,
+  "produced_this_run": 0,
+  "attempted_this_run": 0,
+  "duplicates_skipped_this_run": 0,
+  "rejected_invalid_this_run": 0,
+  "legacy_rows_upgraded": 0,
+  "exit_reason": "target_reached",
+  "exit_code": 0,
+  "generator": "qwen3.8-max-free@tokenrouter",
+  "prompt_version": "candidate-gen-v2",
+  "finished_at_utc": "2026-08-26T19:55:44.661764+00:00",
+  "manifest_sha256": "0d916601c0629814be263bbdda381580eb07cd03e2583e84f4518538cfae5020",
+  "family_count": 7
+}

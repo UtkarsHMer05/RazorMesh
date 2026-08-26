@@ -1,0 +1,42 @@
+{
+  "milestone": "P3-M20",
+  "schema": "agentpay-ir-v0.1",
+  "generator": "qwen3.8-max-free@tokenrouter",
+  "current_prompt_version": "candidate-gen-v2",
+  "prompt_versions": {
+    "candidate-gen-v1": 150,
+    "candidate-gen-v2": 18
+  },
+  "batch_ids": {
+    "phase3-m20-qwen-candidates-v1": 150,
+    "phase3-m20-qwen-candidates-v2": 18
+  },
+  "records": 168,
+  "label_source": {
+    "qwen_provisional": 168
+  },
+  "by_family": {
+    "brand_identity": 1,
+    "budget_ceiling": 146,
+    "currency_binding": 9,
+    "injection_resistance": 3,
+    "safe_lookalike": 3,
+    "seller_alias": 3,
+    "trial_renewal_trap": 3
+  },
+  "by_label": {
+    "contradiction": 38,
+    "entailment": 70,
+    "neutral": 60
+  },
+  "by_difficulty": {
+    "easy": 154,
+    "hard": 10,
+    "medium": 4
+  },
+  "results_sha256": "81a8a9bef1d23b7bd621018befa335cba1ec21f7099c0f650f71138fc9dd0c1d",
+  "failures_recorded": 10,
+  "labels_are_provisional": true,
+  "contains_credentials": false,
+  "generated_at_utc": "2026-08-26T19:55:44.659553+00:00"
+}

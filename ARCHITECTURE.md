@@ -624,4 +624,7 @@ hash, prompt version/hash, schema version, threshold manifest — never secrets.
 
 Data plane: AgentPay-IR lives under data/phase3 (schema-validated, provenance-
 complete, group-split, hash-manifested); training artifacts are manifests+
-hashes in Git with weights ignored locally.
+hashes in Git with weights ignored locally. Generated candidate provenance is
+row-level and binds the reported generator model, prompt version, batch id,
+source case id and stable request id; provider failures are retained separately
+as sanitized metadata and generated labels remain provisional until validation.
