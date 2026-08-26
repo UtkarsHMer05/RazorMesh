@@ -1,0 +1,79 @@
+{
+  "generated_at_utc": "2026-08-26T02:10:00.037811+00:00",
+  "model": "cross-encoder/nli-deberta-v3-base",
+  "split": "test",
+  "rows": 127,
+  "e2e": {
+    "policy": {
+      "tau_block": 0.36,
+      "tau_entail": 0.4
+    },
+    "variant": "fusion",
+    "block_tp": 29,
+    "block_fp": 2,
+    "block_fn": 14,
+    "block_precision": 0.9355,
+    "block_recall": 0.6744,
+    "block_f1": 0.7838,
+    "unsafe_allows": 1
+  },
+  "ablation": {
+    "rules_only_no_semantic_layer": {
+      "variant": "rules_only",
+      "block_tp": 0,
+      "block_fp": 0,
+      "block_fn": 43,
+      "block_precision": 0.0,
+      "block_recall": 0.0,
+      "block_f1": 0.0,
+      "unsafe_allows": 0
+    },
+    "block_only_never_fires": {
+      "variant": "block_only",
+      "block_tp": 0,
+      "block_precision": 0.0,
+      "block_recall": 0.0,
+      "block_f1": 0.0,
+      "unsafe_allows": 0
+    },
+    "full_fusion_calibrated": {
+      "variant": "fusion",
+      "block_tp": 29,
+      "block_fp": 2,
+      "block_fn": 14,
+      "block_precision": 0.9355,
+      "block_recall": 0.6744,
+      "block_f1": 0.7838,
+      "unsafe_allows": 1
+    }
+  },
+  "threshold_sensitivity": [
+    {
+      "tau_block": 0.3,
+      "blocked": 31,
+      "contradiction_recall": 0.6744
+    },
+    {
+      "tau_block": 0.36,
+      "blocked": 31,
+      "contradiction_recall": 0.6744
+    },
+    {
+      "tau_block": 0.5,
+      "blocked": 28,
+      "contradiction_recall": 0.6047
+    },
+    {
+      "tau_block": 0.7,
+      "blocked": 28,
+      "contradiction_recall": 0.6047
+    }
+  ],
+  "timing": {
+    "cpu_wall_s": 6.4,
+    "mps_wall_s": 6.14,
+    "per_pair_cpu_ms": 50.4,
+    "modal_decision": "NOT_NEEDED \u2014 local inference adequate for prototype"
+  },
+  "honesty_note": "absolute zero-shot numbers reflect a hard adversarial-flavored frozen set; deltas between variants are the signal"
+}
