@@ -1,0 +1,57 @@
+{
+  "model": "MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli",
+  "local_dir": "/Users/utkarshkhajuria/Desktop/RazorMesh/models/MoritzLaurer__DeBERTa-v3-base-mnli-fever-anli",
+  "label_map": {
+    "0": "entailment",
+    "1": "neutral",
+    "2": "contradiction"
+  },
+  "split": "val",
+  "rows": 171,
+  "wall_seconds": 30.4,
+  "metrics": {
+    "n": 171,
+    "accuracy": 0.473684,
+    "macro_f1": 0.396761,
+    "per_class": {
+      "entailment": {
+        "precision": 0.453846,
+        "recall": 0.967213,
+        "f1": 0.617801,
+        "support": 61
+      },
+      "neutral": {
+        "precision": 0.055556,
+        "recall": 0.017857,
+        "f1": 0.027027,
+        "support": 56
+      },
+      "contradiction": {
+        "precision": 0.913043,
+        "recall": 0.388889,
+        "f1": 0.545455,
+        "support": 54
+      }
+    },
+    "confusion": {
+      "entailment": {
+        "entailment": 59,
+        "neutral": 1,
+        "contradiction": 1
+      },
+      "neutral": {
+        "entailment": 54,
+        "neutral": 1,
+        "contradiction": 1
+      },
+      "contradiction": {
+        "entailment": 17,
+        "neutral": 16,
+        "contradiction": 21
+      }
+    },
+    "labels_sha256": null
+  },
+  "generated_at_utc": "2026-08-26T00:47:16.454276+00:00",
+  "device": "mps"
+}

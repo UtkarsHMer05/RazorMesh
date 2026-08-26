@@ -39,8 +39,8 @@
 | M25 | Gold review pack generation | PASS | data/phase3/gold/: gold_review.csv 320 rows stratified across all 18 families (labels 121C/98E/101N), suggested_label column LAST for anti-anchoring; self-contained keyboard-driven HTML reviewer (1/2/3 labels, arrows, E-export to gold_decisions.json, localStorage persistence); INSTRUCTIONS.md with orientation + procedure; manifest PENDING_HUMAN_REVIEW + csv sha256; 5 tests; suite 495/495 |
 | M26 | HUMAN GATE 1 — gold review | PENDING_HUMAN | pack READY at data/phase3/gold/ (320 stratified cases, HTML keyboard reviewer, INSTRUCTIONS.md, export flow); human reviews on wake; downstream gates (final model selection, threshold freeze) stamped PENDING_GOLD_VALIDATION until then |
 | M27 | Finalize AgentPay-IR v1 | PASS | frozen_v1: 1021 records (train 723 / val 171 / test 127) from seed+adversarial+candidates-at-freeze; whole-group splits via P3-M23 builder; leakage gate PASSED; per-split sha256 in frozen_manifest; gold_validation_status=PENDING_GOLD_VALIDATION stamped honestly (refresh to v2 possible pre-M48 as candidates grow); 5 tests |
-| M28 | DeBERTa baseline A eval | NOT_STARTED | — |
-| M29 | DeBERTa baseline B eval | NOT_STARTED | — |
+| M28 | DeBERTa baseline A eval | PASS | MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli (MIT) zero-shot on frozen_v1: val acc 0.474 / macroF1 0.397 / contra_recall 0.389; test acc 0.417 / macroF1 0.349; card label map pinned+unit-tested; orientation sanity-checked with hand pairs; docs/PHASE3_NLI_BASELINE_A_METRICS.json |
+| M29 | DeBERTa baseline B eval | PASS | cross-encoder/nli-deberta-v3-base (Apache-2.0, ONNX available) identical harness: val acc 0.637 / macroF1 0.607 / contra_recall 0.704; test acc 0.606 / macroF1 0.589; docs/PHASE3_NLI_BASELINE_B_METRICS.json |
 | M30 | Baseline selection | NOT_STARTED | — |
 | M31 | Reproducible training bundle | NOT_STARTED | — |
 | M32 | Colab notebook | NOT_STARTED | — |
@@ -849,3 +849,16 @@ STATUS: PENDING_HUMAN (overnight deferred-gate mode per human authorization)
 
 ### Overnight policy decisions recorded
 - D-043: dependency-aware deferred-human-gate mode + reduced-volume policy.
+
+
+### M28/M29 — Baseline evaluation details
+Harness: `nli_eval.py` (pure core) + `scripts/rzp_eval_nli_baseline.py`
+(transformers lazy-imported inside the ML venv only). Label maps pinned from
+official cards and unit-tested — the two checkpoints use DIFFERENT index
+orders (A: E/N/C, B: C/E/N), which a naive harness would silently invert.
+Inference: MPS-accelerated torch, batch 8, ~25s per 127-pair split.
+
+Honest finding: absolute numbers are low for BOTH baselines because the
+frozen set is deliberately adversarial-flavored (session-context premises,
+injection-style text). This is exactly what M30 selection + M37 calibration
+are for; zero-shot weakness on this domain is recorded, not hidden.
