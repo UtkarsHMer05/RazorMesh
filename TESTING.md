@@ -403,6 +403,10 @@ On top of all Phase-1/2 gates:
    incomplete provenance, payment-authority misinformation, duplicated ids/
    content, secret-like values and generation artifacts are excluded with stable
    reason codes; downstream builders consume only the hash-bound accepted file.
+   M24 additionally gates adversarial breadth (all 18 semantic families), exact
+   E/N/C balance, a maximum three siblings per authored OOD group, deterministic
+   regeneration, zero exact/near/cross-class duplicate findings, M21 quality
+   compatibility and a passing M23 group-leakage preview.
 5. NLI harness: identical evaluation code across baselines with per-model
    pinned label maps unit-tested against card-declared orders (M28/M29).
 6. Fusion: exhaustive matrix test + Hypothesis property proving semantic

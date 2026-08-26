@@ -134,6 +134,12 @@ def test_secret_generation_artifact_and_malformed_money_are_fatal() -> None:
     )
     assert "malformed_money_expression" in validate_candidate(malformed).fatal
 
+    localized = _record(
+        premise="Checkout explicitly parses the localized total 1.199,00 € as EUR 1,199.00.",
+        hypothesis="The human authorized this recurring subscription purchase.",
+    )
+    assert "malformed_money_expression" not in validate_candidate(localized).fatal
+
 
 def test_payment_misinformation_is_fatal_only_when_promoted_to_hypothesis() -> None:
     premise_only = _record(

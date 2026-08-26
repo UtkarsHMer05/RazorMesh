@@ -630,3 +630,6 @@ source case id and stable request id; provider failures are retained separately
 as sanitized metadata and generated labels remain provisional. Only the
 hash-bound M21 `validated_candidates.jsonl` output—not the immutable raw
 candidate source—is eligible for gold-pack selection or dataset freezing.
+Curated M24 adversarial rows use one source group per independently authored OOD
+scenario and exactly three relation siblings (entailment/neutral/contradiction),
+so the group splitter cannot leak semantic twins across train/val/test.

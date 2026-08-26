@@ -58,3 +58,53 @@ models/
 PASTE_THIS_TO_AGENT_PHASE3.md
 PASTE_THIS_TO_AGENT.md
 RazorMesh_Trust_Phase3_Master_Prompt.md
+PHASE3_OVERNIGHT_REPORT.md
+
+# impeccable-ignore-start
+# Vendor skills (npx impeccable install) and ephemeral output, runtime state,
+# and per-dev overrides. Unanchored so the patterns match both repo-root and
+# nested-workspace locations (e.g. apps/web/.impeccable/...).
+#
+# Shared artifacts stay tracked: .impeccable/config.json, .impeccable/live/
+# config.json, .impeccable/design.json, .impeccable/critique/*.md.
+#
+# .kilo/ project config (kilo.json, command/, agent/, skill/) stays tracked;
+# only ephemeral sub-paths are ignored.
+.agent/
+.agents/
+.claude/
+.cursor/
+.gemini/
+.kiro/
+.opencode/
+.pi/
+.qoder/
+.rovodev/
+.trae/
+.trae-cn/
+.vibe/
+.kilo/agent-manager.json
+.kilo/worktrees/
+.kilo/themes/
+.kilo/cache/
+.kilo/snapshot/
+.kilo/skills/
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
+.impeccable/*.png
+.impeccable/live/server.json
+.impeccable/live/sessions/
+.impeccable/live/previews/
+.impeccable/live/annotations/
+.impeccable/live/cache/
+.impeccable/live/manual-edit-apply-transaction.json
+.impeccable/live/manual-edit-events.jsonl
+.impeccable/live/manual-edit-evidence/
+.impeccable/live/pending-manual-edits.json
+.impeccable/live/deferred-svelte-component-accepts.json
+.impeccable/live/*.png
+# impeccable-ignore-end
+
+
+

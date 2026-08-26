@@ -1,7 +1,7 @@
 {
   "milestone": "P3-M21",
   "validator_version": "candidate-quality-v2",
-  "validated_at_utc": "2026-08-26T20:02:56.899814+00:00",
+  "validated_at_utc": "2026-08-26T20:16:27.617996+00:00",
   "source": "data/phase3/dataset/candidates/candidates.jsonl",
   "source_sha256": "81a8a9bef1d23b7bd621018befa335cba1ec21f7099c0f650f71138fc9dd0c1d",
   "input_rows": 168,

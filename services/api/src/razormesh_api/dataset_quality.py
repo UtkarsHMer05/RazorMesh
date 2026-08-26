@@ -71,7 +71,7 @@ _BYPASS_CLAIM = re.compile(
     re.IGNORECASE,
 )
 _MALFORMED_MONEY = (
-    re.compile(r"\d+\.\d{3,}\b"),
+    re.compile(r"(?:₹|\$|£)\s*\d+\.\d{3,}\b"),
     re.compile(r"\d{1,3},\d{1,2}(?![\d,])"),
     re.compile(r"(?:₹|\$|€|£)\s*(?:₹|\$|€|£)"),
     re.compile(r"\b(?:INR|USD|EUR|GBP)\s+(?:INR|USD|EUR|GBP)\b", re.IGNORECASE),
@@ -145,7 +145,8 @@ def validate_candidate(record: AgentPayIRRecord) -> ValidationResult:
             fatal.append(code)
 
     # --- malformed money and false payment-authority claims ---------------
-    if any(pattern.search(blob) for pattern in _MALFORMED_MONEY):
+    money_scan = re.sub(r"\d{1,3}(?:\.\d{3})+,\d{2}\b", "", blob)
+    if any(pattern.search(money_scan) for pattern in _MALFORMED_MONEY):
         fatal.append("malformed_money_expression")
     if _UNTRUSTED_AUTHORITY.search(record.hypothesis) or _BYPASS_CLAIM.search(record.hypothesis):
         fatal.append("hypothesis_payment_authority_misinformation")
@@ -172,7 +173,8 @@ def validate_candidate(record: AgentPayIRRecord) -> ValidationResult:
         fatal.append("injection-family-without-injection-signal")
 
     if record.family == "safe_lookalike" and not re.search(
-        r"\b(?:compatible|counterfeit|lookalike|similar|third-party|genuine|exact|model)\b",
+        r"\b(?:compatible|counterfeit|lookalike|similar|third-party|genuine|exact|model|"
+        r"buy now|limited stock|never share|ignore|warning|manual|harmless|benign)\b",
         p_norm,
     ):
         fatal.append("lookalike-family-without-identity-signal")

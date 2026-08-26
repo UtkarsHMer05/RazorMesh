@@ -1156,3 +1156,35 @@ Consequences: filtering is reproducible and order-independent; rejected rows
 remain traceable without their raw text being copied into rejection reports.
 M22 still owns fuzzy near-duplicate analysis, and M24 must add independent OOD
 families rather than relabeling this rejected row.
+
+
+## D-049 — Curated OOD breadth supersedes adversarial template-volume inflation
+
+Date: 2026-08-27
+Milestone: P3-M24 standalone closure re-audit
+Status: Accepted
+Supersedes: the M24 2k–4k numerical suggestion where it would be satisfied by
+deterministic surface siblings; applies the owner's explicit closure instruction
+to prefer genuinely new adversarial/OOD families over a meaningless quota.
+Affected docs/artifacts: `PHASE3_STATUS.md`, `MEMORY.md`, `ARCHITECTURE.md`,
+`TESTING.md`, `docs/PHASE3_ADVERSARIAL_DATASET_REVIEW.md`,
+`rzp_build_adversarial.py`, and `data/phase3/dataset/adversarial/`.
+
+Context: the former artifact had 38 hard rows but 32 were minor surface variants
+of injection and hidden-renewal templates. It had no neutral relation, covered
+only seven AgentPay families and carried no sibling group identity. Inflating
+those templates to thousands of rows would worsen evaluation dependence without
+adding meaningful OOD evidence.
+
+Decision: use a manually authored curated matrix of 43 independent adversarial/
+OOD subfamilies. Each subfamily has exactly three truth-by-construction relations
+(entailment, neutral, contradiction), a unique template id and one shared source
+group. Cover all 18 semantic families; enforce a <=10% maximum family share,
+zero exact/near/cross-class duplicate findings, M21 compatibility and M23 group
+integrity. The resulting 129-row artifact is intentionally finite.
+
+Consequences: the expansion is broad, balanced and leakage-aware, but it is
+template truth—not human gold and not an untouched final OOD evaluation. It may
+enter training/validation only through later freeze gates. The owner-requested
+additional untouched human-reviewed OOD set must be constructed and frozen
+separately, and no retraining/model selection/calibration may use its labels.

@@ -426,7 +426,8 @@ No probability combination may weaken a hard decision.
 zero-shot baseline; otherwise the baseline remains.
 **P3-S11** Dataset splits are group-based; pair siblings and template/entity/
 lookalike families cannot cross splits; automated leakage tests are
-release-blocking.
+release-blocking. Curated adversarial E/N/C siblings share an explicit OOD
+scenario group and must remain in one split.
 **P3-S12** Qwen-generated dataset labels are provisional, never automatic gold;
 only rows accepted by the deterministic candidate-quality gate may enter a gold
 review pack or frozen dataset pool.

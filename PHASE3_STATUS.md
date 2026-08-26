@@ -35,7 +35,7 @@
 | M21 | Candidate validation | PASS (standalone closure re-audit) | Original gate independently implemented and run over all 168 M20 rows: JSON/AgentPay schema+text limits, complete provenance, label/family heuristics, malformed money, payment-authority misinformation, duplicate ids/content, secret patterns and generation artifacts; 167 accepted, 1 correctly rejected (`safe_lookalike` without identity/lookalike signal), 0 warnings; hash-bound quality/rejection outputs; gold/freeze consumers now require the validated pool; negative matrix, data regressions, strict types/lint/security PASS; D-048 |
 | M22 | Dedup / near-duplicate detection | PASS | dataset_dedup.py: exact dups via content hash; near-dups via token-Jaccard >=0.90 WITHIN (family,label) classes; union-find clusters w/ deterministic smallest-id canonical; cross-class collisions reported separately as suspected mislabels (never merged); 5 tests incl. determinism + ordering; generator also applies exact-normalized guard at generation time |
 | M23 | Leakage-safe split builder | PASS | dataset_splits.py: groups from provenance.source_case_id (whole groups to ONE split via stable SHA256 hash -> 70/15/15); deterministic across runs; leakage_report catches any group spanning splits (contaminated-fixture test proves the gate FAILS) + UNASSIGNED accounting; assert_no_leakage helper for release gates; 5 tests |
-| M24 | Adversarial dataset expansion | NOT_STARTED | — |
+| M24 | Adversarial dataset expansion | PASS (standalone closure re-audit) | Prior 38-row artifact replaced, not relabeled: deterministic curated v2 has 129 hard rows from 43 independent OOD/adversarial scenario groups × balanced E/N/C, covers 18/18 semantic families, max family share 9.3023%, max sibling group 3; original required euphemistic renewal/double-negation/seller alias/condition/bundle/no-charge-today/injection/benign-lookalike families plus broader money/quantity/variant/return/warranty/delivery cases; exact/near/cross-class duplicates 0, M21 fatal findings 0, group leakage preview PASS; byte-stable build + report; owner quality-over-quota clarification recorded D-049 |
 | M25 | Gold review pack generation | PASS | data/phase3/gold/: gold_review.csv 320 rows stratified across all 18 families (labels 121C/98E/101N), suggested_label column LAST for anti-anchoring; self-contained keyboard-driven HTML reviewer (1/2/3 labels, arrows, E-export to gold_decisions.json, localStorage persistence); INSTRUCTIONS.md with orientation + procedure; manifest PENDING_HUMAN_REVIEW + csv sha256; 5 tests; suite 495/495 |
 | M26 | HUMAN GATE 1 — gold review | PASS | 320/320 reviewed by human owner; 0 invalid exclusions; labels 119C/98E/103N; template-truth agreement 97.8%; baseline-B zero-shot agreement vs human only 56.3% w/ 29 unsafe entailments on human contradictions -> quantifies the fine-tuning gap ahead of M34; manifest GOLD_VALIDATED; gold_frozen.json sha-bound | pack READY at data/phase3/gold/ (320 stratified cases, HTML keyboard reviewer, INSTRUCTIONS.md, export flow); human reviews on wake; downstream gates (final model selection, threshold freeze) stamped PENDING_GOLD_VALIDATION until then |
 | M27 | Finalize AgentPay-IR v1 | PASS | frozen_v1: 1021 records (train 723 / val 171 / test 127) from seed+adversarial+candidates-at-freeze; whole-group splits via P3-M23 builder; leakage gate PASSED; per-split sha256 in frozen_manifest; gold_validation_status=PENDING_GOLD_VALIDATION stamped honestly (refresh to v2 possible pre-M48 as candidates grow); 5 tests |
@@ -980,6 +980,61 @@ real 168-row validation + artifact inspection            PASS_FILTERED
 
 Decision: D-048. Next standalone gate: M24 adversarial dataset expansion (M22
 and M23 remain PASS and will be regression-checked against the expanded pool).
+
+
+### M24 standalone closure re-audit — PASS (2026-08-27)
+
+Original acceptance: add difficult defensive semantic cases covering euphemistic
+recurring fees, double negation, seller ambiguity/aliasing, disguised condition,
+bundle obligations, no-charge-today renewal, prompt-injection-like text and
+benign lookalikes.
+
+The previous 38-row file failed that bar: 32 rows came from only injection and
+renewal templates, neutral had zero coverage, seven semantic families were
+represented, and provenance had no scenario group ids. It was replaced with a
+curated v2 artifact rather than being renamed PASS.
+
+Real output and anti-sibling evidence:
+```text
+records                              129 hard template_truth
+independent authored scenario groups 43
+relation siblings per group            3 (E/N/C exactly)
+semantic families                     18/18
+labels                                43 E / 43 N / 43 C
+largest semantic-family share          9.3023%
+exact/near duplicate rejections         0 @ token Jaccard 0.90
+cross-class near collisions             0
+M21 fatal quality findings              0
+expected premise-only warnings          3 (fake merchant system-approval text)
+leakage-safe split preview              PASS (87 train / 9 val / 33 test)
+dataset + manifest no-op rebuild        byte-identical
+```
+
+Every subfamily carries a unique `template_id`; its three semantic relations
+share one `source_case_id`. This makes M23 keep relation siblings together and
+prevents a final split from being filled by copies of the same template. The
+full inspection report and taxonomy are in
+`docs/PHASE3_ADVERSARIAL_DATASET_REVIEW.md`.
+
+The original prompt's 2k–4k suggestion is superseded for closure by the owner's
+explicit quality-over-quota instruction: do not inflate deterministic siblings;
+add genuinely new adversarial/OOD families. D-049 records the decision. This
+template-truth artifact is not represented as the additional untouched,
+human-reviewed OOD evaluation set; that remains a separate pre-M48 obligation.
+
+Validation:
+```text
+ruff format/check + strict package/script mypy       PASS
+pytest M24 adversarial gates                          PASS (6)
+pytest M21 quality regression                         PASS (11)
+M22 dedup analysis on all 129 rows                    PASS (0 findings)
+M23 group-split leakage preview                       PASS
+real artifact/schema/quality inspection               PASS
+pytest backend full regression                         PASS (531)
+make security-check                                    PASS (0 findings)
+```
+
+Decision: D-049. Next standalone closure: M30 baseline selection.
 
 
 ## M26 — HUMAN GATE 1: Gold Review (PENDING_HUMAN)
