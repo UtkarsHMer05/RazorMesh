@@ -14,6 +14,7 @@
 | M07 UCP Release-Status Resolution + Pin | PASS | 2026-08-27; pinned 2026-04-08 (latest released); 2026-08-25 = unversioned docs, not a release |
 | M08 AP2/ACP/A2A Current-Spec Research + Pin | PASS | 2026-08-27; AP2 v0.2.0 (b4587ac), ACP 2026-01-30 per master prompt, A2A v1.0.1 (3303592) |
 | M09 Phase-4 Threat Model + Architecture Decisions | PASS | 2026-08-27; D-048 appended to DECISIONS.md |
+| M10 Official Protocol Fixture Registry | PASS | 2026-08-27; docs/PHASE4_PROTOCOL_FIXTURE_REGISTRY.md written; fixtures to be populated at M11+ |
 | M03 Full Phase-3 AI/ML Revalidation | NOT_STARTED | |
 | M04 Full Redesigned Frontend Revalidation | NOT_STARTED | |
 | M05 Freeze Phase-4 Baseline | NOT_STARTED | |
