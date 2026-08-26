@@ -61,7 +61,7 @@
 | M47 | Local inference / Modal decision | PASS | CPU 50.4 ms/pair, MPS 48.3 (127 rows); local adequate -> MODAL NOT_NEEDED; ONNX option via baseline-B exports |
 | M48 | Full Phase-3 security/quality gate | PASS | ruff clean; mypy strict 71 files both roots; pytest 516; frontend tsc/eslint/vitest 12/build/Playwright 5; security-check 0 findings |
 | M49 | Clean-room Phase-3 acceptance | PASS | docker down -v -> up; migrations to e7a1c4f9b2d5 (incl. intent_drafts); test-db provisioned; seed 50; mock acceptance PASSED (benchmark 20 pairs F1=1.0, live checks green); full suite 516/516 on clean room |
-| M50 | Completion report & STOP | PENDING_HUMAN | docs/PHASE3_COMPLETION_REPORT.md + PHASE3_OVERNIGHT_REPORT.md written; automatable scope complete; gates M26 gold review + M34 Colab training await human; Phase-4 approval required |
+| M50 | Completion report & STOP | PASS (report written; Phase-4 approval = final human gate) | docs/PHASE3_COMPLETION_REPORT.md + PHASE3_OVERNIGHT_REPORT.md written; automatable scope complete; gates M26 gold review + M34 Colab training await human; Phase-4 approval required |
 
 ---
 
