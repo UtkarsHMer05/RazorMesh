@@ -59,9 +59,9 @@
 | M45 | End-to-end Phase-3 benchmark | PASS | fusion on frozen TEST: BLOCK P=0.9355 R=0.6744 F1=0.7838, unsafe-allows=1 (docs/PHASE3_END_TO_END_BENCHMARK.md) |
 | M46 | Ablation study | PASS | rules-only vs never-fires control vs full fusion on identical rows; threshold sweep 0.30-0.70; NLI-only structurally cannot create authority |
 | M47 | Local inference / Modal decision | PASS | CPU 50.4 ms/pair, MPS 48.3 (127 rows); local adequate -> MODAL NOT_NEEDED; ONNX option via baseline-B exports |
-| M48 | Full Phase-3 security/quality gate | NOT_STARTED | — |
-| M49 | Clean-room Phase-3 acceptance | NOT_STARTED | — |
-| M50 | Completion report & STOP | NOT_STARTED | — |
+| M48 | Full Phase-3 security/quality gate | PASS | ruff clean; mypy strict 71 files both roots; pytest 516; frontend tsc/eslint/vitest 12/build/Playwright 5; security-check 0 findings |
+| M49 | Clean-room Phase-3 acceptance | PASS | docker down -v -> up; migrations to e7a1c4f9b2d5 (incl. intent_drafts); test-db provisioned; seed 50; mock acceptance PASSED (benchmark 20 pairs F1=1.0, live checks green); full suite 516/516 on clean room |
+| M50 | Completion report & STOP | PENDING_HUMAN | docs/PHASE3_COMPLETION_REPORT.md + PHASE3_OVERNIGHT_REPORT.md written; automatable scope complete; gates M26 gold review + M34 Colab training await human; Phase-4 approval required |
 
 ---
 
