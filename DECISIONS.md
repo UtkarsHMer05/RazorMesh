@@ -1320,3 +1320,95 @@ Bauhaus redesign documented in `apps/web/docs/PRE_PHASE4_UI_REDESIGN_FINAL.md`.
 Invariant preserved: no provider secret ever reaches the browser; no
 client code is an authority; tickets are still context-bound; integer
 minor units; append-only audit; no fabricated claims.
+
+---
+
+## D-048 — Phase-4 architecture decisions (threat model + protocol scope)
+
+**Date.** 2026-08-27.
+**Status.** Accepted. Per `RazorMesh_Trust_Phase4_Master_Prompt.md §9 (M09)`.
+
+1. **Protocol validity ≠ financial authority.** A signature that proves an
+   artifact is authentic and unmodified proves only that. It does not
+   prove the artifact's commerce semantics still match the human's
+   confirmed authorization. The Phase-4 architecture treats every
+   protocol envelope as evidence, never as authority. Decisions still
+   flow through Phase-3 RazorGuard + NLI + ExecutionTicket. (master
+   prompt §0, §10, P4-S02)
+
+2. **New internal models, versioned from day one.**
+   - `ProtocolEnvelope` — source/provenance record, no financial
+     authority, no secrets, no raw credentials. (master prompt §5)
+   - `AgentCommerceIR` — canonical authorization-relevant commerce
+     model. Integer minor units only; preserves UCP quantity unit/scale;
+     never normalizes away meaning. (master prompt §6)
+   - `commerce-commitment-v1` — RazorMesh's INTERNAL cross-protocol
+     comparison hash. Distinct from AP2 checkout_hash, RFC 9421
+     Content-Digest, UCP signature, and ExecutionTicket signature.
+     Excludes presentation-only fields. (master prompt §7)
+
+3. **Cryptographic separation.**
+   - Existing Ed25519 ExecutionTicket key + algorithm stay untouched.
+   - AP2 checkout JWT binding uses a NEW local ES256/P-256 merchant
+     test key (per AP2 v0.2 nondeterministic-signature requirement).
+     Keys never reused. (master prompt §8, P4-S15)
+   - UCP message signing follows RFC 9421 + RFC 9530 raw-body digest
+     per the resolved `2026-04-08` target.
+   - No production/live Razorpay key. No Phase-5 deployment.
+
+4. **Protocol Firewall precedes Phase-3 logic.** A deterministic
+   pipeline that emits `PROTOCOL_PASS | PROTOCOL_CHALLENGE |
+   PROTOCOL_BLOCK`. It may make decisions stricter than Phase-3
+   policy but never looser. (master prompt §9, P4-S03..P4-S05)
+
+5. **Cross-Protocol Consistency Engine is the unique Phase-4
+   contribution.** Given independently valid artifacts (MCP request,
+   UCP checkout, AP2 mandate, ACP session, ExecutionTicket), normalize
+   authorization-relevant semantics and compare. Returns `MATCH |
+   MISMATCH | INSUFFICIENT_EVIDENCE`. (master prompt §10, §18, P4-S19)
+
+6. **Pinned stable releases (no `main` deps).**
+   - MCP spec `2026-07-28`, Python SDK `mcp==2.1.0`.
+   - UCP spec `2026-04-08` (latest official release tag; `2026-08-25`
+     is unversioned docs, treated as forward-compat only).
+   - AP2 `v0.2.0` (commit b4587ac).
+   - ACP `2026-01-30` per master prompt §16.
+   - A2A `v1.0.1` (commit 3303592).
+   See `docs/PHASE4_PROTOCOL_VERSION_MATRIX.md`.
+
+7. **ACP custom Razorpay handler is clearly namespaced and
+   nonstandard.** `io.razormesh.razorpay.test_checkout`. Advertises
+   `psp=razorpay`, `requires_delegate_payment=false`,
+   `requires_pci_compliance=false` (hosted checkout path), test mode
+   only. Never call it "ACP Delegate Payment supported". (P4-S17,
+   P4-S18, master prompt §16)
+
+8. **A2A compatibility slice, not full A2A.** Agent Card/profile
+   fixture, UCP extension metadata, DataPart mapping for UCP
+   checkout, `messageId` ↔ idempotency, AP2 evidence refs. (master
+   prompt §17, §44)
+
+9. **Final human gate is OUTSIDE the milestone count.** M50 stops and
+   asks for the single prepared Razorpay Test-mode protocol
+   transaction. Until the human replies, Phase-4 status remains
+   `AWAITING_FINAL_HUMAN_ACCEPTANCE`. (master prompt §22, §28)
+
+10. **Allowed completion claims only** (master prompt §29):
+    - "MCP 2026-07-28 modern interoperability, if conformance proven."
+    - "UCP 2026-04-08 subset compatibility / conformance, only at
+      implemented capability/transport scope."
+    - "AP2 v0.2.0 verification compatibility for implemented test
+      roles/flows."
+    - "ACP 2026-01-30 checkout compatibility with RazorMesh custom
+      Razorpay Test handoff extension."
+    - "A2A compatibility slice, not full conformance."
+
+    Never claim FIDO certification, "official Razorpay agentic
+    protocol", "ACP Delegate Payment supported" (it is not), full UCP
+    implementation, full A2A implementation, or "production payment
+    security proven".
+
+Invariant preserved: no protocol adapter calls Razorpay; no protocol
+adapter creates financial authority; tickets remain
+consume-once/context-bound; integer minor units; append-only audit;
+no fabricated certification claims.
