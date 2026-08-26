@@ -16,14 +16,16 @@ deterministic RazorGuard decision. The exhaustive matrix + Hypothesis
 property test in tests/test_semantic_fusion.py make this release-blocking.
 """
 
+import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
-import json
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+
 
 class SemanticAction(StrEnum):
-    PASS = "PASS"
+    PASS = "PASS"  # noqa: S105 - decision label, not a secret
     CHALLENGE = "CHALLENGE"
     BLOCK = "BLOCK"
 
