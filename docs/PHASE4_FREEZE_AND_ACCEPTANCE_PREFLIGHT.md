@@ -3,10 +3,12 @@
 > **Status: AUTONOMOUS COMPLETION — FINAL HUMAN ACCEPTANCE PENDING**
 > Autonomous flag: `AUTONOMOUS_50_OF_50_PASS / AWAITING_FINAL_HUMAN_ACCEPTANCE`
 
-This document records the frozen implementation state (local-only commit),
-the secret-free / junk-free verification of the M49/M50 polish, the
-narrow + broad gate re-runs, and the preflight for the single
-human-owned Razorpay Test-mode acceptance transaction.
+This document records the frozen implementation state (local-only commits),
+the live-ingress closure (MCP 2026-07-28 mounted at `/mcp-mount/mcp`,
+UCP 2026-04-08 + AP2 v0.2.0 discovery, full Phase-4 acceptance
+orchestrator), the secret-free / junk-free verification of the
+M49/M50 polish, the narrow + broad gate re-runs, and the preflight
+for the single human-owned Razorpay Test-mode acceptance transaction.
 
 ---
 
@@ -14,10 +16,18 @@ human-owned Razorpay Test-mode acceptance transaction.
 
 | Field | Value |
 | ----- | ----- |
-| Frozen commit | `a0ca4190f10e2aa1cfca2c23d98c554f4880060c` |
-| Parent commit | `a31c1e34e5f50c2e19c9eab4bc3d1e0d6e466790` |
+| **Frozen commit (current)** | `2db78c757b9bcd5a8f1404cfc05b4b41af75bcc1` |
+| **Parent commit** | `61c3f49bf7267855dec61fdcc1dcf673f169fbba` |
 | Branch | `main` (no upstream configured — **never pushed**) |
 | Git tree after commit | **clean** (`git status --short` empty) |
+
+### Freeze history
+
+| Commit | Purpose |
+| ------ | ------- |
+| `2db78c7` | **Phase-4 live-ingress closure**: real MCP mounted, UCP/AP2 discovery, acceptance orchestrator, live-ingress E2E |
+| `61c3f49` | Pre-human freeze + acceptance preflight doc |
+| `a0ca419` | M49/M50 polish + autonomous completion evidence |
 
 ### M49/M50 polish — each change verified
 
@@ -29,15 +39,27 @@ human-owned Razorpay Test-mode acceptance transaction.
 | MEMORY.md Phase-4 status | `MEMORY.md` | Append Phase-4 completion status; preserve prior re-audit | none |
 | Completion report relabel | `docs/PHASE4_FINAL_COMPLETION_REPORT.md` | Rename header to `AUTONOMOUS COMPLETION — FINAL HUMAN ACCEPTANCE PENDING` | none |
 
-All other staged files are the intentional Phase-4 protocol module,
-tests, proof harnesses, and Phase-3 compiler-eval v2 artifacts
-(captured for the independent re-audit, not regenerated here).
+### Live-ingress closure — each change verified
+
+| Change | File | Intent |
+| ------ | ---- | ------ |
+| Mount MCP 2026-07-28 at `/mcp-mount/mcp` | `services/api/src/razormesh_api/api/main.py` | Real modern Streamable HTTP ingress |
+| UCP well-known + profile + version | `services/api/src/razormesh_api/api/main.py` | UCP 2026-04-08 discovery |
+| AP2 JWKS + version | `services/api/src/razormesh_api/api/main.py` | AP2 v0.2.0 test merchant key set |
+| `Phase4AcceptanceOrchestrator` | `services/api/src/razormesh_api/protocol/acceptance.py` | Live MCP→UCP→AP2→Firewall→IR→MATCH→ALLOW chain |
+| `DeterministicBuyerAgent` | `services/api/src/razormesh_api/protocol/buyer_agent.py` | Reproducible MCP client (no LLM, no TokenRouter) |
+| `/phase4/acceptance/*` routes | `services/api/src/razormesh_api/api/routes/phase4_acceptance.py` | HTTP entry to orchestrator |
+| `complete_authorized_checkout` MCP tool | `services/api/src/razormesh_api/protocol/mcp_server.py` | Real orchestrator call (was a stub) |
+| Live-ingress E2E (7 tests) | `services/api/tests/phase4/test_live_ingress_e2e.py` | Real backend + real MCP client |
+| `RAZORMESH_MCP_MOUNT=0` default in conftest | `services/api/tests/conftest.py` | Prevents MCP session-manager conflict across TestClient lifespans |
+| `/protocols` live runs section | `apps/web/src/app/protocols/page.tsx` | Renders real acceptance-run evidence |
+| Next.js API proxies | `apps/web/src/app/api/phase4/acceptance/{runs,prepare}/route.ts` | Browser → backend bridge |
 
 ### Test counts recorded at freeze
 
 | Suite | Count |
 | ----- | ----: |
-| `services/api` pytest (full) | 718 |
+| `services/api` pytest (full) | **725** |
 | `apps/web` vitest | 76 |
 | AgentPay-X benchmark scenarios | 191 |
 
@@ -68,12 +90,12 @@ challenge_pass_rate= 1.00
 
 ```
 services/api  ruff check services/api   → All checks passed!
-services/api  mypy -p razormesh_api      → Success: 91 source files, 0 issues
-services/api  pytest                    → 718 passed
+services/api  mypy -p razormesh_api     → Success: 94 source files, 0 issues
+services/api  pytest                    → 725 passed
 apps/web      tsc --noEmit              → 0 errors
-apps/web      eslint                    → 0 errors (1 stylistic warning)
+apps/web      eslint                    → 0 errors
 apps/web      vitest                    → 76 passed
-apps/web      next build                → 6 static routes
+apps/web      next build                → 6 static + 2 dynamic routes
 secret scan   rzp_live_ / sk_live_ / pk_live_ / whsec_live_
              in tracked sources/docs    → 0 real secrets
              (matches are negative-test fixtures / rejection logic only)
@@ -81,7 +103,7 @@ secret scan   rzp_live_ / sk_live_ / pk_live_ / whsec_live_
 
 ---
 
-## 3. Environment preflight (live, at freeze time)
+## 3. Live environment preflight (live, at freeze time)
 
 | Check | Result |
 | ----- | ------ |
@@ -89,39 +111,44 @@ secret scan   rzp_live_ / sk_live_ / pk_live_ / whsec_live_
 | Backend `/ready`   | 200 — postgres ok, redis ok, `payment_provider=razorpay` |
 | Frontend `http://127.0.0.1:3000` | 200 |
 | PostgreSQL (`razormesh-postgres` @15432) | Up / healthy |
-| Redis (`razormesh-redis` @16379) | Up / healthy, `ping=True` |
+| Redis (`razormesh-redis` @16379) | Up / healthy |
 | Razorpay Test-mode auth | 200 — `RAZORPAY TEST MODE — simulated payment, no real money` |
 | `RAZORPAY_MODE` | `test` |
 | `RAZORPAY_KEY_ID` prefix | `rzp_test_` (NOT `rzp_live_`) |
 | Live-mode credentials in source/docs | 0 (only negative-test fixtures) |
+| **MCP 2026-07-28 modern endpoint** | **200** — `initialize` returns serverInfo `razormesh-trust`, session id issued |
+| **UCP 2026-04-08 well-known profile** | **200** — `ucp.version=2026-04-08` |
+| **UCP 2026-04-08 profile** | **200** — same payload |
+| **UCP 2026-04-08 version** | **200** — `{"version":"2026-04-08"}` |
+| **AP2 v0.2.0 JWKS** | **200** — `ap2_version=v0.2.0`, EC P-256 key set |
+| **AP2 v0.2.0 version** | **200** — `{"version":"v0.2.0"}` |
+| **/phase4/acceptance/prepare** | **200 ALLOW** — commerce_commitment MATCH, UCP/AP2/MCP versions present, RazorGuard ALLOW |
+| **/phase4/acceptance/runs** | **200** — live registry populated |
 | Stale ExecutionTicket (active, unexpired) | 0 |
 | Stale open reservation (reserved>0, committed=0) | 0 |
-| Orders/attempts today | 0 |
-| Audit chain | 0 events (fresh DB), valid empty chain |
+| Execution attempts | 0 |
+| Audit chain | valid (append-only trigger enforced) |
 | Previously consumed idempotency key | none |
 
-### Honest gaps (NOT faked as "healthy")
+### Honest gaps (none remaining)
 
-- **MCP modern endpoint is NOT mounted** as a live HTTP route in the
-  running FastAPI app. `services/api/src/razormesh_api/protocol/mcp_server.py`
-  implements the MCP 2026-07-28 server (SDK `mcp==2.1.0`) and is validated
-  by `tests/phase4/test_mcp_proof.py`-class coverage, but `api/main.py`
-  only mounts the Phase-1/2 routers. The human acceptance therefore
-  exercises the protocol chain through the **buyer flow + `/protocols`
-  visualization + `/audit`**, which run the real
-  `razormesh_api.protocol.*` + `DecisionEngine` + `TrustedPaymentExecutor`.
-- **UCP/AP2 signing verification** is validated by the proof harnesses and
-  AgentPay-X scenarios (191/191), not by a standalone live HTTP endpoint.
-  The buyer flow's trusted executor performs the equivalent
-  intent-to-execution integrity checks server-side.
+All protocol endpoints required by the live-ingress closure are now
+live and verified. ACP remains a separately proven compatibility
+path (proof harness only, not in the live checkout chain) per the
+master prompt.
 
 ---
 
 ## 4. Acceptance-run correlation
 
-- **Run ID:** `ACC-2026-08-27T1412Z-razormesh-phase4`
-- All artifacts (screenshots, attempt id, order id, audit events) from the
-  human transaction MUST carry this Run ID for correlation.
+- **Run ID:** `ACC-2026-08-27T1500Z-razormesh-phase4-live-ingress`
+- The first live acceptance run will be auto-generated by the
+  orchestrator when the human opens `/buyer` and clicks Propose.
+  Format: `acc-YYYYMMDDTHHMMSSZ-<rand16>`
+- All artifacts (MCP request id, UCP envelope hash, AP2 evidence
+  hash, AgentCommerceIR hash, commerce commitment, RazorGuard
+  decision, ExecutionTicket id, Razorpay order/payment ids, audit
+  events) carry this Run ID for correlation.
 
 ---
 
@@ -130,10 +157,14 @@ secret scan   rzp_live_ / sk_live_ / pk_live_ / whsec_live_
 > Do NOT push. Do NOT start Phase 5. The agent stops after presenting these.
 
 1. Open `http://127.0.0.1:3000/protocols`.
-   - Confirm the Cross-Protocol Consistency matrix shows MCP/UCP/AP2/ACP/A2A
-     **MATCH** pills and the AgentPay-X grid shows `false_allow=0`.
-   - This visualizes the Phase-4 protocol pipeline (Firewall →
-     AgentCommerceIR → Cross-Protocol MATCH → RazorGuard).
+   - Confirm the **Live acceptance runs** section (new in this
+     closure) renders the real MCP / UCP / AP2 versions, the
+     ProtocolEnvelope hash, the AgentCommerceIR hash, the
+     commerce-commitment-v1, the consistency verdict, the
+     RazorGuard decision, and the final ALLOW for each run.
+   - The existing Cross-Protocol Consistency matrix and
+     AgentPay-X grid remain authoritative for the proof-harness
+     regression suite.
 
 2. Open `http://127.0.0.1:3000/buyer`.
    - Click "Create Intent" (fixture intent, ALLOW by design).
@@ -155,11 +186,12 @@ secret scan   rzp_live_ / sk_live_ / pk_live_ / whsec_live_
 5. Report back the `execution_attempt_id` / `razorpay_order_id` so the
    agent can record the final human-accepted completion.
 
-This flow exercises: Confirmed Intent → (protocol visualization) →
-DecisionEngine/RazorGuard + SemanticVerifier → ExecutionTicket → Razorpay
-Test Checkout → verified callback/webhook → audit. ACP remains a
-separately proven compatibility path (proof harness only, not in the
-live checkout chain).
+This flow exercises: Confirmed Intent → (live Phase-4 protocol
+gateway at `/mcp-mount/mcp`) → DecisionEngine/RazorGuard +
+SemanticVerifier → ExecutionTicket → Razorpay Test Checkout →
+verified callback/webhook → audit. ACP remains a separately proven
+compatibility path (proof harness only, not in the live checkout
+chain).
 
 ---
 
