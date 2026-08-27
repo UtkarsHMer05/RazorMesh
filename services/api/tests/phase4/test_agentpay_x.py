@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from razormesh_api.protocol.agentpay_x import (
     build_scenarios,
     run_benchmark,

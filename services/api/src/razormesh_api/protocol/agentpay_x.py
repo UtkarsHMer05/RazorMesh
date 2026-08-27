@@ -16,15 +16,12 @@ new mutation cases per family.
 
 from __future__ import annotations
 
-import hashlib
-import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from razormesh_api.protocol import (
     AgentCommerceIR,
     SourceProtocol,
-    commitment_hash,
     compute_commitment,
     envelope_from_raw,
     equal_under_commitment,
@@ -147,7 +144,13 @@ def build_scenarios() -> list[AgentPayXScenario]:
 
     # 5. recurring-term insertion
     a = base
-    b = base.model_copy(update={"recurring": _IRRecurring(mode="monthly", interval="1m", amount_minor=189900)})
+    b = base.model_copy(
+        update={
+            "recurring": _IRRecurring(
+                mode="monthly", interval="1m", amount_minor=189900,
+            ),
+        }
+    )
     out.append(AgentPayXScenario(
         name="recurring.inserted",
         family="recurring_term_insertion",
@@ -310,9 +313,9 @@ def run_scenario(scenario: AgentPayXScenario) -> AgentPayXResult:
         # rejected by the verifier. We test the contract via the
         # ap2_verifier module's vct enforcement.
         from razormesh_api.protocol.ap2_verifier import (
-            generate_ap2_test_merchant_key,
             build_ap2_merchant_checkout_jwt,
             export_ap2_test_merchant_pub_jwk,
+            generate_ap2_test_merchant_key,
             verify_ap2_merchant_jwt_es256,
         )
         key = generate_ap2_test_merchant_key()
@@ -331,7 +334,8 @@ def run_scenario(scenario: AgentPayXScenario) -> AgentPayXResult:
         )
     if scenario.name == "acp.illegal_transition":
         from razormesh_api.protocol.acp_adapter import (
-            ACPLifecycleState, is_legal_transition,
+            ACPLifecycleState,
+            is_legal_transition,
         )
         passed = not is_legal_transition(
             ACPLifecycleState.NOT_READY, ACPLifecycleState.COMPLETED
@@ -386,9 +390,9 @@ def run_benchmark() -> dict[str, Any]:
 
 
 __all__ = [
-    "AgentPayXScenario",
     "AgentPayXResult",
+    "AgentPayXScenario",
     "build_scenarios",
-    "run_scenario",
     "run_benchmark",
+    "run_scenario",
 ]

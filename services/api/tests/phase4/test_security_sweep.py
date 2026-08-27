@@ -17,21 +17,21 @@ focus on the property-level invariants that the benchmark relies on.
 from __future__ import annotations
 
 import hashlib
+from datetime import UTC
 from typing import Any
 
 import pytest
 
 from razormesh_api.protocol import (
+    MAX_PAYLOAD_BYTES,
     AgentCommerceIR,
     SourceProtocol,
     commitment_hash,
-    compute_commitment,
     envelope_from_raw,
+    envelope_to_canonical_json,
     equal_under_commitment,
     evaluate_envelope,
     hash_payload,
-    envelope_to_canonical_json,
-    MAX_PAYLOAD_BYTES,
 )
 from razormesh_api.protocol.ir import (
     _IRAuthorization,
@@ -224,7 +224,9 @@ class TestFuzz:
             merchant_reference="m",
             commerce_payload_reference="c",
         )
-        tampered = env.model_copy(update={"signature_evidence": {"scheme": "ed25519", "sig": "abd"}})
+        tampered = env.model_copy(
+            update={"signature_evidence": {"scheme": "ed25519", "sig": "abd"}}
+        )
         assert envelope_to_canonical_json(env) != envelope_to_canonical_json(tampered)
 
 
@@ -307,8 +309,8 @@ class TestMCPEnvelopeManipulation:
         # The canonical hash is order-stable (sorted JSON keys).
         # Reordering capability_evidence dict keys MUST NOT change
         # the canonical hash.
-        from datetime import datetime, timezone
-        fixed = datetime(2026, 8, 27, 12, 0, 0, tzinfo=timezone.utc)
+        from datetime import datetime
+        fixed = datetime(2026, 8, 27, 12, 0, 0, tzinfo=UTC)
         e1 = envelope_from_raw(
             source_protocol=SourceProtocol.MCP,
             source_protocol_version="2026-07-28",

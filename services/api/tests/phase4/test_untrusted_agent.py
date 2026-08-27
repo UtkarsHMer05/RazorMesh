@@ -45,6 +45,7 @@ def test_agent_run_serializable():
 def test_agent_has_no_provider_secrets():
     # P4-S27: untrusted buyer agent has no provider/signing secrets.
     import inspect
+
     from razormesh_api.protocol import untrusted_agent
 
     src = inspect.getsource(untrusted_agent)

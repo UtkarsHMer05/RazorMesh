@@ -15,12 +15,11 @@ backend-only configuration. No live LLM is required for M01..M50.
 from __future__ import annotations
 
 import hashlib
-import json
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any
 
-from .envelope import envelope_from_raw, SourceProtocol
+from .envelope import SourceProtocol, envelope_from_raw
 from .firewall import evaluate_envelope
 
 
@@ -240,10 +239,10 @@ def run_prompt_injection_scenario() -> AgentRun:
 
 
 __all__ = [
-    "UntrustedAgentEvent",
-    "AgentStep",
     "AgentRun",
-    "run_normal_scenario",
+    "AgentStep",
+    "UntrustedAgentEvent",
     "run_adversarial_scenario",
+    "run_normal_scenario",
     "run_prompt_injection_scenario",
 ]
