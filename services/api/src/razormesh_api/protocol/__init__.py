@@ -45,12 +45,26 @@ from .ir import (
     CommitmentPayload,
     equal_under_commitment,
 )
+from .ucp_adapter import (
+    RMA_UCP_PROFILE,
+    UCP_PROFILE_PATH,
+    UCP_TARGET_VERSION,
+    build_signed_order_event,
+    build_ucp_checkout_complete_response,
+    build_ucp_envelope,
+    build_ucp_order_get_response,
+    serialize_ucp_profile,
+    verify_signed_order_event,
+)
 
 __all__ = [
     "COMMERCE_COMMITMENT_VERSION",
     "IR_VERSION",
     "MAX_PAYLOAD_BYTES",
+    "RMA_UCP_PROFILE",
     "SUPPORTED_VERSIONS",
+    "UCP_PROFILE_PATH",
+    "UCP_TARGET_VERSION",
     "AgentCommerceIR",
     "CommitmentPayload",
     "ConsistencyResult",
@@ -61,6 +75,10 @@ __all__ = [
     "ProtocolEnvelope",
     "SourceProtocol",
     "VerificationState",
+    "build_signed_order_event",
+    "build_ucp_checkout_complete_response",
+    "build_ucp_envelope",
+    "build_ucp_order_get_response",
     "commitment_hash",
     "compare_envelopes",
     "compare_ir_to_envelope",
@@ -75,4 +93,6 @@ __all__ = [
     "evaluate_envelope",
     "hash_payload",
     "mark_envelope_state",
+    "serialize_ucp_profile",
+    "verify_signed_order_event",
 ]

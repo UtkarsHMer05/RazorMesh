@@ -15,6 +15,7 @@ dependencies = [
     "rfc8785==0.1.4",
     "httpx==0.28.1",
     "uvicorn[standard]==0.52.4",
+    "mcp==2.1.0",
 ]
 
 [dependency-groups]

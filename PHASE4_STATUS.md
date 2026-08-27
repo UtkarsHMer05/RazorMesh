@@ -24,6 +24,19 @@
 | M17 Protocol Idempotency / Replay Ledger | PASS | 2026-08-27; idempotency_key + REPLAY reason; integration with Phase-3 ticket at higher layer |
 | M18 Cross-Protocol Consistency Engine | PASS | 2026-08-27; src/.../consistency.py; MATCH/MISMATCH/INSUFFICIENT_EVIDENCE |
 | M19 Protocol Evidence Persistence + Audit | PASS | 2026-08-27; src/.../audit.py; 4 new event types; no secrets |
+| M20 MCP Modern Server Foundation | PASS | 2026-08-27; mcp==2.1.0 SDK; src/.../mcp_server.py; modern Streamable HTTP |
+| M21 MCP Discovery + Tool Catalog | PASS | 2026-08-27; build_mcp_server() + list_tools deterministic |
+| M22 MCP Read/Proposal Tools | PASS | 2026-08-27; search_catalog, get_product, cart, propose_checkout, get_checkout |
+| M23 MCP Trust/Status Tools | PASS | 2026-08-27; evaluate_checkout, request_authorization, get_authorization_status, get_execution_status, get_order, get_audit_receipt |
+| M24 MCP Authorized Completion Tool | PASS | 2026-08-27; complete_authorized_checkout BLOCKs missing ticket/signature; never accepts payment secrets; never calls provider |
+| M25 MCP Conformance + Security Gate | PASS | 2026-08-27; tests/phase4/test_mcp_server.py 9/9 PASS |
+| M26 UCP Profile / Discovery | PASS | 2026-08-27; RMA_UCP_PROFILE served at /.well-known/ucp |
+| M27 UCP Catalog + Cart Adapter | PASS | 2026-08-27; subset only; no fabricated conformance |
+| M28 UCP Checkout Adapter | PASS | 2026-08-27; create/get/update/complete; complete carries commitment |
+| M29 UCP Order + Signed Event Path | PASS | 2026-08-27; HMAC-SHA256 signed event fixture; tampered body rejected |
+| M30 UCP RFC 9421 / Content-Digest Security | PASS | 2026-08-27; envelope hash covers raw payload; trust-bound signature evidence |
+| M31 UCP-over-MCP Binding | PASS | 2026-08-27; REST and MCP transports produce same commitment |
+| M32 UCP Stable + Forward-Compatibility Suite | PASS | 2026-08-27; pinned 2026-04-08; 13/13 UCP tests PASS |
 | M03 Full Phase-3 AI/ML Revalidation | NOT_STARTED | |
 | M04 Full Redesigned Frontend Revalidation | NOT_STARTED | |
 | M05 Freeze Phase-4 Baseline | NOT_STARTED | |
