@@ -77,7 +77,7 @@ def verify_content_digest(body: bytes, header: str) -> bool:
     if not header.startswith("sha-256=:"):
         return False
     expected = base64.standard_b64encode(hashlib.sha256(body).digest()).decode("ascii")
-    return header[len("sha-256=:"):-1] == expected
+    return header[len("sha-256=:") : -1] == expected
 
 
 # ---------------------------------------------------------------------
@@ -178,7 +178,11 @@ def make_ucp_request(
         "ucp-agent": "razormesh-test-agent",
     }
     return SignedRequest(
-        method=method, authority=authority, path=path, body=body, headers=headers,
+        method=method,
+        authority=authority,
+        path=path,
+        body=body,
+        headers=headers,
     )
 
 
@@ -220,12 +224,16 @@ class UCPSection2:
             source_protocol_version="2099-99-99",
             source_transport="rest",
             adapter_version="razormesh-ucp-adapter-0.1.0",
-            message_id="m1", request_id="r1", idempotency_key=None,
+            message_id="m1",
+            request_id="r1",
+            idempotency_key=None,
             raw_payload=b'{"a":1}',
             signature_evidence={"scheme": "ucp-ed25519"},
             identity_evidence={"agent": "a"},
             capability_evidence={"profile": "2099-99-99"},
-            agent="a", principal_reference="p", merchant_reference="m",
+            agent="a",
+            principal_reference="p",
+            merchant_reference="m",
             commerce_payload_reference="c",
         )
         result = evaluate_envelope(env)
@@ -260,10 +268,13 @@ class UCPSection2:
         # Tamper the digest:
         req.headers["content-digest"] = "sha-256=:AAAA:"
         sig = self._signer_kid1.sign(
-            req, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         ok, reason = self._signer_kid1.verify(
-            req, sig, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            sig,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         return (not ok) and reason == "content_digest_invalid"
 
@@ -271,10 +282,13 @@ class UCPSection2:
     def c_valid_signature_accepted(self) -> bool:
         req = make_ucp_request()
         sig = self._signer_kid1.sign(
-            req, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         ok, reason = self._signer_kid1.verify(
-            req, sig, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            sig,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         return ok and reason == "ok"
 
@@ -282,50 +296,63 @@ class UCPSection2:
         req = make_ucp_request()
         # Sign with kid1 but verify with kid2.
         sig = self._signer_kid1.sign(
-            req, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         ok, _ = self._signer_kid2.verify(
-            req, sig, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            sig,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         return not ok
 
     def c_changed_method_rejected(self) -> bool:
         req = make_ucp_request(method="POST")
         sig = self._signer_kid1.sign(
-            req, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         req.method = "PUT"  # tamper
         ok, _ = self._signer_kid1.verify(
-            req, sig, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            sig,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         return not ok
 
     def c_changed_authority_rejected(self) -> bool:
         req = make_ucp_request(authority="razormesh.local")
         sig = self._signer_kid1.sign(
-            req, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         req.authority = "evil.local"
         ok, _ = self._signer_kid1.verify(
-            req, sig, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            sig,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         return not ok
 
     def c_changed_path_rejected(self) -> bool:
         req = make_ucp_request(path="/ucp/v1/checkouts")
         sig = self._signer_kid1.sign(
-            req, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         req.path = "/ucp/v1/admin"
         ok, _ = self._signer_kid1.verify(
-            req, sig, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            sig,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         return not ok
 
     def c_changed_body_rejected(self) -> bool:
         req = make_ucp_request(body=b'{"a":1}')
         sig = self._signer_kid1.sign(
-            req, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         # Mutate body but keep the same content-digest header (so
         # we test that the digest check fails).
@@ -333,19 +360,24 @@ class UCPSection2:
         # Even without the digest check, the body change invalidates
         # the digest header; the verifier rejects on content_digest_invalid.
         ok, reason = self._signer_kid1.verify(
-            req, sig, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            sig,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         return (not ok) and reason == "content_digest_invalid"
 
     def c_changed_header_rejected(self) -> bool:
         req = make_ucp_request()
         sig = self._signer_kid1.sign(
-            req, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         # Tamper the ucp-agent header (which is a covered signed component).
         req.headers["ucp-agent"] = "evil"
         ok, _ = self._signer_kid1.verify(
-            req, sig, ["@method", "@authority", "@path", "content-digest", "ucp-agent"],
+            req,
+            sig,
+            ["@method", "@authority", "@path", "content-digest", "ucp-agent"],
         )
         return not ok
 
@@ -354,12 +386,15 @@ class UCPSection2:
         # business layer never runs on a tampered request.
         req = make_ucp_request()
         sig = self._signer_kid1.sign(
-            req, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         # Tamper.
         req.body = b"different body"
         ok, _ = self._signer_kid1.verify(
-            req, sig, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            sig,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         return not ok
 
@@ -380,11 +415,15 @@ class UCPSection2:
         # The harness signs with kid1, profile declares kid2.
         req = make_ucp_request()
         sig = self._signer_kid1.sign(
-            req, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         ok, reason = self._signer_kid1.verify(
-            req, sig, ["@method", "@authority", "@path", "content-digest"],
-            expected_kid="kid2", key_override=b"ucp-test-key-2",
+            req,
+            sig,
+            ["@method", "@authority", "@path", "content-digest"],
+            expected_kid="kid2",
+            key_override=b"ucp-test-key-2",
         )
         return (not ok) and reason == "kid_mismatch"
 
@@ -393,11 +432,15 @@ class UCPSection2:
         # rather than a silent allow.
         req = make_ucp_request()
         sig = self._signer_kid1.sign(
-            req, ["@method", "@authority", "@path", "content-digest"],
+            req,
+            ["@method", "@authority", "@path", "content-digest"],
         )
         ok, reason = self._signer_kid1.verify(
-            req, sig, ["@method", "@authority", "@path", "content-digest"],
-            expected_kid="kid-stale", key_override=b"some-other-key",
+            req,
+            sig,
+            ["@method", "@authority", "@path", "content-digest"],
+            expected_kid="kid-stale",
+            key_override=b"some-other-key",
         )
         return (not ok) and reason == "kid_mismatch"
 
@@ -428,7 +471,9 @@ class UCPSection2:
 
     def f_rest_mcp_equivalent_commitment(self) -> bool:
         # The UCP adapter test in test_ucp_adapter.py proves this.
-        return True  # asserted in test_ucp_adapter.test_rest_and_mcp_transport_produce_same_commitment
+        return (
+            True  # asserted in test_ucp_adapter.test_rest_and_mcp_transport_produce_same_commitment
+        )
 
     # ----- G. Lifecycle -----
     def g_catalog_lifecycle(self) -> bool:
@@ -439,37 +484,42 @@ class UCPSection2:
     def g_cart_lifecycle(self) -> bool:
         # Cart create/get/update are in PHASE4_MCP_TOOL_NAMES.
         from razormesh_api.protocol import PHASE4_MCP_TOOL_NAMES
+
         return {"create_cart", "get_cart", "update_cart"}.issubset(PHASE4_MCP_TOOL_NAMES)
 
     def g_checkout_lifecycle(self) -> bool:
         from razormesh_api.protocol import PHASE4_MCP_TOOL_NAMES
+
         return {"propose_checkout", "get_checkout", "complete_authorized_checkout"}.issubset(
             PHASE4_MCP_TOOL_NAMES
         )
 
     def g_completion_lifecycle(self) -> bool:
         from razormesh_api.protocol import PHASE4_MCP_TOOL_NAMES
+
         return "complete_authorized_checkout" in PHASE4_MCP_TOOL_NAMES
 
     def g_order_lifecycle(self) -> bool:
         from razormesh_api.protocol import PHASE4_MCP_TOOL_NAMES
+
         return "get_order" in PHASE4_MCP_TOOL_NAMES
 
     def g_duplicate_order_event_round_trip(self) -> bool:
         secret = b"ucp-test-2026"
         e1 = build_signed_order_event(
-            order_id="ord_1", checkout_id="co_1",
-            event_type="order.created", secret=secret,
+            order_id="ord_1",
+            checkout_id="co_1",
+            event_type="order.created",
+            secret=secret,
         )
         e2 = build_signed_order_event(
-            order_id="ord_1", checkout_id="co_1",
-            event_type="order.created", secret=secret,
+            order_id="ord_1",
+            checkout_id="co_1",
+            event_type="order.created",
+            secret=secret,
         )
         # Identical events, both verify. Tampered event rejected.
-        return (
-            verify_signed_order_event(e1, secret)
-            and verify_signed_order_event(e2, secret)
-        )
+        return verify_signed_order_event(e1, secret) and verify_signed_order_event(e2, secret)
 
     # ----- H. Unknown critical extension -----
     def h_unknown_critical_extension_fails_closed(self) -> bool:
@@ -478,18 +528,23 @@ class UCPSection2:
             source_protocol_version="2026-04-08",
             source_transport="rest",
             adapter_version="razormesh-ucp-adapter-0.1.0",
-            message_id="m_h", request_id="r_h", idempotency_key=None,
-            raw_payload=b'{}',
+            message_id="m_h",
+            request_id="r_h",
+            idempotency_key=None,
+            raw_payload=b"{}",
             signature_evidence={"scheme": "ucp-ed25519"},
             identity_evidence={"agent": "a"},
             capability_evidence={"profile": "2026-04-08"},
-            agent="a", principal_reference="p", merchant_reference="m",
+            agent="a",
+            principal_reference="p",
+            merchant_reference="m",
             commerce_payload_reference="c",
             extension_evidence=[{"uri": "unknown.razormesh.evil.v1", "required": True}],
         )
         result = evaluate_envelope(env)
         # The firewall records the critical-extension reason.
         from razormesh_api.protocol import FirewallReason
+
         return (
             FirewallReason.UNKNOWN_CRITICAL_EXTENSION in result.reasons
             or result.decision.value in ("PROTOCOL_BLOCK", "PROTOCOL_CHALLENGE")
@@ -505,7 +560,10 @@ class UCPSection2:
             ("B.digest_computed_from_bytes", self.b_digest_computed_from_bytes),
             ("B.one_byte_body_mutation_fails", self.b_one_byte_body_mutation_fails),
             ("B.reserialization_changes_bytes_fails", self.b_reserialization_changes_bytes_fails),
-            ("B.digest_verified_before_business_mutation", self.b_digest_verified_before_business_mutation),
+            (
+                "B.digest_verified_before_business_mutation",
+                self.b_digest_verified_before_business_mutation,
+            ),
             ("C.valid_signature_accepted", self.c_valid_signature_accepted),
             ("C.wrong_key_rejected", self.c_wrong_key_rejected),
             ("C.changed_method_rejected", self.c_changed_method_rejected),
@@ -513,7 +571,10 @@ class UCPSection2:
             ("C.changed_path_rejected", self.c_changed_path_rejected),
             ("C.changed_body_rejected", self.c_changed_body_rejected),
             ("C.changed_header_rejected", self.c_changed_header_rejected),
-            ("C.signature_verified_before_business_mutation", self.c_signature_verified_before_business_mutation),
+            (
+                "C.signature_verified_before_business_mutation",
+                self.c_signature_verified_before_business_mutation,
+            ),
             ("D.profile_keys_resolvable", self.d_profile_keys_resolvable),
             ("D.signing_key_in_profile", self.d_signing_key_in_profile),
             ("D.mismatched_profile_key_rejected", self.d_mismatched_profile_key_rejected),
@@ -529,7 +590,10 @@ class UCPSection2:
             ("G.completion_lifecycle", self.g_completion_lifecycle),
             ("G.order_lifecycle", self.g_order_lifecycle),
             ("G.duplicate_order_event_round_trip", self.g_duplicate_order_event_round_trip),
-            ("H.unknown_critical_extension_fails_closed", self.h_unknown_critical_extension_fails_closed),
+            (
+                "H.unknown_critical_extension_fails_closed",
+                self.h_unknown_critical_extension_fails_closed,
+            ),
         ]
         results = []
         passed = 0
@@ -556,18 +620,23 @@ class UCPSection2:
 
 def _base_ir() -> AgentCommerceIR:
     return AgentCommerceIR(
-        principal_ref="p", agent_ref="a",
+        principal_ref="p",
+        agent_ref="a",
         merchant=_IRMerchant(merchant_id="merch_a", seller_id="seller_a"),
         checkout=_IRCheckout(revision="r1"),
         items=[
             _IRItem(
-                product_id="prod_a", variant_id="v1", merchant_item_id="mi_a",
-                brand="Bose", condition="new",
+                product_id="prod_a",
+                variant_id="v1",
+                merchant_item_id="mi_a",
+                brand="Bose",
+                condition="new",
                 quantity=_Quantity(value=1, unit="EA", scale=0),
                 unit_price=_Money(value_minor=189900, currency="INR"),
             )
         ],
-        totals=_IRTotals(total_minor=189900), currency="INR",
+        totals=_IRTotals(total_minor=189900),
+        currency="INR",
         authorization=_IRAuthorization(intent_contract_id="ic_1", authorization_generation=1),
         provenance=_IRProvenance(source_protocols=["ucp"]),
     )

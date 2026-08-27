@@ -69,9 +69,7 @@ class ProtocolEnvelope(BaseModel):
     message_id: str
     request_id: str
     idempotency_key: str | None = None
-    received_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC)
-    )
+    received_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     raw_payload_hash: str
     signature_evidence: Mapping[str, Any] = Field(default_factory=dict)
@@ -127,9 +125,7 @@ def hash_payload(raw: bytes) -> str:
     if not isinstance(raw, (bytes, bytearray)):
         raise TypeError("raw must be bytes")
     if len(raw) > MAX_PAYLOAD_BYTES:
-        raise ValueError(
-            f"raw payload exceeds MAX_PAYLOAD_BYTES ({MAX_PAYLOAD_BYTES})"
-        )
+        raise ValueError(f"raw payload exceeds MAX_PAYLOAD_BYTES ({MAX_PAYLOAD_BYTES})")
     return hashlib.sha256(bytes(raw)).hexdigest()
 
 

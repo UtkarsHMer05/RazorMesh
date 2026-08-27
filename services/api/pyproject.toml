@@ -80,6 +80,7 @@ ignore = [
 "src/razormesh_api/protocol/untrusted_agent.py" = ["E501"]
 "src/razormesh_api/protocol/acceptance.py" = ["E501", "RUF059"]
 "src/razormesh_api/protocol/buyer_agent.py" = ["E501", "S310"]
+"src/razormesh_api/protocol/ucp_signatures.py" = ["E501"]
 "src/razormesh_api/api/routes/phase4_acceptance.py" = ["E501"]
 
 [tool.mypy]

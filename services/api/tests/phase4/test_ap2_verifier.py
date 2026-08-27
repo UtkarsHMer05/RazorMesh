@@ -46,7 +46,8 @@ def _ir(
     product_id: str = "prod_a",
 ) -> AgentCommerceIR:
     return AgentCommerceIR(
-        principal_ref="p", agent_ref="a",
+        principal_ref="p",
+        agent_ref="a",
         merchant=_IRMerchant(merchant_id=merchant_id),
         checkout=_IRCheckout(revision="r1"),
         items=[
@@ -56,7 +57,8 @@ def _ir(
                 unit_price=_Money(value_minor=total_minor, currency=currency),
             )
         ],
-        totals=_IRTotals(total_minor=total_minor), currency=currency,
+        totals=_IRTotals(total_minor=total_minor),
+        currency=currency,
         authorization=_IRAuthorization(intent_contract_id="ic_1", authorization_generation=1),
         provenance=_IRProvenance(source_protocols=["ap2"]),
     )
@@ -88,7 +90,9 @@ def test_merchant_jwt_sign_verify_round_trip():
     ir = _ir()
     jwt = build_ap2_merchant_checkout_jwt(key=key, kid="kid-1", ir=ir)
     ok, reason = verify_ap2_merchant_jwt_es256(
-        jwt=jwt, public_jwk=jwk, expected_vct="ap2.checkout.merchant.v0.2.0",
+        jwt=jwt,
+        public_jwk=jwk,
+        expected_vct="ap2.checkout.merchant.v0.2.0",
     )
     assert ok, reason
     assert reason == "ok"
@@ -119,7 +123,9 @@ def test_ap2_jwt_must_be_es256_not_ed25519():
     key = generate_ap2_test_merchant_key()
     jwk = export_ap2_test_merchant_pub_jwk(key, "kid-1")
     ok, reason = verify_ap2_merchant_jwt_es256(
-        jwt=bad_jwt, public_jwk=jwk, expected_vct="ap2.checkout.merchant.v0.2.0",
+        jwt=bad_jwt,
+        public_jwk=jwk,
+        expected_vct="ap2.checkout.merchant.v0.2.0",
     )
     assert not ok
     assert reason == "alg_must_be_ES256"
@@ -144,7 +150,9 @@ def test_kid_mismatch_rejected():
     ir = _ir()
     jwt = build_ap2_merchant_checkout_jwt(key=key, kid="kid-2", ir=ir)
     ok, reason = verify_ap2_merchant_jwt_es256(
-        jwt=jwt, public_jwk=jwk, expected_vct="ap2.checkout.merchant.v0.2.0",
+        jwt=jwt,
+        public_jwk=jwk,
+        expected_vct="ap2.checkout.merchant.v0.2.0",
     )
     assert not ok
     assert reason == "kid_mismatch"

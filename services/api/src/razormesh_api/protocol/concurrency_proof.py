@@ -18,6 +18,7 @@ I. lost create/execute response → no blind fresh payment
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
@@ -72,18 +73,23 @@ class _Once:
 
 def _ir() -> AgentCommerceIR:
     return AgentCommerceIR(
-        principal_ref="p", agent_ref="a",
+        principal_ref="p",
+        agent_ref="a",
         merchant=_IRMerchant(merchant_id="merch_a", seller_id="seller_a"),
         checkout=_IRCheckout(revision="r1"),
         items=[
             _IRItem(
-                product_id="prod_a", variant_id="v1", merchant_item_id="mi_a",
-                brand="Bose", condition="new",
+                product_id="prod_a",
+                variant_id="v1",
+                merchant_item_id="mi_a",
+                brand="Bose",
+                condition="new",
                 quantity=_Quantity(value=1, unit="EA", scale=0),
                 unit_price=_Money(value_minor=189900, currency="INR"),
             )
         ],
-        totals=_IRTotals(total_minor=189900), currency="INR",
+        totals=_IRTotals(total_minor=189900),
+        currency="INR",
         authorization=_IRAuthorization(intent_contract_id="ic_1", authorization_generation=1),
         provenance=_IRProvenance(source_protocols=["mcp"]),
     )
@@ -97,7 +103,7 @@ def _commitment_other() -> str:
     return commitment_hash(_ir().model_copy(update={"totals": _IRTotals(total_minor=189901)}))
 
 
-def _run_workers(n: int, fn) -> list[Any]:
+def _run_workers(n: int, fn: Callable[[], Any]) -> list[Any]:
     with ThreadPoolExecutor(max_workers=n) as ex:
         futs = [ex.submit(fn) for _ in range(n)]
         return [f.result() for f in as_completed(futs)]
@@ -154,8 +160,7 @@ class ConcurrencySection6:
             "effect_count": len(once.effects),
             "exactly_one_or_zero_effects": len(once.effects) <= 1,
             "results_summary": [
-                {"created": created, "effect_id": effect_id}
-                for created, effect_id in results
+                {"created": created, "effect_id": effect_id} for created, effect_id in results
             ],
         }
 
@@ -212,8 +217,10 @@ class ConcurrencySection6:
         settlement."""
         once = _Once()
         h = _commitment_for()
+
         def attempt(reason: str) -> tuple[str, bool]:
             return (reason, once.attempt("reconcile_shared", h)[0])
+
         with ThreadPoolExecutor(max_workers=3) as ex:
             futs = [ex.submit(attempt, r) for r in ("callback", "webhook", "protocol")]
             results = [f.result() for f in as_completed(futs)]
@@ -259,7 +266,11 @@ class ConcurrencySection6:
         passed = 0
         for s in scenarios:
             r = s()
-            ok = r.get("exactly_once", False) or r.get("exactly_one_final_settlement", False) or r.get("exactly_one_or_zero_effects", False)
+            ok = (
+                r.get("exactly_once", False)
+                or r.get("exactly_one_final_settlement", False)
+                or r.get("exactly_one_or_zero_effects", False)
+            )
             results.append({"name": r.get("scenario", s.__name__), "passed": ok, "report": r})
             if ok:
                 passed += 1

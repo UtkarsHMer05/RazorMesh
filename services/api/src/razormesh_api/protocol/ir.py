@@ -327,4 +327,3 @@ __all__ = [
     "compute_commitment",
     "equal_under_commitment",
 ]
-

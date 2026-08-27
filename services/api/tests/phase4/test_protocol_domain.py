@@ -60,6 +60,7 @@ def _ir(
         _Money,
         _Quantity,
     )
+
     return IR(
         principal_ref=principal,
         agent_ref=agent,
@@ -77,22 +78,22 @@ def _ir(
                     unit=it["quantity"]["unit"],
                     scale=it["quantity"]["scale"],
                 ),
-                unit_price=_Money(
-                    value_minor=it["unit_price_minor"], currency=currency
-                ),
+                unit_price=_Money(value_minor=it["unit_price_minor"], currency=currency),
             )
-            for it in (items
-                       or [{
-                           "product_id": "prod_bose_quietcomfort_earbuds",
-                           "quantity": {"value": 1, "unit": "EA", "scale": 0},
-                           "unit_price_minor": 189900,
-                       }])
+            for it in (
+                items
+                or [
+                    {
+                        "product_id": "prod_bose_quietcomfort_earbuds",
+                        "quantity": {"value": 1, "unit": "EA", "scale": 0},
+                        "unit_price_minor": 189900,
+                    }
+                ]
+            )
         ],
         totals=_IRTotals(total_minor=total_minor),
         currency=currency,
-        recurring=(
-            _IRRecurring(**recurring) if recurring is not None else None
-        ),
+        recurring=(_IRRecurring(**recurring) if recurring is not None else None),
         authorization=_IRAuthorization(
             intent_contract_id=intent_contract_id,
             authorization_generation=authorization_generation,
@@ -129,19 +130,13 @@ def _envelope(
         idempotency_key=idempotency_key,
         raw_payload=raw,
         signature_evidence=(
-            signature
-            if signature is not None
-            else {"scheme": "ed25519", "key_id": "k1"}
+            signature if signature is not None else {"scheme": "ed25519", "key_id": "k1"}
         ),
         identity_evidence=(
-            identity
-            if identity is not None
-            else {"agent": agent, "principal": principal}
+            identity if identity is not None else {"agent": agent, "principal": principal}
         ),
         capability_evidence=(
-            capability
-            if capability is not None
-            else {"tools": ["search_catalog"]}
+            capability if capability is not None else {"tools": ["search_catalog"]}
         ),
         agent=agent,
         principal_reference=principal,
@@ -198,6 +193,7 @@ class TestProtocolEnvelope:
         e1 = _envelope(received_at=fixed)
         e2 = _envelope(received_at=fixed)
         from razormesh_api.protocol.envelope import envelope_to_canonical_json
+
         a = envelope_to_canonical_json(e1)
         b = envelope_to_canonical_json(e2)
         assert a == b
@@ -223,27 +219,39 @@ class TestAgentCommerceIR:
 
     def test_integer_minor_units_required(self):
         with pytest.raises((ValueError, pydantic.ValidationError)):
-            _ir(items=[{
-                "product_id": "x",
-                "quantity": {"value": 1, "unit": "EA", "scale": 0},
-                "unit_price_minor": 1.5,  # float not allowed
-            }])
+            _ir(
+                items=[
+                    {
+                        "product_id": "x",
+                        "quantity": {"value": 1, "unit": "EA", "scale": 0},
+                        "unit_price_minor": 1.5,  # float not allowed
+                    }
+                ]
+            )
 
     def test_quantity_value_positive(self):
         with pytest.raises((ValueError, pydantic.ValidationError)):
-            _ir(items=[{
-                "product_id": "x",
-                "quantity": {"value": 0, "unit": "EA", "scale": 0},
-                "unit_price_minor": 100,
-            }])
+            _ir(
+                items=[
+                    {
+                        "product_id": "x",
+                        "quantity": {"value": 0, "unit": "EA", "scale": 0},
+                        "unit_price_minor": 100,
+                    }
+                ]
+            )
 
     def test_quantity_scale_nonneg(self):
         with pytest.raises((ValueError, pydantic.ValidationError)):
-            _ir(items=[{
-                "product_id": "x",
-                "quantity": {"value": 1, "unit": "EA", "scale": -1},
-                "unit_price_minor": 100,
-            }])
+            _ir(
+                items=[
+                    {
+                        "product_id": "x",
+                        "quantity": {"value": 1, "unit": "EA", "scale": -1},
+                        "unit_price_minor": 100,
+                    }
+                ]
+            )
 
     def test_negative_minor_units_blocked(self):
         with pytest.raises((ValueError, pydantic.ValidationError)):
@@ -344,8 +352,10 @@ class TestCommerceCommitment:
             _Money,
             _Quantity,
         )
+
         ir_obj = AgentCommerceIR(
-            principal_ref="p", agent_ref="a",
+            principal_ref="p",
+            agent_ref="a",
             merchant=_IRMerchant(merchant_id="m"),
             checkout=_IRCheckout(revision="r"),
             items=[
@@ -355,7 +365,8 @@ class TestCommerceCommitment:
                     unit_price=_Money(value_minor=100, currency="INR"),
                 )
             ],
-            totals=_IRTotals(total_minor=100), currency="INR",
+            totals=_IRTotals(total_minor=100),
+            currency="INR",
             authorization=_IRAuthorization(intent_contract_id="i", authorization_generation=1),
             provenance=_IRProvenance(source_protocols=["mcp"]),
         )
@@ -383,6 +394,7 @@ class TestFirewall:
         # feeding an unknown SOURCE string into the firewall via a
         # raw dict.
         from razormesh_api.protocol.envelope import envelope_from_raw
+
         with pytest.raises((ValueError, pydantic.ValidationError)):
             envelope_from_raw(
                 source_protocol="garbage",  # type: ignore[arg-type]
@@ -441,9 +453,7 @@ class TestFirewall:
         assert firewall.FirewallReason.CAPABILITY_MISSING in result.reasons
 
     def test_challenge_expired_envelope(self):
-        env = _envelope(
-            received_at=datetime.now(UTC) - timedelta(days=2)
-        )
+        env = _envelope(received_at=datetime.now(UTC) - timedelta(days=2))
         result = firewall.evaluate_envelope(env)
         assert firewall.FirewallReason.EXPIRED in result.reasons
         assert result.decision == firewall.FirewallDecision.CHALLENGE
@@ -457,9 +467,7 @@ class TestFirewall:
             _envelope(merchant="")
         # The firewall reason is still in the enum and reachable
         # for adapters that bypass the Pydantic check.
-        assert firewall.FirewallReason.MERCHANT_BINDING_MISSING in set(
-            firewall.FirewallReason
-        )
+        assert firewall.FirewallReason.MERCHANT_BINDING_MISSING in set(firewall.FirewallReason)
 
     def test_replay_indicator(self):
         env = _envelope(idempotency_key="k_recent")
@@ -542,9 +550,7 @@ class TestConsistency:
 
     def test_compare_ir_to_envelope_mismatch(self):
         ir_obj = _ir()
-        env = _envelope(
-            signature={"scheme": "ed25519", "commerce_commitment_hash": "0" * 64}
-        )
+        env = _envelope(signature={"scheme": "ed25519", "commerce_commitment_hash": "0" * 64})
         result = consistency.compare_ir_to_envelope(ir_obj, env)
         assert result.state == consistency.ConsistencyState.MISMATCH
 

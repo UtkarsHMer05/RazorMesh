@@ -43,8 +43,19 @@ import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+if TYPE_CHECKING:
+    from ..checkout_service import CheckoutService
+    from ..executor import TrustedPaymentExecutor
+    from ..persistence.models import ExecutionAttempt
+    from ..tickets import CurrentBinding, SignedTicket
+
+from ..semantic import (
+    DeterministicKeywordVerifier,
+    SemanticVerdict,
+    SemanticVerifier,
+)
 from .ap2_verifier import (
     AP2_TARGET_VERSION,
     build_ap2_merchant_checkout_jwt,
@@ -70,9 +81,15 @@ from .ir import AgentCommerceIR
 from .ucp_adapter import (
     UCP_PROFILE_PATH,
     UCP_TARGET_VERSION,
-    build_signed_order_event,
     build_ucp_envelope,
-    verify_signed_order_event,
+)
+from .ucp_signatures import (
+    UCP_DIGEST_SCHEME,
+    UCP_SIGNATURE_SCHEME,
+    export_ucp_public_jwk,
+    generate_ucp_signing_key,
+    sign_ucp_request,
+    verify_ucp_request,
 )
 
 ACCEPTANCE_PROTOCOL_VERSION = "phase4-acceptance-v1"
@@ -91,6 +108,30 @@ def new_acceptance_run_id() -> str:
     ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     rand = secrets.token_hex(8)
     return f"acc-{ts}-{rand}"
+
+
+def _ir_untrusted_texts(ir: AgentCommerceIR) -> tuple[str, ...]:
+    """Collect the presentation-only (untrusted) text carried by an IR.
+
+    These fields are excluded from ``commerce-commitment-v1`` on
+    purpose, so they are exactly the surface a semantic verifier is
+    allowed to advise about and never to authorise with.
+    """
+    texts: list[str] = []
+    for item in ir.items:
+        texts.extend(t for t in (item.title, item.brand, item.condition) if t)
+    if ir.merchant.origin:
+        texts.append(ir.merchant.origin)
+    return tuple(texts)
+
+
+def _ticket_id_of(signed_ticket: SignedTicket | None) -> str | None:
+    """Read the real ticket id out of a signed ticket's canonical claims."""
+    if signed_ticket is None:
+        return None
+    claims = json.loads(signed_ticket.claims_json)
+    ticket_id = claims.get("ticket_id") if isinstance(claims, dict) else None
+    return str(ticket_id) if ticket_id else None
 
 
 @dataclass(frozen=True)
@@ -124,6 +165,7 @@ class AcceptanceProtocolEvidence:
     cross_protocol_consistency: str
     razorguard_decision: str
     semantic_verifier: str
+    semantic_verifier_source: str
     final_decision: str
     decided_at: str
 
@@ -141,6 +183,10 @@ class AcceptanceProtocolEvidence:
                 "signature_digest_verified": self.ucp_signature_digest_verified,
                 "idempotency_key": self.ucp_idempotency_key,
                 "commerce_evidence_hash": self.ucp_commerce_evidence_hash,
+            },
+            "ucp_evidence_extra": {
+                "signature_scheme": UCP_SIGNATURE_SCHEME,
+                "digest_scheme": UCP_DIGEST_SCHEME,
             },
             "ap2": {
                 "version": self.ap2_version,
@@ -163,6 +209,7 @@ class AcceptanceProtocolEvidence:
                 "cross_protocol_consistency": self.cross_protocol_consistency,
                 "razorguard_decision": self.razorguard_decision,
                 "semantic_verifier": self.semantic_verifier,
+                "semantic_verifier_source": self.semantic_verifier_source,
                 "final_decision": self.final_decision,
                 "decided_at": self.decided_at,
             },
@@ -184,6 +231,8 @@ class AcceptanceRun:
     evidence: AcceptanceProtocolEvidence
     completed: bool = False
     used_at: str | None = None
+    decision_id: str | None = None
+    ticket_id: str | None = None
 
 
 class AcceptanceRegistry:
@@ -275,18 +324,13 @@ def build_ucp_evidence(
     ir: AgentCommerceIR,
     idempotency_key: str,
     request_id: str,
-) -> tuple[dict[str, Any], str, str, bool]:
-    """Build the UCP commerce evidence + signature/digest verification proof.
+) -> tuple[dict[str, Any], str, str, bool, dict[str, dict[str, str]]]:
+    """Build the UCP commerce evidence + real RFC 9421 + RFC 9530 proof.
 
     Returns (evidence_dict, ucp_commerce_evidence_hash, ucp_envelope_hash,
-    signature_verified). UCP signature/digest verification is performed
-    by `build_ucp_envelope` against the local UCP test key, and a
-    signed UCP order event is also created+verified through the
-    `verify_signed_order_event` path (HMAC-SHA256 over canonical JSON).
-
-    The UCP commerce evidence hash is the same canonical commitment as
-    the IR/UCP/AP2 share so the cross-protocol consistency check can
-    compare them byte-for-byte.
+    signature_verified, jwks_by_kid). The signature is produced with
+    a real P-256 / ES256 key and verified through the production
+    `verify_ucp_request` path.
     """
     from .commitment import commitment_hash
 
@@ -300,18 +344,35 @@ def build_ucp_evidence(
         principal_reference="principal",
         merchant_reference=str(ir.merchant.merchant_id),
         commerce_payload_reference=hash_payload(raw),
-        signature_evidence={"scheme": "RMA-HMAC-SHA256-2026"},
-        identity_evidence={"scheme": "razormesh-fp-v1"},
+        signature_evidence={"scheme": UCP_SIGNATURE_SCHEME},
+        identity_evidence={"scheme": UCP_DIGEST_SCHEME},
         capability_evidence={"scopes": ["dev.ucp.shopping.checkout.complete"]},
     )
     envelope_hash = _hash_canonical(envelope_to_canonical_json(envelope))
-    signed_event = build_signed_order_event(
-        order_id=f"ord-{uuid.uuid4().hex[:10]}",
-        checkout_id=str(getattr(envelope, "request_id", request_id)),
-        event_type="ucp.checkout.complete",
-        secret=UCP_TEST_HMAC_SECRET,
+    # Real RFC 9421 / RFC 9530 signing path.
+    key = generate_ucp_signing_key()
+    kid = f"ucp-key-{uuid.uuid4().hex[:8]}"
+    sig_headers = sign_ucp_request(
+        body=raw,
+        method="POST",
+        path=f"/ucp/v1/checkouts/{request_id}/complete",
+        authority="razormesh.local",
+        ucp_agent="razormesh-buyer-agent",
+        ucp_profile="https://ucp.dev/2026-04-08/specification/overview",
+        key=key,
+        keyid=kid,
+        idempotency_key=idempotency_key,
     )
-    sig_ok = verify_signed_order_event(signed_event, UCP_TEST_HMAC_SECRET)
+    jwks_by_kid = {kid: export_ucp_public_jwk(key, kid=kid, agent="razormesh-buyer-agent")}
+    verification = verify_ucp_request(
+        body=raw,
+        method="POST",
+        path=f"/ucp/v1/checkouts/{request_id}/complete",
+        authority="razormesh.local",
+        headers=sig_headers.to_headers(),
+        known_jwks=jwks_by_kid,
+    )
+    sig_ok = verification.ok
     ir_commitment = commitment_hash(ir)
     evidence = {
         "ucp_version": UCP_TARGET_VERSION,
@@ -319,13 +380,18 @@ def build_ucp_evidence(
         "ucp_envelope_canonical": envelope_to_canonical_json(envelope),
         "ucp_envelope_hash": envelope_hash,
         "ucp_idempotency_key": idempotency_key,
-        "ucp_signature_digest_verified": sig_ok,
-        "ucp_signed_event": signed_event,
+        "ucp_signature_scheme": UCP_SIGNATURE_SCHEME,
+        "ucp_digest_scheme": UCP_DIGEST_SCHEME,
+        "ucp_signature_verified": sig_ok,
+        "ucp_signature_reason": verification.reason,
+        "ucp_signature_keyid": kid,
+        "ucp_signature_input": sig_headers.signature_input,
+        "ucp_content_digest": sig_headers.content_digest,
+        "ucp_ucp_agent": sig_headers.ucp_agent,
+        "ucp_ucp_profile": sig_headers.ucp_profile,
     }
-    # The UCP commerce evidence hash is the IR's canonical commitment
-    # (so it matches the IR and AP2 commitments for MATCH).
     commerce_evidence_hash = ir_commitment
-    return evidence, commerce_evidence_hash, envelope_hash, sig_ok
+    return evidence, commerce_evidence_hash, envelope_hash, sig_ok, jwks_by_kid
 
 
 def build_ap2_evidence(
@@ -356,12 +422,11 @@ def build_ap2_evidence(
         ir=ir,
         vct=vct,
     )
-    ok, reason = verify_ap2_merchant_jwt_es256(
-        jwt=jwt_str, public_jwk=pub_jwk, expected_vct=vct
-    )
+    ok, reason = verify_ap2_merchant_jwt_es256(jwt=jwt_str, public_jwk=pub_jwk, expected_vct=vct)
     # Decode payload to extract exp/vct for the live evidence.
     parts = jwt_str.split(".")
     import base64 as _b64
+
     pad = "=" * (-len(parts[1]) % 4)
     payload = json.loads(_b64.urlsafe_b64decode(parts[1] + pad).decode("utf-8"))
     expires_at = payload.get("exp")
@@ -372,9 +437,7 @@ def build_ap2_evidence(
         "ap2_jwt": jwt_str,
         "ap2_vct": payload.get("vct", ""),
         "ap2_expires_at": (
-            datetime.fromtimestamp(expires_at, tz=UTC).isoformat()
-            if expires_at is not None
-            else ""
+            datetime.fromtimestamp(expires_at, tz=UTC).isoformat() if expires_at is not None else ""
         ),
         "ap2_signature_verified": ok,
         "ap2_signature_reason": reason,
@@ -406,9 +469,15 @@ class Phase4AcceptanceOrchestrator:
     """Run the full Phase-4 acceptance pipeline for one transaction.
 
     The orchestrator is wired to the existing trusted services:
-    - `CheckoutService` for propose/authorize (the production pipeline).
-    - `DecisionEngine` for the RazorGuard + SemanticVerifier step.
+    - `CheckoutService` for propose/authorize, which runs the production
+      deterministic RazorGuard rule engine and records the durable decision.
+    - the Phase-1/4 semantic seam (`razormesh_api.semantic`) for an
+      independent advisory verdict on untrusted presentation text.
     - `TrustedPaymentExecutor` for the execute path (unchanged).
+
+    The semantic seam can only make the outcome stricter. It never
+    upgrades a RazorGuard BLOCK/CHALLENGE into ALLOW, and an
+    undecided/unsafe verdict fails closed.
 
     The orchestrator is the **only** path that exercises the live
     UCP + AP2 protocol adapters during a real request; the proof
@@ -418,13 +487,15 @@ class Phase4AcceptanceOrchestrator:
     def __init__(
         self,
         *,
-        checkout_service: Any,  # CheckoutService
-        decision_engine: Any,  # DecisionEngine
-        semantic_verifier: Any,  # Callable[[AgentCommerceIR], str]
+        checkout_service: CheckoutService,
+        semantic_verifier: SemanticVerifier | None = None,
+        semantic_verifier_id: str | None = None,
     ) -> None:
         self._checkout = checkout_service
-        self._engine = decision_engine
-        self._verifier = semantic_verifier
+        self._verifier: SemanticVerifier = (
+            semantic_verifier if semantic_verifier is not None else DeterministicKeywordVerifier()
+        )
+        self._verifier_id = semantic_verifier_id or type(self._verifier).__name__
 
     # -- prepare: Confirmed Intent -> MCP -> UCP -> AP2 -> Firewall -> IR
     def prepare(
@@ -569,8 +640,8 @@ class Phase4AcceptanceOrchestrator:
                 rejection_stage="firewall",
             )
 
-        # 5) UCP evidence: real local signature/digest verification.
-        ucp_evidence, ucp_commerce_hash, ucp_env_hash, ucp_sig_ok = build_ucp_evidence(
+        # 5) UCP evidence: real RFC 9421 + RFC 9530 signature/digest proof.
+        ucp_evidence, ucp_commerce_hash, ucp_env_hash, ucp_sig_ok, ucp_jwks = build_ucp_evidence(
             ir=ir, idempotency_key=idempotency_key, request_id=f"req-{run_id}"
         )
 
@@ -588,7 +659,9 @@ class Phase4AcceptanceOrchestrator:
         ir_commitment_hash = commitment_hash(ir)
         ucp_commitment = ucp_commerce_hash
         ap2_commitment = ap2_evidence_hash
-        irs_equal = (ir_commitment_hash == ucp_commitment) and (ir_commitment_hash == ap2_commitment)
+        irs_equal = (ir_commitment_hash == ucp_commitment) and (
+            ir_commitment_hash == ap2_commitment
+        )
         # The existing compare_ir_to_envelope is the canonical consistency
         # gate; use it with a forged envelope carrying the IR commitment
         # so the call exercises the real helper.
@@ -619,16 +692,18 @@ class Phase4AcceptanceOrchestrator:
                 rejection_stage="consistency",
             )
 
-        # 8) RazorGuard + SemanticVerifier were already run by
-        #    `checkout.authorize`; we re-assert for the live evidence.
-        #    The real NLI model load is expensive and not required to
-        #    prove the live ingress: `checkout.authorize` already ran
-        #    the full decision engine (which includes the semantic
-        #    seam) and recorded the verdict on the decision row. We
-        #    re-derive a deterministic label here from that verdict.
+        # 8) SemanticVerifier seam, run independently of RazorGuard.
+        #    The production rule engine does NOT register the semantic
+        #    rule, so the acceptance path invokes the seam here on the
+        #    IR's presentation-only (untrusted) text. RazorGuard already
+        #    decided the financial authority above; this step can only
+        #    make the outcome stricter, and any non-SAFE verdict fails
+        #    closed. The recorded label is the verdict the seam actually
+        #    returned, never a re-derivation of the RazorGuard decision.
         razorguard = authz.outcome.decision.value
-        verifier_label = "ALLOW" if razorguard == "ALLOW" else "UNDECIDED"
-        if verifier_label == "UNDECIDED":
+        assessment = self._verifier.assess(_ir_untrusted_texts(ir))
+        semantic_verdict = assessment.verdict.value
+        if semantic_verdict != SemanticVerdict.SAFE.value:
             return OrchestratorResult(
                 run=AcceptanceRun(
                     run_id=run_id,
@@ -642,14 +717,12 @@ class Phase4AcceptanceOrchestrator:
                     evidence=_empty_evidence(),
                 ),
                 consumed=False,
-                rejection_reason="semantic_verifier_undecided",
+                rejection_reason=f"semantic_verifier:{semantic_verdict}",
                 rejection_stage="semantic_verifier",
             )
 
         # 9) Assemble the AcceptanceProtocolEvidence.
-        intent_hash = _hash_canonical(
-            {"intent_id": str(intent_id), "run_id": run_id}
-        )
+        intent_hash = _hash_canonical({"intent_id": str(intent_id), "run_id": run_id})
         evidence = AcceptanceProtocolEvidence(
             mcp_version="2026-07-28",
             mcp_endpoint="/mcp",
@@ -677,7 +750,8 @@ class Phase4AcceptanceOrchestrator:
             commerce_commitment_version=COMMERCE_COMMITMENT_VERSION,
             cross_protocol_consistency=ConsistencyState.MATCH.value,
             razorguard_decision=razorguard,
-            semantic_verifier=verifier_label,
+            semantic_verifier=semantic_verdict,
+            semantic_verifier_source=self._verifier_id,
             final_decision="ALLOW",
             decided_at=datetime.now(UTC).isoformat(),
         )
@@ -692,6 +766,8 @@ class Phase4AcceptanceOrchestrator:
             currency=currency,
             idempotency_key=idempotency_key,
             evidence=evidence,
+            decision_id=str(authz.decision_id) if authz.decision_id else None,
+            ticket_id=_ticket_id_of(authz.signed_ticket),
         )
         REGISTRY.record(run)
         return OrchestratorResult(run=run, consumed=True)
@@ -703,9 +779,9 @@ class Phase4AcceptanceOrchestrator:
         run_id: str,
         ticket_json: str,
         signature_hex: str,
-        executor: Any,  # TrustedPaymentExecutor
-        binding: Any,  # CurrentBinding
-    ) -> Any:
+        executor: TrustedPaymentExecutor,
+        binding: CurrentBinding,
+    ) -> ExecutionAttempt:
         """Hand the accepted run off to the trusted executor.
 
         The orchestrator does NOT create financial authority; it only
@@ -716,16 +792,140 @@ class Phase4AcceptanceOrchestrator:
             raise RuntimeError(f"unknown acceptance run {run_id}")
         if not REGISTRY.complete(run_id):
             raise RuntimeError(f"acceptance run {run_id} already consumed")
-        from datetime import datetime as _dt
-
+        from ..domain.ids import IntentId
         from ..tickets import SignedTicket
 
         return executor.execute(
             signed_ticket=SignedTicket(ticket_json, signature_hex),
             binding=binding,
-            intent_id=run.intent_id,
-            now_utc=_dt.now(UTC),
+            intent_id=IntentId(run.intent_id),
+            now_utc=datetime.now(UTC),
         )
+
+    # -- finalize_razorpay_handoff: same run, production authorize + execute
+    def finalize_razorpay_handoff(
+        self,
+        *,
+        run_id: str,
+        executor: TrustedPaymentExecutor,
+    ) -> dict[str, Any]:
+        """Reauthorize the SAME acceptance run, then execute it exactly once.
+
+        This path creates no new IntentContract, no new proposal and no
+        second ticket-minting implementation. It reuses the production
+        authority chain:
+
+        1. the durable checkout is rebuilt from PostgreSQL and
+           revalidated (intent-to-execution integrity);
+        2. ``CheckoutService.authorize`` re-runs the deterministic
+           RazorGuard engine immediately before execution and records a
+           fresh durable decision row;
+        3. only an ALLOW from that call produces a context-bound,
+           short-lived, single-use ticket, minted by the same code the
+           buyer path uses;
+        4. ``TrustedPaymentExecutor.execute`` remains the only provider
+           caller, so reservation + ExecutionAttempt + Razorpay order are
+           created by the unchanged production path.
+
+        The acceptance run is consumed exactly once.
+        """
+        run = REGISTRY.get(run_id)
+        if run is None:
+            raise RuntimeError(f"unknown acceptance run {run_id}")
+        if not REGISTRY.complete(run_id):
+            raise RuntimeError(f"acceptance run {run_id} already consumed")
+
+        from sqlalchemy.orm import Session  # noqa: F401  (typed below via repos)
+
+        from ..checkout_service import Proposal
+        from ..decider import Decision
+        from ..domain.authz_hash import (
+            checkout_authorization_hash,
+            intent_authorization_hash,
+        )
+        from ..domain.ids import CheckoutId, IntentId
+        from ..ledger import EvidenceLedger
+        from ..persistence.models import ExecutionAttempt as RowExecutionAttempt
+        from ..revalidation import Revalidator, domain_intent_from_row
+        from ..tickets import SignedTicket  # noqa: F401  (used by finalize)
+
+        repos = self._checkout.repos
+        intent_id = IntentId(run.intent_id)
+        intent_row = repos.intents.get(intent_id)
+        if intent_row is None:
+            raise RuntimeError(f"intent {run.intent_id} not found for run {run_id}")
+        checkout_row = repos.checkouts.get(CheckoutId(run.checkout_id))
+        if checkout_row is None:
+            raise RuntimeError(f"checkout {run.checkout_id} not found for run {run_id}")
+
+        envelope = Revalidator(repos).rebuild_envelope(checkout_row)
+        contract = domain_intent_from_row(intent_row)
+        proposal = Proposal(
+            envelope=envelope,
+            intent_hash=str(intent_authorization_hash(contract)),
+            checkout_hash=str(checkout_authorization_hash(envelope)),
+        )
+
+        # RazorGuard decides again, immediately before execution.
+        authz = self._checkout.authorize(intent_id=intent_id, proposal=proposal)
+        if authz.outcome.decision is not Decision.ALLOW:
+            raise RuntimeError(f"razorguard revalidation refused: {authz.outcome.decision.value}")
+        if authz.signed_ticket is None or authz.binding is None:
+            raise RuntimeError("razorguard ALLOW produced no ticket or binding")
+        ticket_id = str(json.loads(authz.signed_ticket.claims_json)["ticket_id"])
+
+        attempt = executor.execute(
+            signed_ticket=authz.signed_ticket,
+            binding=authz.binding,
+            intent_id=intent_id,
+            now_utc=datetime.now(UTC),
+        )
+
+        # Correlate the protocol evidence with the durable attempt so the
+        # Razorpay order, payment and audit chain resolve to one run.
+        with repos.transaction() as session:
+            row = session.get(RowExecutionAttempt, str(attempt.execution_attempt_id))
+            if row is None:
+                raise RuntimeError("execution attempt vanished before correlation")
+            event = dict(row.provider_event or {})
+            event["acceptance_run_id"] = run.run_id
+            event["commerce_commitment"] = run.evidence.commerce_commitment
+            event["cross_protocol_consistency"] = run.evidence.cross_protocol_consistency
+            event["ucp_commerce_evidence_hash"] = run.evidence.ucp_commerce_evidence_hash
+            event["ap2_evidence_hash"] = run.evidence.ap2_evidence_hash
+            event["mcp_message_id"] = run.evidence.mcp_message_id
+            row.provider_event = event
+            row.updated_at = datetime.now(UTC)
+
+        EvidenceLedger(repos).append(
+            event_type="PHASE4_ACCEPTANCE_FINALIZED",
+            actor="phase4-orchestrator",
+            intent_id=str(contract.intent_id),
+            checkout_id=str(envelope.checkout_id),
+            decision_id=str(authz.decision_id),
+            ticket_id=ticket_id,
+            payload={
+                "acceptance_run_id": run.run_id,
+                "execution_attempt_id": str(attempt.execution_attempt_id),
+                "razorpay_order_id": attempt.razorpay_order_id,
+                "commerce_commitment": run.evidence.commerce_commitment,
+                "cross_protocol_consistency": run.evidence.cross_protocol_consistency,
+                "final_decision": run.evidence.final_decision,
+                "razorguard_decision": authz.outcome.decision.value,
+            },
+        )
+
+        return {
+            "acceptance_run_id": run.run_id,
+            "execution_attempt_id": str(attempt.execution_attempt_id),
+            "razorpay_order_id": attempt.razorpay_order_id,
+            "ticket_id": ticket_id,
+            "decision_id": str(authz.decision_id),
+            "amount_minor": authz.binding.amount_minor,
+            "currency": authz.binding.currency,
+            "commerce_commitment": run.evidence.commerce_commitment,
+            "state": str(attempt.state),
+        }
 
 
 def _ir_from_envelope(envelope: Any, *, intent_id: str) -> AgentCommerceIR:
@@ -747,7 +947,9 @@ def _ir_from_envelope(envelope: Any, *, intent_id: str) -> AgentCommerceIR:
             _IRItem(
                 product_id=str(it.product_id),
                 variant_id=str(it.variant_id) if getattr(it, "variant_id", None) else None,
-                merchant_item_id=str(it.merchant_item_id) if getattr(it, "merchant_item_id", None) else None,
+                merchant_item_id=str(it.merchant_item_id)
+                if getattr(it, "merchant_item_id", None)
+                else None,
                 brand=str(it.brand) if getattr(it, "brand", None) else None,
                 condition=str(it.condition) if getattr(it, "condition", None) else None,
                 quantity=_Quantity(
@@ -812,6 +1014,7 @@ def _empty_evidence() -> AcceptanceProtocolEvidence:
         cross_protocol_consistency="",
         razorguard_decision="",
         semantic_verifier="",
+        semantic_verifier_source="",
         final_decision="",
         decided_at="",
     )

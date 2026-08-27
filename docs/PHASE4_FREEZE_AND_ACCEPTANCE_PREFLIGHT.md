@@ -21,6 +21,12 @@ for the single human-owned Razorpay Test-mode acceptance transaction.
 | Branch | `main` (no upstream configured — **never pushed**) |
 | Git tree after commit | **clean** (`git status --short` empty) |
 
+Note: the live-ingress closure changes (MCP modern mode, real UCP
+RFC 9421 + RFC 9530, acceptance_run_id correlation, concurrency
+proof) are staged in the working tree at the time of this
+preflight. They will be committed in the **next** freeze commit
+once the live-ingress E2E suite is green and all gates pass.
+
 ### Freeze history
 
 | Commit | Purpose |

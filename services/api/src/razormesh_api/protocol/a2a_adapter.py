@@ -26,8 +26,7 @@ A2A_TARGET_VERSION = "v1.0.1"
 RMA_A2A_AGENT_CARD: dict[str, Any] = {
     "name": "razormesh-trust-agent",
     "description": (
-        "RazorMesh Trust cross-protocol agentic-commerce gateway. "
-        "Phase-4 compatibility slice only."
+        "RazorMesh Trust cross-protocol agentic-commerce gateway. Phase-4 compatibility slice only."
     ),
     "supportedInterfaces": [
         {
@@ -51,8 +50,7 @@ RMA_A2A_AGENT_CARD: dict[str, Any] = {
             {
                 "uri": "https://razormesh.dev/extensions/ap2/v0.2.0",
                 "description": (
-                    "AP2 v0.2.0 mandate evidence reference for cross-"
-                    "protocol consistency checks."
+                    "AP2 v0.2.0 mandate evidence reference for cross-protocol consistency checks."
                 ),
                 "required": False,
             },

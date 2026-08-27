@@ -48,7 +48,8 @@ from razormesh_api.protocol.ir import (
 
 def _ir(**overrides: Any) -> AgentCommerceIR:
     base = AgentCommerceIR(
-        principal_ref="p", agent_ref="a",
+        principal_ref="p",
+        agent_ref="a",
         merchant=_IRMerchant(merchant_id="merch_a"),
         checkout=_IRCheckout(revision="r1"),
         items=[
@@ -58,7 +59,8 @@ def _ir(**overrides: Any) -> AgentCommerceIR:
                 unit_price=_Money(value_minor=189900, currency="INR"),
             )
         ],
-        totals=_IRTotals(total_minor=189900), currency="INR",
+        totals=_IRTotals(total_minor=189900),
+        currency="INR",
         authorization=_IRAuthorization(intent_contract_id="ic_1", authorization_generation=1),
         provenance=_IRProvenance(source_protocols=["mcp"]),
     )
@@ -88,24 +90,28 @@ class TestDifferential:
 
     def test_one_field_product_changes_commitment(self):
         a = _ir()
-        b = _ir(items=[
-            _IRItem(
-                product_id="prod_b",
-                quantity=_Quantity(value=1, unit="EA", scale=0),
-                unit_price=_Money(value_minor=189900, currency="INR"),
-            )
-        ])
+        b = _ir(
+            items=[
+                _IRItem(
+                    product_id="prod_b",
+                    quantity=_Quantity(value=1, unit="EA", scale=0),
+                    unit_price=_Money(value_minor=189900, currency="INR"),
+                )
+            ]
+        )
         assert not equal_under_commitment(a, b)
 
     def test_one_field_quantity_changes_commitment(self):
         a = _ir()
-        b = _ir(items=[
-            _IRItem(
-                product_id="prod_a",
-                quantity=_Quantity(value=2, unit="EA", scale=0),
-                unit_price=_Money(value_minor=189900, currency="INR"),
-            )
-        ])
+        b = _ir(
+            items=[
+                _IRItem(
+                    product_id="prod_a",
+                    quantity=_Quantity(value=2, unit="EA", scale=0),
+                    unit_price=_Money(value_minor=189900, currency="INR"),
+                )
+            ]
+        )
         assert not equal_under_commitment(a, b)
 
     def test_one_field_recurring_changes_commitment(self):
@@ -114,10 +120,16 @@ class TestDifferential:
         assert not equal_under_commitment(a, b)
 
     def test_item_order_does_not_change_commitment(self):
-        item_a = _IRItem(product_id="prod_a", quantity=_Quantity(value=1, unit="EA", scale=0),
-                         unit_price=_Money(value_minor=100, currency="INR"))
-        item_b = _IRItem(product_id="prod_b", quantity=_Quantity(value=1, unit="EA", scale=0),
-                         unit_price=_Money(value_minor=200, currency="INR"))
+        item_a = _IRItem(
+            product_id="prod_a",
+            quantity=_Quantity(value=1, unit="EA", scale=0),
+            unit_price=_Money(value_minor=100, currency="INR"),
+        )
+        item_b = _IRItem(
+            product_id="prod_b",
+            quantity=_Quantity(value=1, unit="EA", scale=0),
+            unit_price=_Money(value_minor=200, currency="INR"),
+        )
         a = _ir(items=[item_a, item_b])
         b = _ir(items=[item_b, item_a])
         assert equal_under_commitment(a, b)
@@ -153,6 +165,7 @@ class TestReplay:
         # that reason alone; the caller must compare payloads and
         # decide. We verify the reason is present.
         from razormesh_api.protocol.firewall import FirewallReason
+
         assert FirewallReason.REPLAY in result.reasons
 
 
@@ -310,6 +323,7 @@ class TestMCPEnvelopeManipulation:
         # Reordering capability_evidence dict keys MUST NOT change
         # the canonical hash.
         from datetime import datetime
+
         fixed = datetime(2026, 8, 27, 12, 0, 0, tzinfo=UTC)
         e1 = envelope_from_raw(
             source_protocol=SourceProtocol.MCP,

@@ -56,17 +56,21 @@ class ACPSection4:
     # ----- A. Capability negotiation -----
     def a_compatible_intersection(self) -> bool:
         seller = {
-            "payment": {"handlers": [
-                {"id": "razorpay_test_checkout", "name": "io.razormesh.razorpay.test_checkout"},
-                {"id": "card_tokenized", "name": "dev.acp.tokenized.card"},
-            ]},
+            "payment": {
+                "handlers": [
+                    {"id": "razorpay_test_checkout", "name": "io.razormesh.razorpay.test_checkout"},
+                    {"id": "card_tokenized", "name": "dev.acp.tokenized.card"},
+                ]
+            },
             "interventions": {"supported": ["3ds", "address_verification"]},
             "extensions": [{"name": "discount"}],
         }
         agent = {
-            "payment": {"handlers": [
-                {"id": "razorpay_test_checkout", "name": "io.razormesh.razorpay.test_checkout"},
-            ]},
+            "payment": {
+                "handlers": [
+                    {"id": "razorpay_test_checkout", "name": "io.razormesh.razorpay.test_checkout"},
+                ]
+            },
             "interventions": {"supported": ["3ds"]},
             "extensions": [{"name": "discount"}, {"name": "shipping"}],
         }
@@ -80,16 +84,20 @@ class ACPSection4:
 
     def a_unsupported_capability_rejected(self) -> bool:
         seller = {
-            "payment": {"handlers": [
-                {"id": "razorpay_test_checkout", "name": "io.razormesh.razorpay.test_checkout"},
-            ]},
+            "payment": {
+                "handlers": [
+                    {"id": "razorpay_test_checkout", "name": "io.razormesh.razorpay.test_checkout"},
+                ]
+            },
             "interventions": {"supported": []},
             "extensions": [{"name": "discount"}],
         }
         agent = {
-            "payment": {"handlers": [
-                {"id": "razorpay_test_checkout", "name": "io.razormesh.razorpay.test_checkout"},
-            ]},
+            "payment": {
+                "handlers": [
+                    {"id": "razorpay_test_checkout", "name": "io.razormesh.razorpay.test_checkout"},
+                ]
+            },
             "interventions": {"supported": []},
             "extensions": [{"name": "shipping"}],  # unknown
         }
@@ -103,7 +111,7 @@ class ACPSection4:
         seller = {"payment": {"handlers": [{"id": "x"}]}}
         agent = {"payment": {"handlers": [{"id": "y"}]}}
         inter = intersect_capabilities(agent, seller)
-        return inter["payment"]["handlers"] == []
+        return bool(inter["payment"]["handlers"] == [])
 
     def a_no_silent_fallback_to_unsafe_payment(self) -> bool:
         # The Razormesh handler has requires_delegate_payment=False
@@ -125,7 +133,7 @@ class ACPSection4:
             total_minor=100,
             intent_contract_id="ic_1",
         )
-        return session["status"] == ACPLifecycleState.NOT_READY.value
+        return bool(session["status"] == ACPLifecycleState.NOT_READY.value)
 
     def b_retrieve_session_shape(self) -> bool:
         session = build_acp_checkout_session(
@@ -170,9 +178,12 @@ class ACPSection4:
         # produce the same canonical hash.
         e1 = build_acp_envelope(
             raw_payload=b'{"a":1}',
-            message_id="m", request_id="r1",
+            message_id="m",
+            request_id="r1",
             idempotency_key="k",
-            agent="a", principal_reference="p", merchant_reference="m",
+            agent="a",
+            principal_reference="p",
+            merchant_reference="m",
             commerce_payload_reference="c",
             signature_evidence={"scheme": "ed25519", "kid": "k"},
             identity_evidence={"agent": "a"},
@@ -180,9 +191,12 @@ class ACPSection4:
         )
         e2 = build_acp_envelope(
             raw_payload=b'{"a":1}',
-            message_id="m", request_id="r2",
+            message_id="m",
+            request_id="r2",
             idempotency_key="k",
-            agent="a", principal_reference="p", merchant_reference="m",
+            agent="a",
+            principal_reference="p",
+            merchant_reference="m",
             commerce_payload_reference="c",
             signature_evidence={"scheme": "ed25519", "kid": "k"},
             identity_evidence={"agent": "a"},
@@ -192,17 +206,19 @@ class ACPSection4:
         # Canonical hash differs by received_at (default factory).
         # We assert that the message_id is the same and the
         # idempotency_key is the same.
-        return (
-            e1.idempotency_key == e2.idempotency_key == "k"
-            and e1.message_id == e2.message_id
+        return bool(
+            e1.idempotency_key == e2.idempotency_key == "k" and e1.message_id == e2.message_id
         )
 
     def c_same_key_different_request_conflict(self) -> bool:
         e1 = build_acp_envelope(
             raw_payload=b'{"a":1}',
-            message_id="m", request_id="r1",
+            message_id="m",
+            request_id="r1",
             idempotency_key="k",
-            agent="a", principal_reference="p", merchant_reference="m",
+            agent="a",
+            principal_reference="p",
+            merchant_reference="m",
             commerce_payload_reference="c",
             signature_evidence={"scheme": "ed25519"},
             identity_evidence={"agent": "a"},
@@ -210,16 +226,19 @@ class ACPSection4:
         )
         e2 = build_acp_envelope(
             raw_payload=b'{"a":2}',  # different body
-            message_id="m", request_id="r2",
+            message_id="m",
+            request_id="r2",
             idempotency_key="k",
-            agent="a", principal_reference="p", merchant_reference="m",
+            agent="a",
+            principal_reference="p",
+            merchant_reference="m",
             commerce_payload_reference="c",
             signature_evidence={"scheme": "ed25519"},
             identity_evidence={"agent": "a"},
             capability_evidence={"handlers": ["razorpay_test_checkout"]},
         )
         # Same idempotency_key, different raw_payload_hash.
-        return e1.raw_payload_hash != e2.raw_payload_hash
+        return bool(e1.raw_payload_hash != e2.raw_payload_hash)
 
     # ----- D. Failure path -----
     def d_payment_failed_cannot_fulfill(self) -> bool:
@@ -230,7 +249,11 @@ class ACPSection4:
         # terminal failure that must not transition to COMPLETED.
         # We assert the gateway contract: no transition from any
         # non-IN_PROGRESS state to COMPLETED.
-        for src in (ACPLifecycleState.NOT_READY, ACPLifecycleState.READY, ACPLifecycleState.CANCELED):
+        for src in (
+            ACPLifecycleState.NOT_READY,
+            ACPLifecycleState.READY,
+            ACPLifecycleState.CANCELED,
+        ):
             assert not is_legal_transition(src, ACPLifecycleState.COMPLETED)
         return True
 
@@ -257,10 +280,12 @@ class ACPSection4:
         # execution_attempt_id yields status=NOT_READY (refused).
         ir = self._base_ir()
         response = build_acp_complete_response(
-            session_id="co_1", intent_contract_id="ic_1",
-            ir=ir, execution_attempt_id=None,
+            session_id="co_1",
+            intent_contract_id="ic_1",
+            ir=ir,
+            execution_attempt_id=None,
         )
-        return response["status"] == ACPLifecycleState.NOT_READY.value
+        return bool(response["status"] == ACPLifecycleState.NOT_READY.value)
 
     def e_reconciliation_resolves_safely(self) -> bool:
         # A reconciliation step that finds the session in
@@ -275,7 +300,7 @@ class ACPSection4:
     # ----- F. Custom handler -----
     def f_handler_namespaced_and_nonstandard(self) -> bool:
         h = ACP_RAZORMESH_PAYMENT_HANDLER
-        return h["name"] == "io.razormesh.razorpay.test_checkout"
+        return bool(h["name"] == "io.razormesh.razorpay.test_checkout")
 
     def f_not_delegate_payment(self) -> bool:
         return ACP_RAZORMESH_PAYMENT_HANDLER["requires_delegate_payment"] is False
@@ -296,10 +321,14 @@ class ACPSection4:
         import inspect
 
         from razormesh_api.protocol import acp_adapter
+
         src = inspect.getsource(acp_adapter)
         for forbidden in (
-            "RZP_KEY", "RAZORPAY_KEY", "RZP_SECRET",
-            "RAZORPAY_SECRET", "RAZORPAY_WEBHOOK_SECRET",
+            "RZP_KEY",
+            "RAZORPAY_KEY",
+            "RZP_SECRET",
+            "RAZORPAY_SECRET",
+            "RAZORPAY_WEBHOOK_SECRET",
         ):
             assert forbidden not in src, f"leak: {forbidden}"
         return True
@@ -308,9 +337,8 @@ class ACPSection4:
         # The profile exposes the handler. The UCP profile mirrors
         # the same handler via the UCP-over-MCP binding.
         from razormesh_api.protocol.ucp_adapter import RMA_UCP_PROFILE
-        h = RMA_UCP_PROFILE["ucp"]["payment_handlers"].get(
-            "io.razormesh.razorpay.test_checkout"
-        )
+
+        h = RMA_UCP_PROFILE["ucp"]["payment_handlers"].get("io.razormesh.razorpay.test_checkout")
         return h is not None and h.get("psp") == "razorpay"
 
     def f_no_browser_razorpay_secret(self) -> bool:
@@ -318,6 +346,7 @@ class ACPSection4:
         # secret. Verified by static check across the frontend
         # Phase-4 module.
         from pathlib import Path
+
         frontend = Path("apps/web")
         if not frontend.exists():
             return True
@@ -326,7 +355,10 @@ class ACPSection4:
                 continue
             text = path.read_text(encoding="utf-8", errors="ignore")
             for forbidden in (
-                "RZP_KEY", "RAZORPAY_KEY", "RZP_SECRET", "RAZORPAY_SECRET",
+                "RZP_KEY",
+                "RAZORPAY_KEY",
+                "RZP_SECRET",
+                "RAZORPAY_SECRET",
                 "RAZORPAY_WEBHOOK_SECRET",
             ):
                 if forbidden in text:
@@ -336,18 +368,23 @@ class ACPSection4:
     # ----- helpers -----
     def _base_ir(self) -> AgentCommerceIR:
         return AgentCommerceIR(
-            principal_ref="p", agent_ref="a",
+            principal_ref="p",
+            agent_ref="a",
             merchant=_IRMerchant(merchant_id="merch_a", seller_id="seller_a"),
             checkout=_IRCheckout(revision="r1"),
             items=[
                 _IRItem(
-                    product_id="prod_a", variant_id="v1", merchant_item_id="mi_a",
-                    brand="Bose", condition="new",
+                    product_id="prod_a",
+                    variant_id="v1",
+                    merchant_item_id="mi_a",
+                    brand="Bose",
+                    condition="new",
                     quantity=_Quantity(value=1, unit="EA", scale=0),
                     unit_price=_Money(value_minor=189900, currency="INR"),
                 )
             ],
-            totals=_IRTotals(total_minor=189900), currency="INR",
+            totals=_IRTotals(total_minor=189900),
+            currency="INR",
             authorization=_IRAuthorization(intent_contract_id="ic_1", authorization_generation=1),
             provenance=_IRProvenance(source_protocols=["acp"]),
         )
@@ -372,7 +409,10 @@ class ACPSection4:
             ("C.same_key_different_request_conflict", self.c_same_key_different_request_conflict),
             ("D.payment_failed_cannot_fulfill", self.d_payment_failed_cannot_fulfill),
             ("D.no_retry_on_failed", self.d_no_retry_on_failed),
-            ("E.unknown_provider_outcome_not_ordinary_failure", self.e_unknown_provider_outcome_not_ordinary_failure),
+            (
+                "E.unknown_provider_outcome_not_ordinary_failure",
+                self.e_unknown_provider_outcome_not_ordinary_failure,
+            ),
             ("E.no_blind_fresh_retry", self.e_no_blind_fresh_retry),
             ("E.reconciliation_resolves_safely", self.e_reconciliation_resolves_safely),
             ("E.no_double_settlement", self.e_no_double_settlement),

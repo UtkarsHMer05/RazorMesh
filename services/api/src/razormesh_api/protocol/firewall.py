@@ -229,16 +229,18 @@ def _extract_date(v: str) -> str | None:
     return None
 
 
-_KNOWN_EXTENSION_URIS: frozenset[str] = frozenset({
-    # RazorMesh-namespaced extensions are the only known extensions
-    # in the test surface. The real registry will be loaded by the
-    # adapter at runtime; for the protocol-firewall primitive the
-    # known set is closed and explicit.
-    "https://razormesh.dev/extensions/ucp/v1",
-    "https://razormesh.dev/extensions/ap2/v0.2.0",
-    "https://razormesh.dev/extensions/acp/v0",
-    "https://razormesh.dev/extensions/a2a/v1",
-})
+_KNOWN_EXTENSION_URIS: frozenset[str] = frozenset(
+    {
+        # RazorMesh-namespaced extensions are the only known extensions
+        # in the test surface. The real registry will be loaded by the
+        # adapter at runtime; for the protocol-firewall primitive the
+        # known set is closed and explicit.
+        "https://razormesh.dev/extensions/ucp/v1",
+        "https://razormesh.dev/extensions/ap2/v0.2.0",
+        "https://razormesh.dev/extensions/acp/v0",
+        "https://razormesh.dev/extensions/a2a/v1",
+    }
+)
 
 
 def _known_extension_uri(uri: str) -> bool:

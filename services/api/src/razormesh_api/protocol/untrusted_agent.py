@@ -262,9 +262,7 @@ def run_prompt_injection_scenario() -> AgentRun:
     firewall's protocol-level guard fires.
     """
     run = AgentRun(agent_id="untrusted_pi", principal_id="principal_test")
-    run.steps.append(
-        AgentStep(event=UntrustedAgentEvent.ADVERSARIAL_TRY, payload={})
-    )
+    run.steps.append(AgentStep(event=UntrustedAgentEvent.ADVERSARIAL_TRY, payload={}))
     # Merchant content pretending to authorize recurring.
     # The firewall does not police semantics (that's NLI), but the
     # protocol-level guard refuses any signature-less payload.

@@ -43,7 +43,8 @@ from .audit import (
     emit_protocol_received,
     emit_protocol_verified,
 )
-from .commitment import commitment_hash, compute_commitment
+from .commitment import commitment_hash as commitment_hash
+from .commitment import compute_commitment as compute_commitment
 from .consistency import (
     ConsistencyResult,
     ConsistencyState,

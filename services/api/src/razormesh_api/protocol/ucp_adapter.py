@@ -102,10 +102,7 @@ RMA_UCP_PROFILE: dict[str, Any] = {
                 "requires_delegate_payment": False,
                 "requires_pci_compliance": False,
                 "test_mode": True,
-                "spec": (
-                    "Local file: services/api/src/razormesh_api/protocol/"
-                    "razorpay_handoff.py"
-                ),
+                "spec": ("Local file: services/api/src/razormesh_api/protocol/razorpay_handoff.py"),
             }
         },
     }

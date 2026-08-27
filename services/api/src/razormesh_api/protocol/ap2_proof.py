@@ -67,10 +67,15 @@ class AP2Section3:
     def a_closed_checkout_authorization_flow(self) -> bool:
         ir = self._base_ir()
         jwt = build_ap2_merchant_checkout_jwt(
-            key=self._key_a, kid="kid_a", ir=ir, vct=self._vct,
+            key=self._key_a,
+            kid="kid_a",
+            ir=ir,
+            vct=self._vct,
         )
         ok, reason = verify_ap2_merchant_jwt_es256(
-            jwt=jwt, public_jwk=self._jwk_a, expected_vct=self._vct,
+            jwt=jwt,
+            public_jwk=self._jwk_a,
+            expected_vct=self._vct,
         )
         return ok and reason == "ok"
 
@@ -88,7 +93,10 @@ class AP2Section3:
         # alg=ES256 only.
         ir = self._base_ir()
         jwt = build_ap2_merchant_checkout_jwt(
-            key=self._key_a, kid="kid_a", ir=ir, vct=self._vct,
+            key=self._key_a,
+            kid="kid_a",
+            ir=ir,
+            vct=self._vct,
         )
         # Try to verify with HS256-style: forge a JWT with alg=HS256
         # and verify it via the ES256 verifier — must fail with
@@ -96,13 +104,22 @@ class AP2Section3:
         parts = jwt.split(".")
         # Replace header with alg=HS256.
         p = parts[1]
-        forged_header = base64.urlsafe_b64encode(
-            json.dumps({"alg": "HS256", "typ": "JWT", "kid": "kid_a"},
-                       sort_keys=True, separators=(",", ":")).encode()
-        ).rstrip(b"=").decode()
+        forged_header = (
+            base64.urlsafe_b64encode(
+                json.dumps(
+                    {"alg": "HS256", "typ": "JWT", "kid": "kid_a"},
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode()
+            )
+            .rstrip(b"=")
+            .decode()
+        )
         forged_jwt = f"{forged_header}.{p}.{parts[2]}"
         ok, reason = verify_ap2_merchant_jwt_es256(
-            jwt=forged_jwt, public_jwk=self._jwk_a, expected_vct=self._vct,
+            jwt=forged_jwt,
+            public_jwk=self._jwk_a,
+            expected_vct=self._vct,
         )
         return (not ok) and reason == "alg_must_be_ES256"
 
@@ -120,7 +137,10 @@ class AP2Section3:
         # are present in the verified payload.
         ir = self._base_ir()
         jwt = build_ap2_merchant_checkout_jwt(
-            key=self._key_a, kid="kid_a", ir=ir, vct=self._vct,
+            key=self._key_a,
+            kid="kid_a",
+            ir=ir,
+            vct=self._vct,
         )
         # Decode without verification — sanity-check shape.
         parts = jwt.split(".")
@@ -132,10 +152,15 @@ class AP2Section3:
         # with reason `vct_mismatch`.
         ir = self._base_ir()
         jwt = build_ap2_merchant_checkout_jwt(
-            key=self._key_a, kid="kid_a", ir=ir, vct="some.other.vct",
+            key=self._key_a,
+            kid="kid_a",
+            ir=ir,
+            vct="some.other.vct",
         )
         ok, reason = verify_ap2_merchant_jwt_es256(
-            jwt=jwt, public_jwk=self._jwk_a, expected_vct=self._vct,
+            jwt=jwt,
+            public_jwk=self._jwk_a,
+            expected_vct=self._vct,
         )
         return (not ok) and reason == "vct_mismatch"
 
@@ -145,18 +170,21 @@ class AP2Section3:
         # verifier checks the IR against the open constraints at
         # the higher layer; we prove the constraint model is
         # present in the IR commitment.
-        ir_open = self._base_ir().model_copy(update={
-            "authorization": _IRAuthorization(
-                intent_contract_id="ic_hnp", authorization_generation=1,
-            ),
-        })
+        ir_open = self._base_ir().model_copy(
+            update={
+                "authorization": _IRAuthorization(
+                    intent_contract_id="ic_hnp",
+                    authorization_generation=1,
+                ),
+            }
+        )
         return compute_ap2_checkout_hash(ir_open) is not None
 
     def b_cnf_key_binding(self) -> bool:
         # cnf is part of the AP2 mandate. The verifier exposes the
         # vct; cnf is checked at the adapter. Here we document the
         # contract via the deterministic key JWK.
-        return self._jwk_a["kty"] == "EC" and self._jwk_a["crv"] == "P-256"
+        return bool(self._jwk_a["kty"] == "EC" and self._jwk_a["crv"] == "P-256")
 
     def b_proof_of_possession(self) -> bool:
         # PoP is HMAC(secret, challenge). Wrong secret fails.
@@ -169,20 +197,36 @@ class AP2Section3:
         # authorization that allowed monthly. We prove the commitment
         # is sensitive to the recurring field.
         a = self._base_ir()
-        b = self._base_ir().model_copy(update={"recurring": _IRRecurring(
-            mode="monthly", interval="1m", amount_minor=189900,
-        )})
+        b = self._base_ir().model_copy(
+            update={
+                "recurring": _IRRecurring(
+                    mode="monthly",
+                    interval="1m",
+                    amount_minor=189900,
+                )
+            }
+        )
         return not equal_under_commitment(a, b)
 
     def b_final_checkout_payment_binding(self) -> bool:
         # The IR commitment includes authorization_generation, so
         # generation N is a different commitment from generation N+1.
-        a = self._base_ir().model_copy(update={"authorization": _IRAuthorization(
-            intent_contract_id="ic_1", authorization_generation=1,
-        )})
-        b = self._base_ir().model_copy(update={"authorization": _IRAuthorization(
-            intent_contract_id="ic_1", authorization_generation=2,
-        )})
+        a = self._base_ir().model_copy(
+            update={
+                "authorization": _IRAuthorization(
+                    intent_contract_id="ic_1",
+                    authorization_generation=1,
+                )
+            }
+        )
+        b = self._base_ir().model_copy(
+            update={
+                "authorization": _IRAuthorization(
+                    intent_contract_id="ic_1",
+                    authorization_generation=2,
+                )
+            }
+        )
         return not equal_under_commitment(a, b)
 
     def b_expiry(self) -> bool:
@@ -190,10 +234,15 @@ class AP2Section3:
         # mandates fail. The harness verifies the vct/version path.
         ir = self._base_ir()
         jwt = build_ap2_merchant_checkout_jwt(
-            key=self._key_a, kid="kid_a", ir=ir, vct=self._vct,
+            key=self._key_a,
+            kid="kid_a",
+            ir=ir,
+            vct=self._vct,
         )
         ok, _ = verify_ap2_merchant_jwt_es256(
-            jwt=jwt, public_jwk=self._jwk_a, expected_vct=self._vct,
+            jwt=jwt,
+            public_jwk=self._jwk_a,
+            expected_vct=self._vct,
         )
         return ok  # valid; expiry is enforced at the higher layer
 
@@ -206,24 +255,26 @@ class AP2Section3:
         # and the equality property is verified.
         ir = self._base_ir()
         jwt1 = build_ap2_merchant_checkout_jwt(
-            key=self._key_a, kid="kid_a", ir=ir, vct=self._vct,
+            key=self._key_a,
+            kid="kid_a",
+            ir=ir,
+            vct=self._vct,
         )
         # Decode both to compare payloads. The two JWTs have the
         # same payload (no iat field) and the same signature, so
         # the same mandate can be detected at the adapter.
         parts1 = jwt1.split(".")
-        payload1 = json.loads(
-            base64.urlsafe_b64decode(parts1[1] + "===").decode()
-        )
+        payload1 = json.loads(base64.urlsafe_b64decode(parts1[1] + "===").decode())
         # Build a second JWT with the same IR — payload must match.
         jwt2 = build_ap2_merchant_checkout_jwt(
-            key=self._key_a, kid="kid_a", ir=ir, vct=self._vct,
+            key=self._key_a,
+            kid="kid_a",
+            ir=ir,
+            vct=self._vct,
         )
         parts2 = jwt2.split(".")
-        payload2 = json.loads(
-            base64.urlsafe_b64decode(parts2[1] + "===").decode()
-        )
-        return payload1 == payload2
+        payload2 = json.loads(base64.urlsafe_b64decode(parts2[1] + "===").decode())
+        return bool(payload1 == payload2)
 
     # ----- C. Constraints -----
     def c_known_constraint_enforced(self) -> bool:
@@ -235,11 +286,15 @@ class AP2Section3:
         # Unknown vct fails closed.
         ir = self._base_ir()
         jwt = build_ap2_merchant_checkout_jwt(
-            key=self._key_a, kid="kid_a", ir=ir,
+            key=self._key_a,
+            kid="kid_a",
+            ir=ir,
             vct="ap2.unknown.required.v0",
         )
         ok, reason = verify_ap2_merchant_jwt_es256(
-            jwt=jwt, public_jwk=self._jwk_a, expected_vct=self._vct,
+            jwt=jwt,
+            public_jwk=self._jwk_a,
+            expected_vct=self._vct,
         )
         return (not ok) and reason == "vct_mismatch"
 
@@ -247,9 +302,15 @@ class AP2Section3:
         # Open constraint: monthly <= 100000. Closed = one-time.
         # A "relaxation" is one-time instead of monthly. The IR
         # commitment flips → detected.
-        a = self._base_ir().model_copy(update={"recurring": _IRRecurring(
-            mode="monthly", interval="1m", amount_minor=189900,
-        )})
+        a = self._base_ir().model_copy(
+            update={
+                "recurring": _IRRecurring(
+                    mode="monthly",
+                    interval="1m",
+                    amount_minor=189900,
+                )
+            }
+        )
         b = self._base_ir()  # recurring=none (one-time)
         return not equal_under_commitment(a, b)
 
@@ -282,14 +343,21 @@ class AP2Section3:
 
     def d_changed_product_fails(self) -> bool:
         a = self._base_ir()
-        b = self._base_ir().model_copy(update={"items": [
-            _IRItem(
-                product_id="prod_b", variant_id="v1", merchant_item_id="mi_a",
-                brand="Bose", condition="new",
-                quantity=_Quantity(value=1, unit="EA", scale=0),
-                unit_price=_Money(value_minor=189900, currency="INR"),
-            )
-        ]})
+        b = self._base_ir().model_copy(
+            update={
+                "items": [
+                    _IRItem(
+                        product_id="prod_b",
+                        variant_id="v1",
+                        merchant_item_id="mi_a",
+                        brand="Bose",
+                        condition="new",
+                        quantity=_Quantity(value=1, unit="EA", scale=0),
+                        unit_price=_Money(value_minor=189900, currency="INR"),
+                    )
+                ]
+            }
+        )
         return compute_ap2_checkout_hash(a) != compute_ap2_checkout_hash(b)
 
     def d_mismatched_payment_evidence_fails(self) -> bool:
@@ -318,7 +386,10 @@ class AP2Section3:
         ir = self._base_ir()
         blob = json.dumps(ir.model_dump(mode="json"), default=str)
         for forbidden in (
-            "BEGIN PRIVATE KEY", "Bearer ", "razorpay_key", "whsec_",
+            "BEGIN PRIVATE KEY",
+            "Bearer ",
+            "razorpay_key",
+            "whsec_",
         ):
             assert forbidden not in blob, f"leak: {forbidden}"
         return True
@@ -328,6 +399,7 @@ class AP2Section3:
         # The AP2 test key is a fresh P-256 EC key per run; the
         # ExecutionTicket key is a separate Ed25519 key.
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
         ap2_key = self._key_a
         ed_key = Ed25519PrivateKey.generate()
         return type(ap2_key).__name__ != type(ed_key).__name__
@@ -337,6 +409,7 @@ class AP2Section3:
         import inspect
 
         from razormesh_api.protocol import ap2_verifier
+
         src = inspect.getsource(ap2_verifier)
         return ".private_bytes(" not in src and "export_ap2_test_merchant_pub_jwk" in src
 
@@ -345,6 +418,7 @@ class AP2Section3:
         import inspect
 
         from razormesh_api.protocol import ap2_verifier
+
         src = inspect.getsource(ap2_verifier)
         for forbidden in ("RZP_WEBHOOK_SECRET", "RAZORPAY_WEBHOOK_SECRET", "whsec_"):
             assert forbidden not in src
@@ -357,16 +431,26 @@ class AP2Section3:
         # commitment → FINAL = BLOCK.
         ir_a = self._base_ir()  # intent_contract_id=ic_1
         jwt = build_ap2_merchant_checkout_jwt(
-            key=self._key_a, kid="kid_a", ir=ir_a, vct=self._vct,
+            key=self._key_a,
+            kid="kid_a",
+            ir=ir_a,
+            vct=self._vct,
         )
         ok, _ = verify_ap2_merchant_jwt_es256(
-            jwt=jwt, public_jwk=self._jwk_a, expected_vct=self._vct,
+            jwt=jwt,
+            public_jwk=self._jwk_a,
+            expected_vct=self._vct,
         )
         assert ok, "AP2 sig must verify"
         # Now produce a different commerce with intent_contract_id=ic_evil.
-        ir_b = ir_a.model_copy(update={"authorization": _IRAuthorization(
-            intent_contract_id="ic_evil", authorization_generation=1,
-        )})
+        ir_b = ir_a.model_copy(
+            update={
+                "authorization": _IRAuthorization(
+                    intent_contract_id="ic_evil",
+                    authorization_generation=1,
+                )
+            }
+        )
         # Cross-protocol consistency: MISMATCH.
         same = equal_under_commitment(ir_a, ir_b)
         # Final = BLOCK (the trust path enforces this; the
@@ -376,18 +460,23 @@ class AP2Section3:
     # ----- helpers -----
     def _base_ir(self) -> AgentCommerceIR:
         return AgentCommerceIR(
-            principal_ref="p", agent_ref="a",
+            principal_ref="p",
+            agent_ref="a",
             merchant=_IRMerchant(merchant_id="merch_a", seller_id="seller_a"),
             checkout=_IRCheckout(revision="r1"),
             items=[
                 _IRItem(
-                    product_id="prod_a", variant_id="v1", merchant_item_id="mi_a",
-                    brand="Bose", condition="new",
+                    product_id="prod_a",
+                    variant_id="v1",
+                    merchant_item_id="mi_a",
+                    brand="Bose",
+                    condition="new",
                     quantity=_Quantity(value=1, unit="EA", scale=0),
                     unit_price=_Money(value_minor=189900, currency="INR"),
                 )
             ],
-            totals=_IRTotals(total_minor=189900), currency="INR",
+            totals=_IRTotals(total_minor=189900),
+            currency="INR",
             authorization=_IRAuthorization(intent_contract_id="ic_1", authorization_generation=1),
             provenance=_IRProvenance(source_protocols=["ap2"]),
         )
@@ -408,9 +497,18 @@ class AP2Section3:
             ("B.expiry", self.b_expiry),
             ("B.replay_protection", self.b_replay_protection),
             ("C.known_constraint_enforced", self.c_known_constraint_enforced),
-            ("C.unknown_required_constraint_fails_closed", self.c_unknown_required_constraint_fails_closed),
-            ("C.relaxation_of_user_constraint_rejected", self.c_relaxation_of_user_constraint_rejected),
-            ("C.amount_currency_merchant_item_quantity_verified", self.c_amount_currency_merchant_item_quantity_verified),
+            (
+                "C.unknown_required_constraint_fails_closed",
+                self.c_unknown_required_constraint_fails_closed,
+            ),
+            (
+                "C.relaxation_of_user_constraint_rejected",
+                self.c_relaxation_of_user_constraint_rejected,
+            ),
+            (
+                "C.amount_currency_merchant_item_quantity_verified",
+                self.c_amount_currency_merchant_item_quantity_verified,
+            ),
             ("D.current_checkout_matches_mandate", self.d_current_checkout_matches_mandate),
             ("D.changed_amount_fails", self.d_changed_amount_fails),
             ("D.changed_currency_fails", self.d_changed_currency_fails),
@@ -421,9 +519,15 @@ class AP2Section3:
             ("E.broken_reference_chain_fails", self.e_broken_reference_chain_fails),
             ("E.audit_bundle_no_secrets", self.e_audit_bundle_no_secrets),
             ("F.ap2_keys_not_execution_ticket_keys", self.f_ap2_keys_not_execution_ticket_keys),
-            ("F.ap2_private_key_never_reaches_frontend", self.f_ap2_private_key_never_reaches_frontend),
+            (
+                "F.ap2_private_key_never_reaches_frontend",
+                self.f_ap2_private_key_never_reaches_frontend,
+            ),
             ("F.razorpay_webhook_secrets_unrelated", self.f_razorpay_webhook_secrets_unrelated),
-            ("G.ap2_sig_pass_intentcontract_mismatch_blocks", self.g_ap2_sig_pass_intentcontract_mismatch_blocks),
+            (
+                "G.ap2_sig_pass_intentcontract_mismatch_blocks",
+                self.g_ap2_sig_pass_intentcontract_mismatch_blocks,
+            ),
         ]
         results = []
         passed = 0

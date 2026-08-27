@@ -40,12 +40,8 @@ class ACPLifecycleState(StrEnum):
 # COMPLETED without going through READY and IN_PROGRESS. This is
 # the state machine the adapter enforces at the boundary.
 _LEGAL_TRANSITIONS: dict[ACPLifecycleState, frozenset[ACPLifecycleState]] = {
-    ACPLifecycleState.NOT_READY: frozenset(
-        {ACPLifecycleState.READY, ACPLifecycleState.CANCELED}
-    ),
-    ACPLifecycleState.READY: frozenset(
-        {ACPLifecycleState.IN_PROGRESS, ACPLifecycleState.CANCELED}
-    ),
+    ACPLifecycleState.NOT_READY: frozenset({ACPLifecycleState.READY, ACPLifecycleState.CANCELED}),
+    ACPLifecycleState.READY: frozenset({ACPLifecycleState.IN_PROGRESS, ACPLifecycleState.CANCELED}),
     ACPLifecycleState.IN_PROGRESS: frozenset(
         {ACPLifecycleState.COMPLETED, ACPLifecycleState.CANCELED}
     ),
@@ -91,9 +87,7 @@ def intersect_capabilities(
     seller_handlers = {
         h["id"]: h for h in seller_capabilities.get("payment", {}).get("handlers", [])
     }
-    agent_handlers = {
-        h["id"]: h for h in agent_capabilities.get("payment", {}).get("handlers", [])
-    }
+    agent_handlers = {h["id"]: h for h in agent_capabilities.get("payment", {}).get("handlers", [])}
     common = sorted(set(seller_handlers) & set(agent_handlers))
     out["payment"] = {"handlers": [seller_handlers[i] for i in common]}
     seller_int = seller_capabilities.get("interventions", {}).get("supported", [])
@@ -196,7 +190,8 @@ def build_acp_complete_response(
         "id": session_id,
         "intent_contract_id": intent_contract_id,
         "status": (
-            ACPLifecycleState.COMPLETED.value if execution_attempt_id
+            ACPLifecycleState.COMPLETED.value
+            if execution_attempt_id
             else ACPLifecycleState.NOT_READY.value
         ),
         "commerce_commitment": compute_commitment(ir),

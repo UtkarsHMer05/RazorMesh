@@ -59,18 +59,23 @@ from razormesh_api.protocol.untrusted_agent import (
 
 def _base_ir() -> AgentCommerceIR:
     return AgentCommerceIR(
-        principal_ref="p", agent_ref="a",
+        principal_ref="p",
+        agent_ref="a",
         merchant=_IRMerchant(merchant_id="merch_a", seller_id="seller_a"),
         checkout=_IRCheckout(revision="r1"),
         items=[
             _IRItem(
-                product_id="prod_a", variant_id="v1", merchant_item_id="mi_a",
-                brand="Bose", condition="new",
+                product_id="prod_a",
+                variant_id="v1",
+                merchant_item_id="mi_a",
+                brand="Bose",
+                condition="new",
                 quantity=_Quantity(value=1, unit="EA", scale=0),
                 unit_price=_Money(value_minor=189900, currency="INR"),
             )
         ],
-        totals=_IRTotals(total_minor=189900), currency="INR",
+        totals=_IRTotals(total_minor=189900),
+        currency="INR",
         authorization=_IRAuthorization(intent_contract_id="ic_1", authorization_generation=1),
         provenance=_IRProvenance(source_protocols=["mcp"]),
     )
@@ -83,14 +88,17 @@ class TestFirewallInvariants:
             source_protocol_version="2099-99-99",
             source_transport="stdio",
             adapter_version="x",
-            message_id="m", request_id="r",
+            message_id="m",
+            request_id="r",
             idempotency_key=None,
             raw_payload=b"x",
             signature_evidence={"scheme": "ed25519"},
             identity_evidence={"agent": "a"},
             capability_evidence={"tools": []},
-            agent="a", principal_reference="p",
-            merchant_reference="m", commerce_payload_reference="c",
+            agent="a",
+            principal_reference="p",
+            merchant_reference="m",
+            commerce_payload_reference="c",
         )
         result = evaluate_envelope(env)
         assert result.decision == FirewallDecision.BLOCK
@@ -109,17 +117,27 @@ class TestFirewallInvariants:
         # exists. The trust path must BLOCK because signature
         # alone does not create authority.
         ir_a = _base_ir()
-        ir_b = _base_ir().model_copy(update={"authorization": _IRAuthorization(
-            intent_contract_id="ic_attacker", authorization_generation=1,
-        )})
+        ir_b = _base_ir().model_copy(
+            update={
+                "authorization": _IRAuthorization(
+                    intent_contract_id="ic_attacker",
+                    authorization_generation=1,
+                )
+            }
+        )
         # AP2 sig verifies on ir_a.
         key = generate_ap2_test_merchant_key()
         jwk = export_ap2_test_merchant_pub_jwk(key, "kid_a")
         jwt = build_ap2_merchant_checkout_jwt(
-            key=key, kid="kid_a", ir=ir_a, vct="ap2.checkout.merchant.v0.2.0",
+            key=key,
+            kid="kid_a",
+            ir=ir_a,
+            vct="ap2.checkout.merchant.v0.2.0",
         )
         ok, _ = verify_ap2_merchant_jwt_es256(
-            jwt=jwt, public_jwk=jwk, expected_vct="ap2.checkout.merchant.v0.2.0",
+            jwt=jwt,
+            public_jwk=jwk,
+            expected_vct="ap2.checkout.merchant.v0.2.0",
         )
         assert ok
         # The current commerce is ir_b (attacker). Cross-protocol
@@ -147,6 +165,7 @@ class TestFirewallInvariants:
             mcp_server,
             ucp_adapter,
         )
+
         for mod in (ap2_verifier, ucp_adapter, acp_adapter, a2a_adapter, mcp_server):
             src = inspect.getsource(mod)
             assert "import PaymentProvider" not in src
@@ -160,33 +179,40 @@ class TestFirewallInvariants:
         # What matters is that no scenario's *expected outcome* is
         # an ALLOW that bypasses the firewall/consistency.
         from razormesh_api.protocol.agentpay_x import run_benchmark
+
         m = run_benchmark()
         # No false-allow.
         assert m["false_allow_count"] == 0
 
     def test_external_agent_no_payment_provider(self):
         from razormesh_api.protocol import untrusted_agent
+
         src = inspect.getsource(untrusted_agent)
         assert "PaymentProvider" not in src
         assert "razorpay_client" not in src
 
     def test_external_agent_no_signing_secrets(self):
         from razormesh_api.protocol import untrusted_agent
+
         src = inspect.getsource(untrusted_agent)
         for forbidden in (
-            "BEGIN PRIVATE KEY", "Bearer ", "RZP_KEY", "RAZORPAY_KEY",
+            "BEGIN PRIVATE KEY",
+            "Bearer ",
+            "RZP_KEY",
+            "RAZORPAY_KEY",
             "whsec_",
         ):
             assert forbidden not in src, f"untrusted_agent leaks: {forbidden}"
 
     def test_mcp_tool_no_raw_card_credentials(self):
         from razormesh_api.protocol import mcp_server
+
         src = inspect.getsource(mcp_server)
         # The complete_authorized_checkout tool BLOCKs on
         # signature_hex missing or empty. The harness asserts
         # the tool body does not accept or transmit a raw card.
         # Source check: no field for "card", "pan", "cvv", "4111".
-        for forbidden in ("\"card\"", "4111-1111", "\"pan\"", "\"cvv\""):
+        for forbidden in ('"card"', "4111-1111", '"pan"', '"cvv"'):
             assert forbidden not in src, f"mcp tool references: {forbidden}"
 
 
@@ -207,6 +233,7 @@ class TestUntrustedAgentInvariants:
         # The agent harness events are limited to the safe tool
         # surface; the tool catalog is the PHASE4_MCP_TOOL_NAMES.
         from razormesh_api.protocol import PHASE4_MCP_TOOL_NAMES
+
         forbidden = {"pay", "charge", "refund", "transfer", "set_secret"}
         assert not (forbidden & set(PHASE4_MCP_TOOL_NAMES))
 
@@ -221,7 +248,10 @@ class TestNoFrontendSecrets:
                 continue
             text = path.read_text(encoding="utf-8", errors="ignore")
             for forbidden in (
-                "RZP_KEY", "RAZORPAY_KEY", "RZP_SECRET", "RAZORPAY_SECRET",
+                "RZP_KEY",
+                "RAZORPAY_KEY",
+                "RZP_SECRET",
+                "RAZORPAY_SECRET",
                 "RAZORPAY_WEBHOOK_SECRET",
             ):
                 assert forbidden not in text, f"{path} leaks: {forbidden}"
@@ -235,9 +265,14 @@ class TestRazorGuardNLIInvariants:
         # enforces BLOCK. We test the architectural property:
         # a valid IR + valid sig + valid IntentContract without
         # confirmed authorization = BLOCK at the trust layer.
-        ir = _base_ir().model_copy(update={"authorization": _IRAuthorization(
-            intent_contract_id="ic_unconfirmed", authorization_generation=1,
-        )})
+        ir = _base_ir().model_copy(
+            update={
+                "authorization": _IRAuthorization(
+                    intent_contract_id="ic_unconfirmed",
+                    authorization_generation=1,
+                )
+            }
+        )
         # The agent has no confirmation. The trust path BLOCKs
         # because the IR carries an unconfirmed intent_contract_id.
         # This is documented in the Phase-3 trust layer; the
@@ -262,14 +297,17 @@ class TestRazorGuardNLIInvariants:
             source_protocol_version="2026-07-28",
             source_transport="stdio",
             adapter_version="x",
-            message_id="m", request_id="r",
+            message_id="m",
+            request_id="r",
             idempotency_key=None,
             raw_payload=b"x",
             signature_evidence={},  # missing -> BLOCK
             identity_evidence={"agent": "a"},
             capability_evidence={"tools": []},
-            agent="a", principal_reference="p",
-            merchant_reference="m", commerce_payload_reference="c",
+            agent="a",
+            principal_reference="p",
+            merchant_reference="m",
+            commerce_payload_reference="c",
         )
         result = evaluate_envelope(env)
         assert result.decision == FirewallDecision.BLOCK

@@ -243,13 +243,15 @@ def build_mcp_server() -> MCPServer:
 
         run_id = run_id or new_acceptance_run_id()
         # The orchestrator requires a live CheckoutService wired to the
-        # real backend. We construct one via the same dependency chain
-        # the /phase4/acceptance route uses. This is a thin import-only
-        # path; the heavy lifting lives in the route.
+        # real backend. We construct one through the same composition
+        # helper the /phase4/acceptance route uses, so the MCP ingress
+        # and the HTTP ingress can never drift apart. Any failure here
+        # fails closed: the tool returns BLOCK and never reaches a
+        # provider.
         try:
-            from ..api.routes.phase4_acceptance import _orchestrator
+            from ..api.routes.phase4_acceptance import build_orchestrator
 
-            orch: Phase4AcceptanceOrchestrator = _orchestrator()
+            orch: Phase4AcceptanceOrchestrator = build_orchestrator()
         except Exception as exc:  # noqa: BLE001
             return _json_result(
                 {
@@ -359,7 +361,7 @@ def mount_mcp(app: Any, base_path: str = "/mcp") -> None:
     # new instance per mount is the supported way to re-mount.
     server = build_mcp_server()
     mcp_asgi = server.streamable_http_app()
-    sm: StreamableHTTPSessionManager | None = server._lowlevel_server.session_manager  # type: ignore[attr-defined]
+    sm: StreamableHTTPSessionManager | None = server._lowlevel_server.session_manager
     if sm is None:  # pragma: no cover - defensive
         raise RuntimeError("StreamableHTTPSessionManager not initialised")
 

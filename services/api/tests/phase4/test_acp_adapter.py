@@ -116,7 +116,8 @@ def test_acp_checkout_session_shape():
 
 def test_acp_complete_response_with_ir():
     ir = AgentCommerceIR(
-        principal_ref="p", agent_ref="a",
+        principal_ref="p",
+        agent_ref="a",
         merchant=_IRMerchant(merchant_id="m1"),
         checkout=_IRCheckout(revision="r1"),
         items=[
@@ -126,12 +127,15 @@ def test_acp_complete_response_with_ir():
                 unit_price=_Money(value_minor=189900, currency="INR"),
             )
         ],
-        totals=_IRTotals(total_minor=189900), currency="INR",
+        totals=_IRTotals(total_minor=189900),
+        currency="INR",
         authorization=_IRAuthorization(intent_contract_id="ic_1", authorization_generation=1),
         provenance=_IRProvenance(source_protocols=["acp"]),
     )
     response = build_acp_complete_response(
-        session_id="co_1", intent_contract_id="ic_1", ir=ir,
+        session_id="co_1",
+        intent_contract_id="ic_1",
+        ir=ir,
         execution_attempt_id="att_1",
     )
     assert response["status"] == "completed"
@@ -142,7 +146,8 @@ def test_acp_complete_response_with_ir():
 
 def test_acp_complete_response_no_execution_attempt_blocks():
     ir = AgentCommerceIR(
-        principal_ref="p", agent_ref="a",
+        principal_ref="p",
+        agent_ref="a",
         merchant=_IRMerchant(merchant_id="m1"),
         checkout=_IRCheckout(revision="r1"),
         items=[
@@ -152,12 +157,16 @@ def test_acp_complete_response_no_execution_attempt_blocks():
                 unit_price=_Money(value_minor=100, currency="INR"),
             )
         ],
-        totals=_IRTotals(total_minor=100), currency="INR",
+        totals=_IRTotals(total_minor=100),
+        currency="INR",
         authorization=_IRAuthorization(intent_contract_id="ic_1", authorization_generation=1),
         provenance=_IRProvenance(source_protocols=["acp"]),
     )
     response = build_acp_complete_response(
-        session_id="co_1", intent_contract_id="ic_1", ir=ir, execution_attempt_id=None,
+        session_id="co_1",
+        intent_contract_id="ic_1",
+        ir=ir,
+        execution_attempt_id=None,
     )
     assert response["status"] == ACPLifecycleState.NOT_READY.value
 

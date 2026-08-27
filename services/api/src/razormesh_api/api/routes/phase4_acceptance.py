@@ -7,6 +7,8 @@ trigger the full chain:
   POST /phase4/acceptance/prepare   -> run MCP->UCP->AP2->Firewall->IR
                                        ->Consistency->RazorGuard->ALLOW
   GET  /phase4/acceptance/run/{id}  -> inspect a recorded run
+  POST /phase4/acceptance/finalize  -> reauthorize + execute the same run
+  GET  /phase4/acceptance/handoff/{id} -> Razorpay launch payload
   GET  /phase4/acceptance/runs      -> snapshot of the in-memory registry
 
 The route is intentionally thin: it delegates to the
@@ -18,35 +20,60 @@ the payment provider, shell access, or arbitrary networking.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Path
 from pydantic import BaseModel, Field
 
 from razormesh_api.api.routes.buyer import (
     _keys,
+    _nonce_registry,
+    _provider_for,
     _repos,
     _service,
 )
+from razormesh_api.executor import TrustedPaymentExecutor
 from razormesh_api.protocol.acceptance import (
     REGISTRY,
     Phase4AcceptanceOrchestrator,
 )
 from razormesh_api.settings import Settings, get_settings
+from razormesh_api.spend import SpendError, SpendManager
+from razormesh_api.tickets import TicketRejected
 
 router = APIRouter(prefix="/phase4/acceptance", tags=["phase4-acceptance"])
 
+RunIdPath = Annotated[str, Path(min_length=10, max_length=64)]
 
-def _orchestrator() -> Phase4AcceptanceOrchestrator:
-    """Construct an orchestrator with the real buyer-flow services."""
+
+def build_orchestrator() -> Phase4AcceptanceOrchestrator:
+    """Construct an orchestrator with the real buyer-flow services.
+
+    Nothing here can force an ALLOW: the orchestrator reaches RazorGuard
+    through ``CheckoutService``, and the semantic seam defaults to the
+    credential-free deterministic verifier, which can only make the
+    outcome stricter.
+    """
     settings: Settings = get_settings()
-    repos_obj = _repos(settings=settings)  # type: ignore[call-arg]
-    keys = _keys(settings=settings)  # type: ignore[call-arg]
-    checkout_svc = _service(repos=repos_obj, keys=keys)  # type: ignore[call-arg]
+    repos_obj = _repos(settings=settings)
+    keys_obj = _keys(settings=settings)
     return Phase4AcceptanceOrchestrator(
-        checkout_service=checkout_svc,
-        decision_engine=checkout_svc._engine,  # type: ignore[attr-defined]
-        semantic_verifier=lambda ir: "ALLOW",
+        checkout_service=_service(repos=repos_obj, keys=keys_obj),
+    )
+
+
+def build_executor() -> TrustedPaymentExecutor:
+    """Build the production trusted executor for one acceptance handoff."""
+    settings: Settings = get_settings()
+    repos_obj = _repos(settings=settings)
+    keys_obj = _keys(settings=settings)
+    provider = _provider_for(settings)
+    return TrustedPaymentExecutor(
+        repos=repos_obj,
+        keys=keys_obj.ensure(),
+        nonces=_nonce_registry(),
+        provider=provider,
+        spend=SpendManager(repos_obj),
     )
 
 
@@ -61,10 +88,16 @@ class PrepareBody(BaseModel):
     mcp_message_id: str | None = None
 
 
+class FinalizeBody(BaseModel):
+    """Bounded input for the single-execution handoff step."""
+
+    run_id: str = Field(min_length=10, max_length=64)
+
+
 @router.post("/prepare")
 def prepare_acceptance(body: PrepareBody) -> dict[str, Any]:
     """Run the full Phase-4 acceptance pipeline for one transaction."""
-    orch = _orchestrator()
+    orch = build_orchestrator()
     result = orch.prepare(
         intent_id=body.intent_id,
         product_id=body.product_id,
@@ -92,14 +125,14 @@ def prepare_acceptance(body: PrepareBody) -> dict[str, Any]:
         "evidence": result.run.evidence.to_dict(),
         "tickets_endpoint": "/buyer/execute",
         "next_step": (
-            "POST /buyer/execute with checkout_id + ticket_json + "
-            "signature_hex from /buyer/propose"
+            "POST /phase4/acceptance/finalize with this run_id to "
+            "reauthorize and create the Razorpay Test order"
         ),
     }
 
 
 @router.get("/run/{run_id}")
-def get_run(run_id: str) -> dict[str, Any]:
+def get_run(run_id: RunIdPath) -> dict[str, Any]:
     run = REGISTRY.get(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail={"code": "UNKNOWN_RUN", "run_id": run_id})
@@ -113,6 +146,53 @@ def get_run(run_id: str) -> dict[str, Any]:
         "completed": run.completed,
         "used_at": run.used_at,
         "evidence": run.evidence.to_dict(),
+    }
+
+
+@router.post("/finalize")
+def finalize_acceptance(body: FinalizeBody) -> dict[str, Any]:
+    """Reauthorize and execute the SAME acceptance_run_id exactly once.
+
+    No second ticket-minting path exists: the orchestrator re-runs the
+    production ``CheckoutService.authorize`` (deterministic RazorGuard +
+    durable decision row + context-bound single-use ticket) immediately
+    before handing that ticket to ``TrustedPaymentExecutor``, which is
+    the only provider caller. The reservation, ExecutionAttempt and
+    Razorpay order therefore come from the unchanged trusted path.
+    """
+    orch = build_orchestrator()
+    try:
+        return orch.finalize_razorpay_handoff(
+            run_id=body.run_id,
+            executor=build_executor(),
+        )
+    except (RuntimeError, TicketRejected, SpendError) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "FINALIZE_REFUSED",
+                "reason": str(exc) or type(exc).__name__,
+                "run_id": body.run_id,
+            },
+        ) from exc
+
+
+@router.get("/handoff/{run_id}")
+def get_handoff(run_id: RunIdPath) -> dict[str, Any]:
+    """Return the Razorpay launch payload for a finalized acceptance run."""
+    settings: Settings = get_settings()
+    attempt = _repos(settings=settings).attempts.find_by_acceptance_run_id(run_id)
+    if attempt is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"code": "NO_HANDOFF", "run_id": run_id},
+        )
+    return {
+        "run_id": run_id,
+        "execution_attempt_id": attempt.execution_attempt_id,
+        "razorpay_order_id": attempt.razorpay_order_id,
+        "state": attempt.state,
+        "provider_event": attempt.provider_event,
     }
 
 

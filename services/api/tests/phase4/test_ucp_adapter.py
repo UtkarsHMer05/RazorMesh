@@ -47,7 +47,8 @@ from razormesh_api.protocol.ir import (
 
 def _ir() -> AgentCommerceIR:
     return AgentCommerceIR(
-        principal_ref="p", agent_ref="a",
+        principal_ref="p",
+        agent_ref="a",
         merchant=_IRMerchant(merchant_id="m1"),
         checkout=_IRCheckout(revision="r1"),
         items=[
@@ -57,7 +58,8 @@ def _ir() -> AgentCommerceIR:
                 unit_price=_Money(value_minor=189900, currency="INR"),
             )
         ],
-        totals=_IRTotals(total_minor=189900), currency="INR",
+        totals=_IRTotals(total_minor=189900),
+        currency="INR",
         authorization=_IRAuthorization(intent_contract_id="ic_1", authorization_generation=1),
         provenance=_IRProvenance(source_protocols=["ucp"]),
     )
@@ -82,10 +84,7 @@ def test_profile_serialization():
 
 
 def test_transports_advertised():
-    transports = [
-        s["transport"]
-        for s in RMA_UCP_PROFILE["ucp"]["services"]["dev.ucp.shopping"]
-    ]
+    transports = [s["transport"] for s in RMA_UCP_PROFILE["ucp"]["services"]["dev.ucp.shopping"]]
     assert "rest" in transports
     assert "mcp" in transports
 
@@ -143,7 +142,7 @@ def test_ucp_envelope_construction():
 
 def test_ucp_blocked_for_unsupported_version():
     env = build_ucp_envelope(
-        raw_payload=b'{}',
+        raw_payload=b"{}",
         message_id="m2",
         request_id="r2",
         idempotency_key=None,
@@ -174,16 +173,17 @@ def test_checkout_complete_response_has_commitment():
 
 def test_order_get_response_has_commitment():
     ir = _ir()
-    response = build_ucp_order_get_response(
-        order_id="ord_1", checkout_id="co_1", ir=ir
-    )
+    response = build_ucp_order_get_response(order_id="ord_1", checkout_id="co_1", ir=ir)
     assert response["commerce_commitment"] == compute_commitment(ir)
 
 
 def test_signed_order_event_round_trip():
     secret = b"razormesh-test-secret-2026"
     event = build_signed_order_event(
-        order_id="ord_1", checkout_id="co_1", event_type="order.created", secret=secret,
+        order_id="ord_1",
+        checkout_id="co_1",
+        event_type="order.created",
+        secret=secret,
     )
     assert verify_signed_order_event(event, secret)
     # Tampered body rejected.

@@ -65,6 +65,7 @@ def test_subscription_insertion_scenario_blocked():
 
 def test_agent_run_serializable():
     import json
+
     run = run_normal_scenario()
     blob = json.dumps(run.to_dict(), default=str)
     assert "agent_id" in blob
@@ -73,6 +74,7 @@ def test_agent_run_serializable():
 
 def test_agent_has_no_provider_secrets():
     from razormesh_api.protocol import untrusted_agent
+
     src = inspect.getsource(untrusted_agent)
     assert "razorpay_key" not in src
     assert "RZP_KEY" not in src

@@ -45,9 +45,7 @@ def _envelope_canonical_hash(env: ProtocolEnvelope) -> str:
 
     from .envelope import envelope_to_canonical_json
 
-    return hashlib.sha256(
-        envelope_to_canonical_json(env).encode("utf-8")
-    ).hexdigest()
+    return hashlib.sha256(envelope_to_canonical_json(env).encode("utf-8")).hexdigest()
 
 
 def emit_protocol_received(env: ProtocolEnvelope) -> Mapping[str, Any]:
@@ -68,9 +66,7 @@ def emit_protocol_received(env: ProtocolEnvelope) -> Mapping[str, Any]:
     }
 
 
-def emit_protocol_verified(
-    env: ProtocolEnvelope, result: FirewallResult
-) -> Mapping[str, Any]:
+def emit_protocol_verified(env: ProtocolEnvelope, result: FirewallResult) -> Mapping[str, Any]:
     """Build the audit event body for a firewall verification outcome."""
     return {
         "event_type": PROTOCOL_VERIFIED,

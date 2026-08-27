@@ -115,23 +115,29 @@ class AgentPayXScenario:
                 self.expected_consistency = ExpectedConsistency.INSUFFICIENT_EVIDENCE
 
     def to_dict(self) -> dict[str, Any]:
+        """JSON-safe projection.
+
+        Scenarios are constructed in Python only (never deserialised
+        from JSON), so the declared field types are authoritative here.
+        """
         d = asdict(self)
         d["expected_firewall"] = self.expected_firewall.value
         d["expected_consistency"] = self.expected_consistency.value
         d["expected_final"] = self.expected_final.value
-        if self.acp_src is not None and not isinstance(self.acp_src, str):
+        if self.acp_src is not None:
             d["acp_src"] = self.acp_src.value
-        if self.acp_dst is not None and not isinstance(self.acp_dst, str):
+        if self.acp_dst is not None:
             d["acp_dst"] = self.acp_dst.value
         # raw_payload is bytes; base64-encode for JSON.
         if isinstance(d.get("raw_payload"), (bytes, bytearray)):
             import base64
+
             d["raw_payload_b64"] = base64.b64encode(bytes(d["raw_payload"])).decode("ascii")
             d["raw_payload"] = d["raw_payload_b64"]
         # IRs are Pydantic models; serialize via model_dump.
-        if self.ir_a is not None and not isinstance(self.ir_a, dict):
+        if self.ir_a is not None:
             d["ir_a"] = self.ir_a.model_dump(mode="json")
-        if self.ir_b is not None and not isinstance(self.ir_b, dict):
+        if self.ir_b is not None:
             d["ir_b"] = self.ir_b.model_dump(mode="json")
         return d
 
@@ -143,7 +149,8 @@ class AgentPayXScenario:
 
 def _base_ir() -> AgentCommerceIR:
     return AgentCommerceIR(
-        principal_ref="p", agent_ref="a",
+        principal_ref="p",
+        agent_ref="a",
         merchant=_IRMerchant(merchant_id="merch_a", seller_id="seller_a"),
         checkout=_IRCheckout(revision="r1"),
         items=[
@@ -169,16 +176,22 @@ def _base_ir() -> AgentCommerceIR:
         recurring=_IRRecurring(mode="none"),
         fulfillment=_IRFulfillment(method_id="standard", type="shipping"),
         authorization=_IRAuthorization(
-            intent_contract_id="ic_1", authorization_generation=1,
+            intent_contract_id="ic_1",
+            authorization_generation=1,
         ),
         provenance=_IRProvenance(source_protocols=["mcp"]),
     )
 
 
 def _ir_with_total(total: int) -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"totals": _IRTotals(
-        subtotal_minor=total, total_minor=total,
-    )})
+    return _base_ir().model_copy(
+        update={
+            "totals": _IRTotals(
+                subtotal_minor=total,
+                total_minor=total,
+            )
+        }
+    )
 
 
 def _ir_with_currency(c: str) -> AgentCommerceIR:
@@ -190,58 +203,93 @@ def _ir_with_merchant(m: str) -> AgentCommerceIR:
 
 
 def _ir_with_product(p: str) -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"items": [
-        _IRItem(
-            product_id=p, variant_id="v1", merchant_item_id="mi_a",
-            brand="Bose", condition="new",
-            quantity=_Quantity(value=1, unit="EA", scale=0),
-            unit_price=_Money(value_minor=189900, currency="INR"),
-        )
-    ]})
+    return _base_ir().model_copy(
+        update={
+            "items": [
+                _IRItem(
+                    product_id=p,
+                    variant_id="v1",
+                    merchant_item_id="mi_a",
+                    brand="Bose",
+                    condition="new",
+                    quantity=_Quantity(value=1, unit="EA", scale=0),
+                    unit_price=_Money(value_minor=189900, currency="INR"),
+                )
+            ]
+        }
+    )
 
 
 def _ir_with_variant(v: str) -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"items": [
-        _IRItem(
-            product_id="prod_a", variant_id=v, merchant_item_id="mi_a",
-            brand="Bose", condition="new",
-            quantity=_Quantity(value=1, unit="EA", scale=0),
-            unit_price=_Money(value_minor=189900, currency="INR"),
-        )
-    ]})
+    return _base_ir().model_copy(
+        update={
+            "items": [
+                _IRItem(
+                    product_id="prod_a",
+                    variant_id=v,
+                    merchant_item_id="mi_a",
+                    brand="Bose",
+                    condition="new",
+                    quantity=_Quantity(value=1, unit="EA", scale=0),
+                    unit_price=_Money(value_minor=189900, currency="INR"),
+                )
+            ]
+        }
+    )
 
 
 def _ir_with_condition(c: str) -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"items": [
-        _IRItem(
-            product_id="prod_a", variant_id="v1", merchant_item_id="mi_a",
-            brand="Bose", condition=c,
-            quantity=_Quantity(value=1, unit="EA", scale=0),
-            unit_price=_Money(value_minor=189900, currency="INR"),
-        )
-    ]})
+    return _base_ir().model_copy(
+        update={
+            "items": [
+                _IRItem(
+                    product_id="prod_a",
+                    variant_id="v1",
+                    merchant_item_id="mi_a",
+                    brand="Bose",
+                    condition=c,
+                    quantity=_Quantity(value=1, unit="EA", scale=0),
+                    unit_price=_Money(value_minor=189900, currency="INR"),
+                )
+            ]
+        }
+    )
 
 
 def _ir_with_quantity(value: int, unit: str = "EA", scale: int = 0) -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"items": [
-        _IRItem(
-            product_id="prod_a", variant_id="v1", merchant_item_id="mi_a",
-            brand="Bose", condition="new",
-            quantity=_Quantity(value=value, unit=unit, scale=scale),
-            unit_price=_Money(value_minor=189900, currency="INR"),
-        )
-    ]})
+    return _base_ir().model_copy(
+        update={
+            "items": [
+                _IRItem(
+                    product_id="prod_a",
+                    variant_id="v1",
+                    merchant_item_id="mi_a",
+                    brand="Bose",
+                    condition="new",
+                    quantity=_Quantity(value=value, unit=unit, scale=scale),
+                    unit_price=_Money(value_minor=189900, currency="INR"),
+                )
+            ]
+        }
+    )
 
 
 def _ir_with_recurring(mode: str, **kwargs: Any) -> AgentCommerceIR:
     return _base_ir().model_copy(update={"recurring": _IRRecurring(mode=mode, **kwargs)})
 
 
-def _ir_with_fulfillment(method: str | None = None, type_: str | None = None,
-                         destination: str | None = None) -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"fulfillment": _IRFulfillment(
-        method_id=method, type=type_, destination_fingerprint=destination,
-    )})
+def _ir_with_fulfillment(
+    method: str | None = None, type_: str | None = None, destination: str | None = None
+) -> AgentCommerceIR:
+    return _base_ir().model_copy(
+        update={
+            "fulfillment": _IRFulfillment(
+                method_id=method,
+                type=type_,
+                destination_fingerprint=destination,
+            )
+        }
+    )
 
 
 def _ir_with_revision(rev: str) -> AgentCommerceIR:
@@ -249,44 +297,81 @@ def _ir_with_revision(rev: str) -> AgentCommerceIR:
 
 
 def _ir_with_authorization(generation: int, intent: str = "ic_1") -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"authorization": _IRAuthorization(
-        intent_contract_id=intent, authorization_generation=generation,
-    )})
+    return _base_ir().model_copy(
+        update={
+            "authorization": _IRAuthorization(
+                intent_contract_id=intent,
+                authorization_generation=generation,
+            )
+        }
+    )
 
 
 def _ir_with_shipping(minor: int) -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"totals": _IRTotals(
-        subtotal_minor=189900, fulfillment_minor=minor, total_minor=189900 + minor,
-    )})
+    return _base_ir().model_copy(
+        update={
+            "totals": _IRTotals(
+                subtotal_minor=189900,
+                fulfillment_minor=minor,
+                total_minor=189900 + minor,
+            )
+        }
+    )
 
 
 def _ir_with_tax(minor: int) -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"totals": _IRTotals(
-        subtotal_minor=189900, tax_minor=minor, total_minor=189900 + minor,
-    )})
+    return _base_ir().model_copy(
+        update={
+            "totals": _IRTotals(
+                subtotal_minor=189900,
+                tax_minor=minor,
+                total_minor=189900 + minor,
+            )
+        }
+    )
 
 
 def _ir_with_fee(minor: int) -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"totals": _IRTotals(
-        subtotal_minor=189900, fee_minor=minor, total_minor=189900 + minor,
-    )})
+    return _base_ir().model_copy(
+        update={
+            "totals": _IRTotals(
+                subtotal_minor=189900,
+                fee_minor=minor,
+                total_minor=189900 + minor,
+            )
+        }
+    )
 
 
 def _ir_with_discount(minor: int) -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"totals": _IRTotals(
-        subtotal_minor=189900, discount_minor=-minor, total_minor=189900 - minor,
-    )})
+    return _base_ir().model_copy(
+        update={
+            "totals": _IRTotals(
+                subtotal_minor=189900,
+                discount_minor=-minor,
+                total_minor=189900 - minor,
+            )
+        }
+    )
 
 
 def _ir_with_title(item_title: str | None) -> AgentCommerceIR:
-    return _base_ir().model_copy(update={"items": [
-        _IRItem(
-            product_id="prod_a", variant_id="v1", merchant_item_id="mi_a",
-            title=item_title, brand="Bose", condition="new",
-            quantity=_Quantity(value=1, unit="EA", scale=0),
-            unit_price=_Money(value_minor=189900, currency="INR"),
-        )
-    ]})
+    return _base_ir().model_copy(
+        update={
+            "items": [
+                _IRItem(
+                    product_id="prod_a",
+                    variant_id="v1",
+                    merchant_item_id="mi_a",
+                    title=item_title,
+                    brand="Bose",
+                    condition="new",
+                    quantity=_Quantity(value=1, unit="EA", scale=0),
+                    unit_price=_Money(value_minor=189900, currency="INR"),
+                )
+            ]
+        }
+    )
 
 
 # -----------------------------------------------------------------------
@@ -334,7 +419,7 @@ A_AMOUNT_NEGATIVE = [
 
 A_CURRENCY_MUTATION = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{20+i:03d}",
+        scenario_id=f"AX-A-{20 + i:03d}",
         family="currency_mutation",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -353,7 +438,7 @@ A_CURRENCY_MUTATION = [
 
 A_MERCHANT_SUB = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{30+i:03d}",
+        scenario_id=f"AX-A-{30 + i:03d}",
         family="merchant_substitution",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -372,7 +457,7 @@ A_MERCHANT_SUB = [
 
 A_SELLER_SUB = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{40+i:03d}",
+        scenario_id=f"AX-A-{40 + i:03d}",
         family="seller_substitution",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -384,16 +469,21 @@ A_SELLER_SUB = [
         expected_consistency=ExpectedConsistency.MISMATCH,
         expected_final=ExpectedFinal.BLOCK,
         ir_a=_base_ir(),
-        ir_b=_base_ir().model_copy(update={"merchant": _IRMerchant(
-            merchant_id="merch_a", seller_id=s,
-        )}),
+        ir_b=_base_ir().model_copy(
+            update={
+                "merchant": _IRMerchant(
+                    merchant_id="merch_a",
+                    seller_id=s,
+                )
+            }
+        ),
     )
     for i, s in enumerate(["seller_b", "seller_c"])
 ]
 
 A_PRODUCT_SUB = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{50+i:03d}",
+        scenario_id=f"AX-A-{50 + i:03d}",
         family="product_substitution",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -412,7 +502,7 @@ A_PRODUCT_SUB = [
 
 A_VARIANT_SUB = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{60+i:03d}",
+        scenario_id=f"AX-A-{60 + i:03d}",
         family="variant_substitution",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -431,7 +521,7 @@ A_VARIANT_SUB = [
 
 A_CONDITION_MISMATCH = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{70+i:03d}",
+        scenario_id=f"AX-A-{70 + i:03d}",
         family="product_condition_mismatch",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -450,7 +540,7 @@ A_CONDITION_MISMATCH = [
 
 A_QUANTITY_MUTATION = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{80+i:03d}",
+        scenario_id=f"AX-A-{80 + i:03d}",
         family="quantity_mutation",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -469,7 +559,7 @@ A_QUANTITY_MUTATION = [
 
 A_QUANTITY_UNIT_SCALE = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{90+i:03d}",
+        scenario_id=f"AX-A-{90 + i:03d}",
         family="quantity_unit_scale_mismatch",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -488,7 +578,7 @@ A_QUANTITY_UNIT_SCALE = [
 
 A_RECURRING_INSERT = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{100+i:03d}",
+        scenario_id=f"AX-A-{100 + i:03d}",
         family="recurring_term_insertion",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -502,14 +592,18 @@ A_RECURRING_INSERT = [
         ir_a=_base_ir(),
         ir_b=_ir_with_recurring(m, interval=interval, amount_minor=189900),
     )
-    for i, (m, interval) in enumerate([
-        ("monthly", "1m"), ("annual", "1y"), ("weekly", "1w"),
-    ])
+    for i, (m, interval) in enumerate(
+        [
+            ("monthly", "1m"),
+            ("annual", "1y"),
+            ("weekly", "1w"),
+        ]
+    )
 ]
 
 A_RECURRING_REMOVE = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{110+i:03d}",
+        scenario_id=f"AX-A-{110 + i:03d}",
         family="subscription_removal_mismatch",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -528,7 +622,7 @@ A_RECURRING_REMOVE = [
 
 A_SHIPPING = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{115+i:03d}",
+        scenario_id=f"AX-A-{115 + i:03d}",
         family="shipping_mutation",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -547,7 +641,7 @@ A_SHIPPING = [
 
 A_TAX = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{120+i:03d}",
+        scenario_id=f"AX-A-{120 + i:03d}",
         family="tax_mutation",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -566,7 +660,7 @@ A_TAX = [
 
 A_FEE = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{130+i:03d}",
+        scenario_id=f"AX-A-{130 + i:03d}",
         family="fee_mutation",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -585,7 +679,7 @@ A_FEE = [
 
 A_DISCOUNT = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{140+i:03d}",
+        scenario_id=f"AX-A-{140 + i:03d}",
         family="discount_mutation",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -604,7 +698,7 @@ A_DISCOUNT = [
 
 A_FULFILLMENT_METHOD = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{150+i:03d}",
+        scenario_id=f"AX-A-{150 + i:03d}",
         family="fulfillment_method_mutation",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -623,7 +717,7 @@ A_FULFILLMENT_METHOD = [
 
 A_FULFILLMENT_DEST = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{160+i:03d}",
+        scenario_id=f"AX-A-{160 + i:03d}",
         family="fulfillment_destination_mismatch",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -642,7 +736,7 @@ A_FULFILLMENT_DEST = [
 
 A_STALE_REVISION = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{170+i:03d}",
+        scenario_id=f"AX-A-{170 + i:03d}",
         family="stale_checkout_revision",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -661,7 +755,7 @@ A_STALE_REVISION = [
 
 A_EXPIRED = [
     AgentPayXScenario(
-        scenario_id=f"AX-A-{180+i:03d}",
+        scenario_id=f"AX-A-{180 + i:03d}",
         family="expired_checkout",
         source_protocols=["mcp"],
         safe_or_attack="attack",
@@ -680,16 +774,33 @@ A_EXPIRED = [
 
 # A continues from 185; B (MCP) starts at 200
 _A_FAMILY = (
-    A_AMOUNT_MUTATION + A_AMOUNT_NEGATIVE + A_CURRENCY_MUTATION
-    + A_MERCHANT_SUB + A_SELLER_SUB + A_PRODUCT_SUB + A_VARIANT_SUB
-    + A_CONDITION_MISMATCH + A_QUANTITY_MUTATION + A_QUANTITY_UNIT_SCALE
-    + A_RECURRING_INSERT + A_RECURRING_REMOVE + A_SHIPPING + A_TAX
-    + A_FEE + A_DISCOUNT + A_FULFILLMENT_METHOD + A_FULFILLMENT_DEST
-    + A_STALE_REVISION + A_EXPIRED
+    A_AMOUNT_MUTATION
+    + A_AMOUNT_NEGATIVE
+    + A_CURRENCY_MUTATION
+    + A_MERCHANT_SUB
+    + A_SELLER_SUB
+    + A_PRODUCT_SUB
+    + A_VARIANT_SUB
+    + A_CONDITION_MISMATCH
+    + A_QUANTITY_MUTATION
+    + A_QUANTITY_UNIT_SCALE
+    + A_RECURRING_INSERT
+    + A_RECURRING_REMOVE
+    + A_SHIPPING
+    + A_TAX
+    + A_FEE
+    + A_DISCOUNT
+    + A_FULFILLMENT_METHOD
+    + A_FULFILLMENT_DEST
+    + A_STALE_REVISION
+    + A_EXPIRED
 )
 
+
 # Renumber A to 001..019+x
-def _renumber(family: list[AgentPayXScenario], start: int, family_letter: str) -> list[AgentPayXScenario]:
+def _renumber(
+    family: list[AgentPayXScenario], start: int, family_letter: str
+) -> list[AgentPayXScenario]:
     for i, s in enumerate(family):
         s.scenario_id = f"AX-{family_letter}-{start + i:03d}"
     return family
@@ -1065,21 +1176,23 @@ for vct in [
     "ap2.payment.merchant.v9.9.9",
     "ap2.unknown.v1",
 ]:
-    D_AP2.append(AgentPayXScenario(
-        scenario_id=f"AX-D-{46 + len(D_AP2):03d}",
-        family="wrong_vct_version",
-        source_protocols=["ap2"],
-        safe_or_attack="attack",
-        description=f"vct={vct}",
-        mutation=f"ap2_vct={vct}",
-        fixture_provenance="AP2 v0.2.0 (FIDO-donated 2026-04-28)",
-        tags=["ap2", "vct"],
-        expected_firewall=ExpectedFirewallDecision.PASS,
-        expected_consistency=ExpectedConsistency.MATCH,
-        expected_final=ExpectedFinal.BLOCK,
-        ir_a=_base_ir(),
-        ap2_vct=vct,
-    ))
+    D_AP2.append(
+        AgentPayXScenario(
+            scenario_id=f"AX-D-{46 + len(D_AP2):03d}",
+            family="wrong_vct_version",
+            source_protocols=["ap2"],
+            safe_or_attack="attack",
+            description=f"vct={vct}",
+            mutation=f"ap2_vct={vct}",
+            fixture_provenance="AP2 v0.2.0 (FIDO-donated 2026-04-28)",
+            tags=["ap2", "vct"],
+            expected_firewall=ExpectedFirewallDecision.PASS,
+            expected_consistency=ExpectedConsistency.MATCH,
+            expected_final=ExpectedFinal.BLOCK,
+            ir_a=_base_ir(),
+            ap2_vct=vct,
+        )
+    )
 
 D_AP2 += [
     AgentPayXScenario(
@@ -1629,7 +1742,9 @@ G_CROSS = [
         expected_consistency=ExpectedConsistency.MISMATCH,
         expected_final=ExpectedFinal.BLOCK,
         ir_a=_base_ir(),
-        ir_b=_ir_with_product("prod_b").model_copy(update={"totals": _IRTotals(total_minor=189900)}),
+        ir_b=_ir_with_product("prod_b").model_copy(
+            update={"totals": _IRTotals(total_minor=189900)}
+        ),
     ),
     AgentPayXScenario(
         scenario_id="AX-G-088",
@@ -1674,14 +1789,22 @@ G_CROSS = [
         expected_consistency=ExpectedConsistency.MATCH,
         expected_final=ExpectedFinal.ALLOW,
         ir_a=_base_ir(),
-        ir_b=_base_ir().model_copy(update={"items": [
-            _IRItem(
-                product_id="prod_a", variant_id="v1", merchant_item_id="mi_a",
-                title="different title", brand="Bose", condition="new",
-                quantity=_Quantity(value=1, unit="EA", scale=0),
-                unit_price=_Money(value_minor=189900, currency="INR"),
-            ),
-        ]}),
+        ir_b=_base_ir().model_copy(
+            update={
+                "items": [
+                    _IRItem(
+                        product_id="prod_a",
+                        variant_id="v1",
+                        merchant_item_id="mi_a",
+                        title="different title",
+                        brand="Bose",
+                        condition="new",
+                        quantity=_Quantity(value=1, unit="EA", scale=0),
+                        unit_price=_Money(value_minor=189900, currency="INR"),
+                    ),
+                ]
+            }
+        ),
     ),
     AgentPayXScenario(
         scenario_id="AX-G-091",
@@ -1711,9 +1834,14 @@ G_CROSS = [
         expected_consistency=ExpectedConsistency.MISMATCH,
         expected_final=ExpectedFinal.BLOCK,
         ir_a=_base_ir(),
-        ir_b=_base_ir().model_copy(update={"merchant": _IRMerchant(
-            merchant_id="merch_a", seller_id="seller_b",
-        )}),
+        ir_b=_base_ir().model_copy(
+            update={
+                "merchant": _IRMerchant(
+                    merchant_id="merch_a",
+                    seller_id="seller_b",
+                )
+            }
+        ),
     ),
     AgentPayXScenario(
         scenario_id="AX-G-093",
@@ -2508,8 +2636,17 @@ K_DEEP = [
 
 # Total assembly
 ALL_SCENARIOS: list[AgentPayXScenario] = (
-    _A_FAMILY + B_MCP + C_UCP + D_AP2 + E_ACP + F_A2A + G_CROSS
-    + H_SEMANTIC + I_REPLAY + J_FIREWALL + K_DEEP
+    _A_FAMILY
+    + B_MCP
+    + C_UCP
+    + D_AP2
+    + E_ACP
+    + F_A2A
+    + G_CROSS
+    + H_SEMANTIC
+    + I_REPLAY
+    + J_FIREWALL
+    + K_DEEP
 )
 
 
@@ -2583,9 +2720,7 @@ def run_scenario(s: AgentPayXScenario) -> dict[str, Any]:
     if s.ir_a is not None and s.ir_b is not None:
         same = equal_under_commitment(s.ir_a, s.ir_b)
         actual_cons = (
-            ExpectedConsistency.MATCH.value
-            if same
-            else ExpectedConsistency.MISMATCH.value
+            ExpectedConsistency.MATCH.value if same else ExpectedConsistency.MISMATCH.value
         )
         # Final: BLOCK if MISMATCH, ALLOW if MATCH (and no challenge
         # surface), else CHALLENGE for H semantic.

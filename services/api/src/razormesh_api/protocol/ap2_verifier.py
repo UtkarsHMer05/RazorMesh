@@ -53,9 +53,7 @@ def generate_ap2_test_merchant_key() -> ec.EllipticCurvePrivateKey:
     return ec.generate_private_key(ec.SECP256R1())
 
 
-def export_ap2_test_merchant_pub_jwk(
-    key: ec.EllipticCurvePrivateKey, kid: str
-) -> dict[str, Any]:
+def export_ap2_test_merchant_pub_jwk(key: ec.EllipticCurvePrivateKey, kid: str) -> dict[str, Any]:
     """Export the public key as a JWK (kid + kty + crv + x + y)."""
     pub = key.public_key().public_numbers()
     n_bytes = (pub.curve.key_size + 7) // 8

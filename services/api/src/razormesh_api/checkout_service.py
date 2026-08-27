@@ -146,6 +146,17 @@ class CheckoutService:
         self._engine = engine
         self._keys = keys
 
+    # read-only service wiring: the Phase-4 acceptance orchestrator needs the
+    # same durable repositories + deterministic engine this service uses.
+    # Signing keys are deliberately NOT exposed.
+    @property
+    def repos(self) -> Repositories:
+        return self._repos
+
+    @property
+    def engine(self) -> DecisionEngine:
+        return self._engine
+
     # ------------------------------------------------------------------
     # proposal (server-authoritative amounts)
     # ------------------------------------------------------------------

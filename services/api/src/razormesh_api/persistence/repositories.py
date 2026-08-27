@@ -350,6 +350,25 @@ class ExecutionAttemptRepository:
                 .first()
             )
 
+    def find_by_acceptance_run_id(self, acceptance_run_id: str) -> ExecutionAttempt | None:
+        """Correlate a Phase-4 acceptance run with its durable attempt.
+
+        The acceptance run id is stored on ``provider_event`` so the
+        protocol evidence, the ExecutionAttempt and the Razorpay order
+        share one correlation key without a schema change.
+        """
+        with session_scope(self._factory) as s:
+            return (
+                s.execute(
+                    select(ExecutionAttempt).where(
+                        ExecutionAttempt.provider_event["acceptance_run_id"].astext
+                        == acceptance_run_id
+                    )
+                )
+                .scalars()
+                .first()
+            )
+
 
 class AuditRepository:
     def __init__(self, factory: sessionmaker[Session]) -> None:
