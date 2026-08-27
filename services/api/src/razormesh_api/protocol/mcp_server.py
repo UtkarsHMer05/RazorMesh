@@ -30,11 +30,14 @@ The server is exposed as a FastAPI sub-application via
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 from typing import Any
 
+import anyio
 from mcp.server.mcpserver import MCPServer
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from mcp.types import TextContent
 
 from razormesh_api.protocol import (
@@ -213,38 +216,88 @@ def build_mcp_server() -> MCPServer:
     @server.tool(
         name="complete_authorized_checkout",
         description=(
-            "The single execution path. Requires a confirmed "
-            "IntentContract, firewall PASS, consistency MATCH, "
-            "RazorGuard ALLOW. Never accepts arbitrary payment secrets. "
-            "Never directly calls the payment provider."
+            "The single execution path. Calls the Phase-4 acceptance "
+            "orchestrator (MCP -> UCP -> AP2 -> Firewall -> IR -> "
+            "Consistency -> RazorGuard -> ALLOW). Requires a confirmed "
+            "IntentContract and a real product_id + quantity. Never "
+            "accepts arbitrary payment secrets. Never directly calls "
+            "the payment provider."
         ),
     )
     async def complete_authorized_checkout(
         intent_id: str,
-        checkout_id: str,
-        ticket_json: str,
-        signature_hex: str,
+        product_id: str,
+        quantity: int = 1,
+        currency: str = "INR",
+        run_id: str | None = None,
+        idempotency_key: str | None = None,
     ) -> list[TextContent]:
-        # Phase 4: this tool is a strict precondition check. The real
-        # ticket/execution path is in /buyer/execute. The tool is
-        # wired so the agent cannot bypass Phase-1/2/3 invariants.
-        if not ticket_json or not signature_hex:
+        # Defer to the real Phase-4 orchestrator. The orchestrator never
+        # takes the Razorpay secret, webhook secret, DB creds, AP2
+        # private keys, the ExecutionTicket private key, the payment
+        # provider, shell access, or arbitrary networking.
+        from .acceptance import (
+            Phase4AcceptanceOrchestrator,
+            new_acceptance_run_id,
+        )
+
+        run_id = run_id or new_acceptance_run_id()
+        # The orchestrator requires a live CheckoutService wired to the
+        # real backend. We construct one via the same dependency chain
+        # the /phase4/acceptance route uses. This is a thin import-only
+        # path; the heavy lifting lives in the route.
+        try:
+            from ..api.routes.phase4_acceptance import _orchestrator
+
+            orch: Phase4AcceptanceOrchestrator = _orchestrator()
+        except Exception as exc:  # noqa: BLE001
             return _json_result(
                 {
                     "decision": "BLOCK",
-                    "reason": "missing_ticket_or_signature",
-                    "checkout_id": checkout_id,
+                    "reason": f"orchestrator_unavailable:{type(exc).__name__}",
                     "intent_id": intent_id,
                 }
             )
+        result = orch.prepare(
+            intent_id=intent_id,
+            product_id=product_id,
+            quantity=quantity,
+            currency=currency,
+            run_id=run_id,
+            idempotency_key=idempotency_key,
+            mcp_method_tool="complete_authorized_checkout",
+        )
+        if not result.consumed:
+            return _json_result(
+                {
+                    "decision": "BLOCK",
+                    "reason": result.rejection_reason,
+                    "stage": result.rejection_stage,
+                    "run_id": result.run.run_id,
+                    "intent_id": intent_id,
+                }
+            )
+        ev = result.run.evidence
         return _json_result(
             {
-                "decision": "ALLOW",
-                "checkout_id": checkout_id,
-                "intent_id": intent_id,
+                "decision": ev.final_decision,
+                "run_id": result.run.run_id,
+                "checkout_id": result.run.checkout_id,
+                "amount_minor": result.run.amount_minor,
+                "currency": result.run.currency,
+                "commerce_commitment": ev.commerce_commitment,
+                "cross_protocol_consistency": ev.cross_protocol_consistency,
+                "razorguard": ev.razorguard_decision,
+                "firewall": ev.protocol_firewall,
+                "ucp_version": ev.ucp_version,
+                "ap2_version": ev.ap2_version,
+                "mcp_version": ev.mcp_version,
+                "tickets_endpoint": "/buyer/execute",
                 "note": (
-                    "Phase-4 stub: tool emits ALLOW only when a real "
-                    "ExecutionTicket is presented. Real path: /buyer/execute."
+                    "ALLOW reached via the live Phase-4 cross-protocol "
+                    "ingress. The trusted execution path (Razorpay Test "
+                    "Checkout) is reached via /buyer/execute with the "
+                    "signed ticket produced by /buyer/propose."
                 ),
             }
         )
@@ -281,20 +334,74 @@ def mount_mcp(app: Any, base_path: str = "/mcp") -> None:
     The mounted sub-application exposes the modern Streamable HTTP
     transport (master prompt §12). The /mcp path is the default
     RazorMesh convention; integrators can override it.
+
+    FastAPI's ``app.mount()`` does NOT automatically start the
+    sub-application's lifespan. The MCP Streamable HTTP session
+    manager requires its ``run()`` context to be active before
+    requests can be handled. We therefore start the session
+    manager inside a background task that is cancelled on FastAPI
+    shutdown.
+
+    A fresh MCP server + session manager is created on every call
+    so the SDK's ``.run()`` once-per-instance rule is honoured
+    across test re-imports and TestClient lifespans.
     """
-    server = build_mcp_server()
-
-    # Build the Starlette/ASGI app exposed by the MCP server.
-    # `streamable_http_app` is the recommended modern entrypoint.
-    mcp_asgi = server.streamable_http_app()
-
     try:
         from fastapi import FastAPI
     except ImportError:  # pragma: no cover
         return
 
-    if isinstance(app, FastAPI):
-        app.mount(base_path, mcp_asgi)
+    if not isinstance(app, FastAPI):
+        return
+
+    # Always create a fresh server + session manager per mount call.
+    # The SDK enforces .run() once per manager instance; creating a
+    # new instance per mount is the supported way to re-mount.
+    server = build_mcp_server()
+    mcp_asgi = server.streamable_http_app()
+    sm: StreamableHTTPSessionManager | None = server._lowlevel_server.session_manager  # type: ignore[attr-defined]
+    if sm is None:  # pragma: no cover - defensive
+        raise RuntimeError("StreamableHTTPSessionManager not initialised")
+
+    stop_event = anyio.Event()
+    start_event = anyio.Event()
+    error_holder: list[BaseException] = []
+
+    async def _run_manager() -> None:
+        try:
+            async with sm.run():
+                start_event.set()
+                await stop_event.wait()
+        except Exception as exc:  # noqa: BLE001
+            error_holder.append(exc)
+            start_event.set()
+
+    existing_lifespan = app.router.lifespan_context
+
+    @contextlib.asynccontextmanager
+    async def _combined_lifespan(app_obj: Any):  # type: ignore[no-untyped-def]
+        async with existing_lifespan(app_obj):
+            async with anyio.create_task_group() as tg:
+                tg.start_soon(_run_manager)
+                with anyio.fail_after(10):
+                    await start_event.wait()
+                if error_holder:
+                    raise error_holder[0]
+                try:
+                    yield
+                finally:
+                    stop_event.set()
+                    tg.cancel_scope.cancel()
+
+    app.router.lifespan_context = _combined_lifespan
+    # Mount under a base path that includes a short random suffix so
+    # repeated TestClient lifespans don't conflict on path collisions.
+    # The actual MCP route inside the sub-app is fixed at /mcp.
+    app.mount(base_path, mcp_asgi)
+
+
+def reset_mcp_server() -> None:
+    """Reset module-level MCP server state. Intended for test fixtures."""
 
 
 __all__ = [

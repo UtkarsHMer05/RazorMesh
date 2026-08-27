@@ -60,6 +60,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S105", "S106", "S107"]  # hardcoded-test-string literals only in tests
+"tests/phase4/*_e2e.py" = ["BLE001", "S310"]
 "scripts/*" = ["T201"]
 "training/*" = ["E501", "F401", "F811", "BLE001", "B008", "S105"]
 # Alembic conventions: env.py must insert the src path before importing the app
@@ -77,6 +78,9 @@ ignore = [
 "src/razormesh_api/protocol/*_proof.py" = ["E501", "BLE001", "S105"]
 "src/razormesh_api/protocol/agentpay_x.py" = ["E501", "S105"]
 "src/razormesh_api/protocol/untrusted_agent.py" = ["E501"]
+"src/razormesh_api/protocol/acceptance.py" = ["E501", "RUF059"]
+"src/razormesh_api/protocol/buyer_agent.py" = ["E501", "S310"]
+"src/razormesh_api/api/routes/phase4_acceptance.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.13"

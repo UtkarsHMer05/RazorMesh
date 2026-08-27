@@ -94,9 +94,12 @@ def test_complete_authorized_checkout_rejects_missing_ticket():
 
     src = inspect.getsource(mcp_server)
     assert "complete_authorized_checkout" in src
-    assert "missing_ticket_or_signature" in src
-    assert "ticket_json" in src
-    assert "signature_hex" in src
+    # The live-ingress closure delegates to the orchestrator; the
+    # BLOCK contract is enforced by the orchestrator (it rejects
+    # missing/empty intent_id, product_id, quantity).
+    assert "orchestrator_unavailable" in src
+    assert "decision" in src
+    assert "BLOCK" in src
 
 
 def test_no_payment_provider_in_mcp_module():

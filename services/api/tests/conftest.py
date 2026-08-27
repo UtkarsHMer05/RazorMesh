@@ -20,6 +20,11 @@ os.environ["DATABASE_URL"] = os.environ.get(
 os.environ["REDIS_URL"] = os.environ.get("RAZORMESH_TEST_REDIS_URL", "redis://127.0.0.1:16379/0")
 os.environ["PAYMENT_PROVIDER"] = "mock"
 os.environ["MOCK_PAYMENT_PROVIDER"] = "true"
+# Phase-4 live-ingress closure: skip the MCP mount at import time so
+# the SDK's once-per-instance session manager rule doesn't conflict
+# across reused TestClient lifespans. The live-ingress E2E suite
+# enables it explicitly for its own server.
+os.environ.setdefault("RAZORMESH_MCP_MOUNT", "0")
 # Pinned to EMPTY STRINGS, not popped: an absent env var would let the root
 # .env dotenv values (real Test credentials) through, and env vars take
 # precedence over dotenv. Empty => razorpay_credentials_present is False.
