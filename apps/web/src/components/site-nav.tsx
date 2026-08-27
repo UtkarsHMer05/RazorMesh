@@ -13,8 +13,9 @@ export function SiteNav() {
           <span>RAZORMESH</span>
         </Link>
         <nav className="site-nav__links" aria-label="Primary">
-          <Link href="/#story">Product</Link>
-          <Link href="/#architecture">Solutions</Link>
+          <Link href="/">Story</Link>
+          <Link href="/#architecture">Architecture</Link>
+          <Link href="/protocols">Protocols</Link>
           <Link href="/security-lab">Security</Link>
         </nav>
         <div className="site-nav__actions">

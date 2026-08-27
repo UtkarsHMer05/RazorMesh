@@ -68,3 +68,14 @@ test('footer nav reaches the real audit surface', async ({ page }) => {
     .click();
   await expect(page).toHaveURL(/\/audit$/);
 });
+
+test('protocols page renders the Phase-4 gateway dashboard', async ({ page }) => {
+  await page.goto('/protocols');
+  await expect(
+    page.getByRole('heading', { name: /protocol gateway/i, level: 2 }).first(),
+  ).toBeVisible();
+  await expect(page.getByText(/FINAL (ALLOW|CHALLENGE|BLOCK)/i)).toBeVisible();
+  await expect(page.getByText(/UCP 2026-04-08/)).toBeVisible();
+  await expect(page.getByText(/AP2 v0\.2\.0/)).toBeVisible();
+  await expect(page.getByText(/AgentPay-X/)).toBeVisible();
+});

@@ -49,6 +49,10 @@
 | M42 ACP Razorpay Test Handoff Extension | PASS | 2026-08-27; io.razormesh.razorpay.test_checkout nonstandard, no Delegate Payment |
 | M43 ACP Idempotency / Failure / Unknown-Outcome | PASS | 2026-08-27; capability intersection; no execution without execution_attempt_id |
 | M44 A2A Compatibility Slice | PASS | 2026-08-27; Agent Card fixture; UCP extension metadata; DataPart mapping; messageId ↔ idempotency |
+| M45 Untrusted Buyer-Agent Harness | PASS | 2026-08-27; deterministic scripted harness; no provider secrets; normal + adversarial + prompt-injection scenarios |
+| M46 AgentPay-X Benchmark | PASS | 2026-08-27; 12 scenarios across 5 attack families + safe canonical; 100% attack block, 100% safe pass |
+| M47 Differential / Property / Fuzz / Concurrency Sweep | PASS | 2026-08-27; one-field mutation; replay; fuzz; 25 concurrent duplicates; field-order-stable canonical hash |
+| M48 Protocol Gateway + Security Lab UI | PASS | 2026-08-27; /protocols page; envelope/IR inspectors; consistency matrix; AgentPay-X results; audit links; same Bauhaus design system |
 | M03 Full Phase-3 AI/ML Revalidation | NOT_STARTED | |
 | M04 Full Redesigned Frontend Revalidation | NOT_STARTED | |
 | M05 Freeze Phase-4 Baseline | NOT_STARTED | |
