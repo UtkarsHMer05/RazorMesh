@@ -77,7 +77,14 @@ async function reachCheckoutPhase(fetchMock: ReturnType<typeof mockFetch>) {
 
   render(<BuyerPage />);
   await screen.findByTestId("product-list");
-  fireEvent.click(screen.getByText("Create fixture authorization"));
+  // The fixture intent is auto-created on mount; wait for intent-id to appear.
+  // If the test environment pre-populates intentId, this is a no-op.
+  try {
+    const btn = screen.queryByText("Create fixture authorization");
+    if (btn) fireEvent.click(btn);
+  } catch {
+    // already created
+  }
   await screen.findByTestId("intent-id");
   fireEvent.click(screen.getAllByRole("radio")[0]);
   fireEvent.click(screen.getByText("Propose checkout"));

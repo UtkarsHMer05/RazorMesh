@@ -85,7 +85,10 @@ export default function BuyerPage() {
         const res = await fetch(`${API}/catalog/products?limit=100`);
         if (!res.ok) throw new Error(`catalog ${res.status}`);
         const body = await res.json();
-        if (!ignore) setProducts(body.items);
+        if (!ignore) {
+          setProducts(body.items);
+          if (body.items.length > 0) setSelected(body.items[0]);
+        }
       } catch (e) {
         if (!ignore) setError(`Catalog unavailable — is the API running? (${String(e)})`);
       }
@@ -94,6 +97,28 @@ export default function BuyerPage() {
       ignore = true;
     };
   }, []);
+
+  // Auto-create the fixture intent on first load so the buyer can
+  // immediately click "Propose checkout" without a separate
+  // "Create fixture authorization" click. The intent is the
+  // minimal synthetic contract for the test path.
+  useEffect(() => {
+    if (intentId || busy) return;
+    let ignore = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/buyer/fixture-intent`, { method: "POST" });
+        if (!res.ok) return;
+        const body = await res.json();
+        if (!ignore) setIntentId(body.intent_id);
+      } catch {
+        // best-effort; the user can still click "Create fixture authorization"
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, [intentId, busy]);
 
   const createAuthorization = async () => {
     setBusy(true);
