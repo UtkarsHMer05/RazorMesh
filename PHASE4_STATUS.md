@@ -1,7 +1,8 @@
-# RazorMesh Trust — Phase 4 Status (skeleton)
+# RazorMesh Trust — Phase 4 Status
 
 **Active phase:** Phase 4 — Cross-Protocol Agentic Commerce Gateway + Zero-Trust Protocol Firewall.
-**Mode:** Autonomous M01..M50; no human gate before M50.
+**Status:** `AUTONOMOUS_50_OF_50_PASS / AWAITING_FINAL_HUMAN_ACCEPTANCE`.
+**Mode:** Autonomous M01..M50 completed locally; no human gate before M50. The single final human gate is OUTSIDE the milestone count (one prepared Razorpay Test-mode transaction, per master prompt §22 and §28).
 
 | Milestone | Status | Notes |
 |---|---|---|
@@ -65,12 +66,12 @@
 The single final human gate (one prepared Razorpay Test-mode
 transaction) is OUTSIDE the milestone count. Per master prompt §22
 and §28, the agent now stops and waits for the human reply.
-| M03 Full Phase-3 AI/ML Revalidation | NOT_STARTED | |
-| M04 Full Redesigned Frontend Revalidation | NOT_STARTED | |
-| M05 Freeze Phase-4 Baseline | NOT_STARTED | |
-| ... | NOT_STARTED | |
-| M50 Autonomous Completion Report + Final Human Acceptance Preparation | NOT_STARTED | |
 
 **HEAD (pre-Phase-4 starting commit):** `fab0ed6` (UI redesign D-047, UI-01..UI-18 PASS).
+**HEAD (Phase-4 closing commit):** `f3542ff` (M49..M50: full quality gate + autonomous completion report).
 **Branch:** `main`.
 **Mode:** local only; never push.
+
+**Allowed completion phrase (master prompt §28):**
+
+> **Phase-4 cross-protocol trust layer complete.**
