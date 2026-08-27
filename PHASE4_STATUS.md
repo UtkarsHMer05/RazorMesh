@@ -37,6 +37,18 @@
 | M30 UCP RFC 9421 / Content-Digest Security | PASS | 2026-08-27; envelope hash covers raw payload; trust-bound signature evidence |
 | M31 UCP-over-MCP Binding | PASS | 2026-08-27; REST and MCP transports produce same commitment |
 | M32 UCP Stable + Forward-Compatibility Suite | PASS | 2026-08-27; pinned 2026-04-08; 13/13 UCP tests PASS |
+| M33 AP2 Test Crypto / SDK Foundation | PASS | 2026-08-27; ES256/P-256 test merchant key, separate from Ed25519 ticket key (P4-S15) |
+| M34 AP2 Mandate Parser + Version Rules | PASS | 2026-08-27; vct exact match; JWT JWS shape enforced |
+| M35 AP2 Closed Checkout Verification | PASS | 2026-08-27; merchant JWT signed/verified; checkout hash binds to IR |
+| M36 AP2 Closed Payment Verification | PASS | 2026-08-27; contract documented; mock Payment Mandate validation hooks |
+| M37 AP2 Human-Not-Present Open→Closed Verification | PASS | 2026-08-27; cnf / key binding / PoP helpers; HMAC-SHA256 deterministic |
+| M38 AP2 Receipts + Dispute Evidence | PASS | 2026-08-27; AP2 checkout hash + commitment hash; no secrets |
+| M39 AP2 → AgentCommerceIR → Execution Binding | PASS | 2026-08-27; valid signature + mismatched IR = BLOCK (P4-S19) |
+| M40 ACP Capability Negotiation + Session Domain | PASS | 2026-08-27; ACPLifecycleState enum; legal-transition checks |
+| M41 ACP Checkout REST Compatibility | PASS | 2026-08-27; create/get/update/complete; complete carries commitment |
+| M42 ACP Razorpay Test Handoff Extension | PASS | 2026-08-27; io.razormesh.razorpay.test_checkout nonstandard, no Delegate Payment |
+| M43 ACP Idempotency / Failure / Unknown-Outcome | PASS | 2026-08-27; capability intersection; no execution without execution_attempt_id |
+| M44 A2A Compatibility Slice | PASS | 2026-08-27; Agent Card fixture; UCP extension metadata; DataPart mapping; messageId ↔ idempotency |
 | M03 Full Phase-3 AI/ML Revalidation | NOT_STARTED | |
 | M04 Full Redesigned Frontend Revalidation | NOT_STARTED | |
 | M05 Freeze Phase-4 Baseline | NOT_STARTED | |
