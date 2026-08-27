@@ -1451,3 +1451,39 @@ Consequences: P3-S20 (no fabricated numbers) preserved — every cell above
 traces to `data/phase3/compiler_eval/summary.json` (sha-bound via the golden
 manifest). M48 final PASS is now unconditional; M50 may declare all 50 rows
 closed.
+
+## D-052 — Retract unsupported Phase-3 acceptance; preserve evaluation history
+
+Date: 2026-08-27
+Milestone: P3 independent re-audit / M15 evidence repair
+Status: Accepted
+Supersedes: D-050 untouched-79 assertion and D-051 unconditional M48/M50
+acceptance; historical full-307 coverage remains recorded, not discarded.
+Affected docs: PHASE3_STATUS.md, PHASE1_STATUS.md, MEMORY.md,
+docs/PHASE3_REAUDIT_2026_08_27.md, docs/PHASE3_COMPLETION_REPORT.md,
+docs/PHASE3_INTENT_COMPILER_EVAL.md.
+
+Context: independent backend/data/UI audits reproduced missing runtime semantic
+integration, dropped confirmed restrictions, invalid browser IDs, and evaluation
+claims stronger than their evidence. Full-worktree checks also fail in concurrent
+Phase-4 edits; these are outside the owner's Phase-3 repair scope.
+
+Decision: reopen affected gates, preserve historical decisions/results, and do
+not freeze Phase 3 or issue a new closure commit before acceptance actually
+passes. The compiler's 307 archived verdict-only records cannot distinguish
+missing numeric values from wrong-present values; those metrics must be unknown
+where unrecoverable, not silently relabeled. Future evaluation must preserve
+validated synthetic payloads and evaluator/provenance versions in a separate run.
+Correct numeric substitutions and omissions independently in the evaluator.
+
+Reviewed-data roles: 241 reviewed IDs occur in train, 43 in validation, 36 in
+test. Seven frozen labels differ from human decisions; reviewed ID overlap does
+not prove the corrections were used as training labels. Validation influenced
+checkpoint selection and calibration, and D-046 cited the combined 79 non-train
+cards during selection. Neither those 79 cards nor the already evaluated
+agent-curated 129-row OOD matrix is a fresh blind human-reviewed final set.
+
+Consequences: no security requirement is relaxed; benchmark/ML completion remains
+blocked. Existing Phase-4 commits and dirty files are preserved, not endorsed or
+expanded. A scoped regression pass is not full M48 or clean-room M49 acceptance.
+Exact reproductions and remaining repairs are in the dated re-audit report.

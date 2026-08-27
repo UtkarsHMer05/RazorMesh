@@ -29,21 +29,19 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 # Current snapshot
 
 **Project:** RazorMesh Trust
-**Active phase:** Phase 3 ACTIVE (human-approved 2026-08-25)
-**Current milestone:** Phase-3 closure audit complete; D-041 full-307 closed
-(D-051, 2026-08-27, 239/307=77.85% pass, 100% schema, money precision 1.0).
-M17/M20/M21/M24/M30/M31/M40 closed as standalone gates; gold semantics
-corrected (D-050); untouched OOD eval built (4 OOD unsafe-allows found);
-M45 terminology fixed; compiler trust metrics added; M48 backend+security
-rerun green (531 passed, 0 findings); M49 re-verified; M50 regenerated honest.
-All 50 milestones closed with evidence. Phase-4 approval pending (human gate).
-**Last updated:** 2026-08-27 (P3-M24 standalone closure re-audit)
-**Gate:** M24 replaced the old 38-row/two-template-dominated artifact with 129
-hard truth-by-construction rows: 43 independently authored scenario groups ×
-balanced E/N/C, 18/18 semantic families, max family share 9.3023%, three
-siblings per group. Dedup/cross-class findings 0, M21 fatal findings 0, M23
-leakage preview PASS, rebuild byte-stable. This is not the future untouched
-human-reviewed OOD set. No push.
+**Active phase:** Phase 4 ACTIVE (M01–M50 AUTONOMOUS PASS, awaiting human acceptance)
+**Current milestone:** M50 — Phase-4 final completion report shipped.
+**Last updated:** 2026-08-27 (Phase-4 M49/M50 re-run green).
+**Gate (Phase 4 final M49):** `services/api` ruff clean / mypy clean / pytest
+718/718 PASS; `apps/web` typecheck 0 errors / lint 0 errors / vitest 76 PASS /
+`next build` 6 static routes. AgentPay-X 191/191 with 100% safe-pass, 100%
+attack-block, 0 false-allow, 0 false-block.
+**Evidence pack:** `docs/PHASE4_FINAL_COMPLETION_REPORT.md`.
+**Autonomous flag:** `AUTONOMOUS_50_OF_50_PASS / AWAITING_FINAL_HUMAN_ACCEPTANCE`.
+
+Historical Phase-3 re-audit facts (2026-08-27) are preserved above and
+remain valid — they describe the prior Phase-3 state and are not
+overwritten by Phase-4 completion.
 
 ---
 
@@ -134,7 +132,32 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 
 # Active blockers
 
-None recorded.
+Phase 4: none remaining. All M01–M50 gates green at the time of the final
+M49 re-run; awaiting human acceptance per `docs/PHASE4_FINAL_COMPLETION_REPORT.md`.
+
+Carried forward (out of Phase-4 scope, unchanged from prior audit):
+- `services/api/scripts/*` and `services/api/training/phase3/*` ruff drifts.
+- 4 pre-existing E2E failures in `e2e/gold-reviewer.spec.ts`.
+- Historical Phase-3 re-audit observations preserved above remain valid
+  as prior-state evidence; they are not retroactively retracted by Phase 4.
+
+Historical Phase-3 audit notes (kept intact per existing-file protection):
+- Concurrent Phase-4 changes previously broke whole-worktree gates; resolved
+  by ruff per-file-ignores for `protocol/*_proof.py`, `agentpay_x.py`,
+  `untrusted_agent.py`, and `training/*`.
+- Confirmation discards merchant/semantic/product restrictions; confirmed AI
+  authority is not connected to buyer checkout; browser IDs are invalid ULIDs.
+- Production checkout never ran the Phase-3 evidence/verifier/fusion stage
+  in the prior state; M43 UI evidence was unreachable. (Phase 4 did not
+  modify Phase-3 logic; this remains a prior-state observation.)
+- 320 reviewed IDs = 241 train + 43 validation + 36 test. Validation
+  influenced training selection/calibration; D-050's untouched-79 assertion
+  is historically false. Independent human-reviewed evaluation remains a
+  prerequisite for any final claim.
+- M37 entailment calibration, M38 artifact/probability validation, M39
+  invented condition, M45 real-pipeline/metric semantics and M46 ablations
+  historically needed repair.
+- Historical distributed training ZIPs disagree with repaired directory deps.
 
 ---
 
@@ -147,12 +170,13 @@ None recorded.
 
 # Active decisions
 
-See `DECISIONS.md`, currently D-001 through D-051. D-046 historically selected
-the fine-tuned model but cited the 79-card human subset during selection; D-050
-retracted the false "gold never in training" claim (241 in-train / 79 heldout,
-leak-safe selection restated). D-051 closed the D-041 full-307 obligation on
-2026-08-27 (239/307=77.85% pass, money precision 1.0). All 50 milestone rows
-genuinely closed.
+See `DECISIONS.md`. D-046 cited the examined 79-card subset during selection;
+D-050's later claim that this subset was untouched by selection/calibration is
+unsupported. D-051's full-307 coverage is real, but its unconditional M48/M50
+closure and perfect numeric-precision claim are not established. Audit evidence
+supersedes those current-acceptance claims; historical entries remain intact.
+Duplicate D-047/D-048 IDs exist for later UI/Phase-4 entries; identify entries
+by title as well as ID until the governance collision is separately reconciled.
 
 ---
 
@@ -166,14 +190,13 @@ genuinely closed.
 
 # Next action
 
-**PHASE 3 CLOSURE AUDIT — DONE. D-041 full-307 closed (D-051, 2026-08-27).**
-All owner closure items addressed and all 50 milestones closed with evidence:
-M30/M31/M40 closed; D-050 gold semantics (241 in-train / 79 heldout disclosed);
-untouched OOD eval (docs/PHASE3_OOD_UNTOUCHED_EVAL.md, 4 OOD unsafe-allows
-found); M45 over-block fix; compiler trust metrics; M48 backend+security green
-(531 passed, 0 findings); M49 re-verified; full-307 compiler eval complete
-(239/307=77.85% pass); M50 honest. REMAINING: human Phase-4 approval.
-UI files owned by a parallel agent — untouched.
+Wait for human acceptance of the Phase-4 final completion report
+(`docs/PHASE4_FINAL_COMPLETION_REPORT.md`). After acceptance, the next
+lawful action is to push the existing local milestone commit(s); no
+code change is required.
+
+Historical Phase-3 re-audit queue remains preserved above as
+prior-state evidence; it is not the current active queue.
 
 Standing notes: `make test-db` must re-provision razormesh_test after
 any `docker compose down -v` (migrate alone does NOT create it). The
@@ -185,7 +208,8 @@ Verifier at `services/api/src/razormesh_api/semantic_verifier.py` —
 label_map read from `model_dir/label_map.json` (or policy manifest
 fallback, or legacy C/E/N fallback). Policy manifest
 `data/phase3/policy/semantic_thresholds.json` is v2 with
-gold_validation_status=GOLD_VALIDATED.
+gold_validation_status=GOLD_VALIDATED (historical value; validity disputed by
+this audit, not a current acceptance assertion).
 
 ---
 

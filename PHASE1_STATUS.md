@@ -1,5 +1,23 @@
 # PHASE1_STATUS.md — Execution Evidence
 
+## Phase-3 independent re-audit checkpoint — 2026-08-27
+
+At `a31c1e3` plus concurrent user work, scoped Phase-1/2/3 regression
+`.venv/bin/pytest --ignore=tests/phase4 -q` exited 0. Full pytest instead failed
+during Phase-4 collection (`_IRAuthorization` import); full Ruff reported 23
+findings in the concurrently edited Phase-4 files. Those files are untouched.
+The scoped pass does not establish M48/M49. Phase-3 implementation/evidence
+defects and exact checks are recorded in `docs/PHASE3_REAUDIT_2026_08_27.md`.
+Current repair is M15; no new PASS/closure commit or phase approval is claimed.
+Historical Phase-1 evidence below remains unchanged.
+
+M15 repair verification: targeted compiler/draft/confirmation/inherited-buyer
+regression **65 passed in 10.46s**; scoped strict mypy and Ruff format/check
+pass. `python3 scripts/security_check.py` reports zero findings across secrets,
+Python dependencies and frontend production dependencies. Original 307-case
+raw results and golden data unchanged; unsupported metrics are now explicitly
+unknown. Whole-worktree/clean-room gates and fresh M15 measurement remain open.
+
 ## Status rules
 
 - Valid states: `NOT_STARTED`, `IN_PROGRESS`, `PASS`, `BLOCKED`.

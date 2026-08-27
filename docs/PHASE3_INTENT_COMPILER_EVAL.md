@@ -1,249 +1,240 @@
 # Phase-3 Intent Compiler Evaluation (P3-M15)
 
-Status: **COMPLETE** — real Qwen evaluation over a stratified sample of the
-manual-truth golden set.
+## Current evidence — payload-backed v2 run
 
-> **Scope statement (D-041 → D-051).** Per the human owner's explicit instruction
-> (2026-08-25), M15 began as a deterministic stratified sample of N=90 of the
-> 307 golden cases. The full-307 resumable continuation was a pre-M48
-> obligation and **was completed on 2026-08-27 (D-051, "complete": true,
-> 307/307)**. Every metric below is now reported over the **full N=307/307
-> golden set**; the prior N=90/307 numbers are preserved in §5/§6 as the
-> within-scope sample for transparency. P3-S20 honesty preserved.
+The owner completed a new, separate 307-case run in
+`data/phase3/compiler_eval/v2/`. This audit performed **offline inspection and
+summary regeneration only**, with no new provider calls or changes to raw
+results, golden truth, or the compiler prompt. Measurement coverage is complete;
+this report does not declare a perfect compiler or full Phase-3 acceptance.
 
----
+All 307 unique case IDs match the frozen golden set. Every row's provenance
+matches `run_manifest.json` (model `qwen/qwen3.8-max-free`, compiler prompt v2,
+evaluator v2, schema v1, temperature 0, output budget 4000). Raw results SHA-256:
+`a9800259c7aa397db547d358d55356a74dc9c2f0435a4aa789cd93b68297e9ab`.
+The golden SHA remains `9164f04c8714d711cae1a9ecba0db35853947bfec0683af9428bd4f6c86c79b7`.
 
-## 1. What was measured
+| Measure | v2 result |
+|---|---:|
+| Coverage | 307/307 unique final cases |
+| Valid payloads | 304/307 (99.02%) |
+| Whole-output failures | 3/307, all SCHEMA_INVALID_AFTER_REPAIR |
+| Cases needing bounded repair | **27/307 (8.79%)** |
+| Repair outcomes | 24 valid; 3 failed; success 24/27 (88.89%) |
+| Exact golden-case matches | 242/307 (78.83%) |
+| Amount substitutions in valid outputs | 35, all exactly one minor unit lower |
+| Amount / currency omissions in valid outputs | 14 / 14 |
+| Currency / quantity substitutions | 0 / 0 |
+| Detected invented-constraint cases | 22/307 (7.17%) |
+| Ambiguity-count probes satisfied | 6/6 |
+| Valid-output latency p50 / p95 / max / mean | 20.7s / 64.8s / 141.4s / 26.8s |
 
-- **Compiler under test:** the real Phase-3 intent pipeline —
-  `IntentCompilationService` driving the real TokenRouter client against the
-  real planner model `qwen/qwen3.8-max-free` (OpenAI-compatible chat
-  completions, `api.tokenrouter.com`), with the production strict-validation +
-  bounded-repair path enabled.
-- **Prompt:** `razormesh-intent-compiler-v2` (see §6 for the v1→v2 change).
-- **Harness settings:** `max_output_tokens=4000`, `temperature=0.0`. Qwen3.8 is
-  a *thinking* model: hidden reasoning consumes the output-token budget, so a
-  reduced budget artificially truncates answers (see §7, budget-2000 discard).
-- **Golden set:** `data/phase3/compiler_golden/golden_set.jsonl`,
-  **sha256 `9164f04c8714d711cae1a9ecba0db35853947bfec0683af9428bd4f6c86c79b7`**,
-  307 manual-truth cases, 25 categories, difficulty 234/43/30. Truth is
-  human-authored by construction — **never Qwen self-labels**.
-- **Evaluator:** `compiler_eval.evaluate_case` — field-level
-  omission / invention / mismatch taxonomy, including the
-  `currency="UNSPECIFIED"` sentinel that flags invented money.
-- **Sampling:** deterministic stratified round-robin across sorted categories
-  (`rzp_run_compiler_eval.stratified`), reproducible from the frozen golden set
-  — no randomness. The same 90 case-ids are selected every run.
+The original v2 summary counted only the 24 successful repairs and divided by
+304 valid outcomes. That excluded the three failed repairs. The corrected
+repair rate counts every repaired case over all 307 evaluated cases.
+The preserved run has no COMPILER_UNAVAILABLE outcomes; this is a statement
+about these 307 recorded service outcomes, not general provider reliability.
 
-Runner: `scripts/rzp_run_compiler_eval.py 90` (resumable; provider-noise rows
-are retried, never counted). Summarizer: `scripts/rzp_summarize_compiler_eval.py 90`.
+### Bound interpretation is not silently changed
 
----
+All 35 amount substitutions occur with “under”, “below”, or “less than” wording.
+The frozen golden values equal the named amounts; the model instead emitted
+one minor unit less. For example, F1-009 says “below ₹1,499”: expected 149900,
+actual 149899. This is an observable strict-versus-inclusive interpretation
+difference, not a missing amount and not an increased budget. **All 35 remain
+exact-match failures against unchanged truth.** No claim that either wording
+interpretation has been human-approved is made. Any requirement clarification
+and new truth/prompt version must be explicit and preserve this run.
 
-## 2. Headline metrics (N=307/307, D-051)
+### Field denominators and whole-output failures
 
-| Metric | Value |
-|---|---|
-| Coverage | **307/307 = 100%** (complete=true; provider-noise excluded 0) |
-| Schema validity (strict parse OK) | **307/307 = 100%** |
-| Bounded repair needed | 11/307 (3.6%), **all 11 repaired to valid** |
-| **Case-level pass** | **239/307 = 77.85%** |
-| — easy | 177/234 = 75.6% |
-| — medium | 40/43 = 93.0% |
-| — hard | 22/30 = 73.3% |
-| Money precision (no invented money) | **1.0** (0 invented amounts) |
-| Mismatches (wrong-but-present values) | **0** |
-| Ambiguity surfacing satisfied | 6/6 = 100% |
-| Latency p50 / p95 / max / mean | 29.4s / 122.7s / 241.2s / 42.2s |
+Precision counts correct/present annotated fields; recall below uses **all
+cases**, so a complete output failure reduces recall without being mislabeled
+as an omission in a valid payload.
 
-**Reading the pass rate honestly:** the dominant failure mode is *omitting* a
-stated amount (11 cases), not fabricating values. There were **zero mismatches
-and zero invented amounts** — when the compiler is wrong about money it drops
-the field rather than guessing a value. For a trust system that is the safe
-failure direction (a missing bound fails closed downstream; an invented bound
-would not). The hallucination cluster is `condition` invention (6 cases).
+| Field | Correct / expected | Present | Precision | All-case recall |
+|---|---:|---:|---:|---:|
+| Amount | 236/288 | 271 | 0.8708 | 0.8194 |
+| Currency | 271/288 | 271 | 1.0 | 0.9410 |
+| Quantity | 33/36 | 33 | 1.0 | 0.9167 |
+| Brand members | 52/54 | 53 | 0.9811 | 0.9630 |
+| Merchant members | 13/13 | 13 | 1.0 | 1.0 |
+| Recurring-forbidden expectations | 21/25 | 21 | 1.0 | 0.8400 |
+| Semantic substring probes | 50/53 | unknown | unknown | 0.9434 |
+| Unspecified-field probes | 0/0 | unknown | unknown | n/a |
 
-### Field-level recall (N=307)
+Whole-output failures are F10-002, F10-004, and F3-018. Their missing output
+accounts for three amount/currency/quantity expectations, two brand members,
+two recurring expectations, and two semantic probes. Among **valid outputs**,
+there are additionally two recurring omissions and one missing semantic probe;
+the 14 amount omissions also omit currency. Invented constraints detected:
+20 condition, one warranty, and one extra brand. Error categories overlap.
 
-| Field | Recall |
-|---|---|
-| brands | 1.0 |
-| merchants | 1.0 |
-| quantity_max | 1.0 |
-| currency | 0.9514 |
-| semantic constraints | 0.9811 |
-| recurring_forbidden | 0.96 |
-| max_amount_minor | 0.8229 |
-| unspecified | n/a (see §8) |
+The machine-readable summary separately reports `valid_output_omissions`,
+`whole_output_failures`, `valid_output_field_metrics`, and direction/case-level
+`scalar_mismatch_details`. Amount recall conditional on a valid output is
+236/285 (0.8281), not the all-case 236/288 (0.8194).
 
-### 2.1 Compiler trust-quality metrics (closure-audit requirement; N=307)
+Semantic truth remains partial substring probes: exhaustive semantic precision
+and over-constraint rates remain unknown. The 22 detected inventions are a
+lower-bound over-constraint signal. Ambiguity presence is not proof of question
+quality or later human-confirmation behavior. Hard-rule/NLI enforcement cannot
+independently reconstruct dropped or invented human constraints.
 
-The report must cover more than schema validity and money accuracy. The
-following trust-quality dimensions are computed from the full N=307 set.
-
-| Metric | Definition | Value (N=307) |
-|---|---|---|
-| **Unsafe omission rate** | cases where a *stated* hard/semantic constraint was dropped (fail-closed) ÷ evaluated cases | max_amount 51/307=16.6%; currency 14/307=4.6%; semantic 1/307; recurring 1/307 |
-| **Hallucinated constraint rate** | cases where a constraint absent from the source was invented ÷ evaluated cases | condition 22, warranty 1, brands 1 → 24/307 = 7.8% |
-| **Over-constraint rate** | cases where the model added any constraint beyond human truth (invented `condition`/`warranty`/`brands`, or invented constraint while also surfacing ambiguity) ÷ evaluated cases | 24/307 = 7.8% (superset of hallucinated) |
-| **Ambiguity handling** | genuine ambiguities correctly surfaced as NEEDS_CLARIFICATION ÷ ambiguities present | 6/6 = 100% (satisfied) |
-| **Field precision** | correct-present fields ÷ model-present fields (no fabricated value where none stated) | 1.0 for brands/merchants/quantity/currency/semantic/recurring/max_amount (0 mismatches, 0 invented amounts) |
-
-Notes:
-- Unsafe omissions fail **closed** downstream (a missing bound is rejected, an
-  invented bound would not) — the safe direction for a trust compiler.
-- Hallucinated/over-constraint cases are exactly the semantic errors the
-  Phase-3 DeBERTa verifier + conservative fusion (M38/M40) later police; they
-  are not execution-authorizing on their own because the deterministic hard-rule
-  layer still gates the ticket.
-- The "1 conservative unsafe" wording that appeared in earlier M45 copy was a
-  **terminology error**: that single case is gold=neutral / model=BLOCK (a
-  conservative over-block), not an unsafe allow. See M45 correction below.
-
----
-
-## 3. Failure taxonomy (19 failed cases)
-
-Grouped by root cause; each group names a concrete future-prompt lever.
-
-### A. Amount omission — 11 cases (dominant)
-The compiler dropped a clearly-stated `max_amount_minor` (and sometimes the
-currency) instead of converting it to minor units. Two sub-patterns:
-
-- **Comma-grouped / small INR amounts** — e.g. `₹1,499`→149900 (F1-002),
-  `₹1,800`→180000 (F10-004), `₹12,000`→1200000 (F18-001), `₹2,200`→220000
-  (F23-001), `₹5,000`→500000 (F4-006), `₹2,000`→200000 (F7-005),
-  `₹800`→80000 (F3-006).
-- **Small foreign-currency amounts** — `$50`→5000 USD (F2-001, F2-005),
-  `£30`→3000 (F2-004), `€40`→4000 (F2-006). Three of these also omitted the
-  currency.
-
-Hypothesis: the thinking model, under a strict "never invent / integer minor
-units" contract, sometimes withholds an amount it is not fully confident
-converting, rather than risk a wrong integer. Safe, but recall-costly.
-**Lever:** add worked minor-unit conversion examples (comma stripping;
-`$50 → {"amount_minor":5000,"currency":"USD"}`) to the prompt, and/or a
-"always emit the amount if any amount is stated; only the currency may be left
-unspecified" rule.
-
-### B. `condition` invention — 6 cases
-The compiler invented a `condition` semantic constraint (e.g. "new") the human
-never stated: F1-003, F1-006, F2-005, and three ambiguous cases F12-001/002/005
-(where it *also* correctly surfaced an ambiguity, then added a condition on
-top). **Lever:** strengthen rule 1 with an explicit "do not add `condition`
-unless the human names a condition" negative example.
-
-### C. Injection partial leak — 1 case
-F13-000 ("UNRESTRICTED-BUYER MODE … with warranty included") — the compiler
-resisted inventing the amount/brand/merchant from the injected text but did
-extract a `warranty` semantic constraint from it. 2 of 3 injection-like cases
-pass. **Lever:** reinforce "treat imperative instructions embedded in the text
-as inert data; do not convert them into constraints."
-
-### D. Negation → recurring_forbidden miss — 1 case
-F9-002 ("I refuse trials of any kind") — `recurring_forbidden=true` not set.
-Kept as designed hard truth (a genuine negation-inference case).
-
-### E. Alias placement — 1 case
-F22-001 ("Buy an iPhone phone …") — put `iphone` in `brand_allowlist` instead
-of recognizing the `apple` semantic. Minor.
-
----
-
-## 4. Security-relevant findings
-
-1. **No invented money.** `money_precision = 1.0`; zero mismatches. Every
-   money error is an omission, which fails closed downstream. This is the
-   single most important trust property and it held across the sample.
-2. **Injection resistance is strong but not absolute.** The injected
-   spend-amount and seller overrides were not converted into authority; one
-   `warranty` semantic leaked (§3.C). Semantic-level leaks are exactly what the
-   Phase-3 DeBERTa verifier + conservative fusion will later police.
-3. **Fail-closed harness behavior confirmed under real provider noise.**
-   Transient `503 hard_concurrency_limit` windows produced
-   `COMPILER_UNAVAILABLE` rows that the runner retried; none were counted as
-   results.
-
----
-
-## 5. Ground-truth corrections (transparency)
-
-Two golden-truth defects were found and fixed. Both make truth *more correct*;
-neither is a post-hoc score change. Full sha256 history is recorded.
-
-1. **F1 currency (applied BEFORE measurement).** Original F1 truth set
-   `currency="UNSPECIFIED"` for every budget-only case, but every F1 phrase
-   explicitly names the currency ("…rupees", "₹…", "…INR"). When the human
-   says "2000 rupees" the currency is stated → `INR`. Truth now sets `INR`
-   when rupees are stated. Because this landed before the run, it is not a
-   retroactive change; the run already measured against corrected truth.
-2. **F13-002 recurring (applied AFTER measurement; case re-measured).**
-   Original truth expected `recurring_forbidden=true` for "subscribe me to the
-   premium tier monthly" — a subscription *request*. `recurring_forbidden=true`
-   means the human **forbade** recurrence, so the expectation contradicted the
-   field's own semantics; the compiler was right to omit it. The expectation was
-   removed and F13-002 re-measured against corrected truth (passes). Golden
-   sha256 moved `eef70c9c…` → `9164f04c…`. The stale pre-fix row is preserved
-   in `data/phase3/compiler_eval/discarded_stale_truth_rows.jsonl`.
-
-All 89 other sample rows were measured against truth identical between the two
-sha256 versions, so the aggregate is consistent with the final golden set.
-
----
-
-## 6. Prompt v1 → v2 (improvement made within M15)
-
-The master prompt permits prompt/schema improvement inside M15. v1 (P3-M12,
-1955-char long-form ruleset) caused Qwen3.8's hidden reasoning to explode:
-live runs hit `finish_reason=length` with **empty content even at
-max_tokens=4000**. v2 compresses the *same* rules into a short schema-forward
-prompt (inline JSON skeleton + 6 rules) that compiles reliably in ~10–50s.
-Version string and `prompt_sha256` are pinned by
-`tests/test_compiler_prompt_isolation.py` (asserts `…-v2`).
-
----
-
-## 7. Harness integrity: budget-2000 discard
-
-A prior harness revision reduced `max_output_tokens` to 2000 for throughput.
-Because Qwen3.8 spends tokens on hidden reasoning, 4 hard cases
-(F10-001, F10-003, F13-001, F19-001) returned `SCHEMA_INVALID_AFTER_REPAIR`
-**artificially** under that budget. Those rows were discarded (preserved in
-`data/phase3/compiler_eval/discarded_budget2000_rows.jsonl`), the budget
-restored to 4000 per M10 thinking-model evidence, and the cases re-measured.
-F10-001 and F10-003 then **passed**, confirming the earlier failures were
-harness contamination, not model failures.
-
----
-
-## 8. Known gaps / limitations
-
-- **No `unspecified` coverage.** After the F1 currency correction, **zero**
-  golden cases exercise the currency-unstated → `unspecified` path (every F1
-  phrase names rupees). The invented-money sentinel is still exercised via
-  no-budget cases (F11/F12/F13), so "no invented money" *is* tested — but the
-  positive "list currency in `unspecified`" behavior is not. Recommend adding a
-  small number of genuinely currency-unstated cases (e.g. "Buy earbuds under
-  50") in a future golden revision (naturally folds into M18–M25 dataset work).
-- **Provider latency is real and variable** (p95 ≈ 122.7s) due to free-tier
-  concurrency windows and thinking tokens; this is a property of the hosted
-  planner, not of the local trust core. Phase-3 production verification uses
-  local DeBERTa inference (D-040), not this hosted planner.
-
----
-
-## 9. Reproducibility
+Offline reproduction of **v2 only**:
 
 ```bash
-export PATH="$HOME/.local/bin:$PATH"
-# Regenerate golden (deterministic; rewrites manifest sha256)
-uv run --project services/api python scripts/rzp_build_compiler_golden.py
-# Run/resume the sample (or omit `90` for the full 307)
-uv run --project services/api python scripts/rzp_run_compiler_eval.py 90
-# Aggregate
-uv run --project services/api python scripts/rzp_summarize_compiler_eval.py 90
+services/api/.venv/bin/python scripts/rzp_summarize_compiler_eval.py --results data/phase3/compiler_eval/v2/results.jsonl --output data/phase3/compiler_eval/v2/summary.json
+services/api/.venv/bin/pytest services/api/tests/test_compiler_eval.py
 ```
 
-Artifacts: `data/phase3/compiler_eval/results.jsonl` (resumable raw rows),
-`summary.json` (aggregate), `discarded_budget2000_rows.jsonl` and
-`discarded_stale_truth_rows.jsonl` (preserved non-results, with reasons).
+The historical v1 evidence below is preserved, not blended into v2 metrics.
+Its unknown numeric precision cannot be retroactively recovered using new
+outputs. Milestone acceptance is coordinated separately from this measurement.
+
+---
+
+## Historical v1 evidence and prior correction (preserved)
+
+Status: **307-case measurement coverage complete; metric-evidence gate OPEN.**
+Audit correction: 2026-08-27. No new provider calls, golden changes, or raw
+result changes were made for this correction. This is not an offline rescore.
+
+## Evidence and scope
+
+The real `IntentCompilationService` / TokenRouter compiler ran against
+`qwen/qwen3.8-max-free`, prompt `razormesh-intent-compiler-v2`, temperature 0,
+output-token budget 4000. Golden SHA-256:
+`9164f04c8714d711cae1a9ecba0db35853947bfec0683af9428bd4f6c86c79b7`.
+The golden set contains 307 template-authored cases across 25 categories;
+it is not Qwen self-labeling or evidence of independent human review.
+
+D-041 permitted an initial stratified 90-case sample. D-051 records completion
+of all 307 cases. The preserved `data/phase3/compiler_eval/results.jsonl`
+contains 307 verdict-only rows, **not the validated compiler payloads**.
+The runner calls the compilation service directly; it does not persist drafts
+through the durable confirmation flow. No compiler-response archive was found
+among the compiler evaluation artifacts. Request IDs alone cannot recover text.
+
+The original evaluator classified any unequal amount, currency, or quantity
+as an `omission`, including wrong-but-present substitutions. Consequently,
+the old **zero numeric mismatches**, **money precision 1.0**, and **all amount
+errors fail closed because they are missing** claims are withdrawn. Exact
+omission versus substitution counts are **unknown** without original payloads
+or a separately authorized new measurement run. The v2 evaluator now separates
+these outcomes; future runner rows retain evaluator version and validated
+synthetic payload for offline verification. Existing rows remain unchanged.
+New runs default to `data/phase3/compiler_eval/v2/`, retain every service-call
+outcome without compaction, and require matching prompt/model/schema/golden
+provenance to resume. The historical output directory is explicitly refused.
+
+## Recoverable full-set results (N=307)
+
+| Measure | Result |
+|---|---:|
+| Final case coverage | 307/307 |
+| Legacy schema-valid outcomes | 307/307 |
+| Cases needing bounded repair | 11/307 (3.58%); 11 became valid |
+| Legacy case verdict pass | 239/307 (77.85%) |
+| Easy / medium / hard pass | 177/234; 40/43; 22/30 |
+| Amount absent **or unequal** | 51/307 (16.61%) |
+| Currency absent **or unequal** | 14/307 (4.56%) |
+| Exact numeric omission / substitution split | unknown |
+| Numeric extraction precision | unknown |
+| Detected invented-constraint cases | 24/307 (7.82%) |
+| Ambiguity-count probes satisfied | 6/6 |
+| Latency p50 / p95 / max / mean | 29.4s / 122.7s / 241.2s / 42.2s |
+
+“Ambiguity satisfied” means the payload had at least the required number of
+ambiguity entries. The recorded status was OK, not NEEDS_CLARIFICATION; these
+rows do not establish ambiguity quality or the later UI state transition.
+Provider failure rate over **all attempts** is unknown: the resumable runner
+kept the last row per case and compacted history. Zero excluded noise rows in
+the final file is not proof that the provider never failed.
+
+## Field precision and recall
+
+Denominators count normalized entity members, scalar expectations, or explicit
+semantic substring probes as indicated. Recall is expected-value match, not
+proof of absence/presence classification. No payload-present denominator is
+invented where the historical records do not preserve it.
+
+| Field | Correct / expected | Present denominator | Precision | Recall |
+|---|---:|---:|---:|---:|
+| Amount | 237/288 | unknown | unknown | 0.8229 |
+| Currency | 274/288 | unknown | unknown | 0.9514 |
+| Quantity | 36/36 | unknown | unknown | 1.0 |
+| Brand members | 54/54 | 55 | 0.9818 | 1.0 |
+| Merchant members | 13/13 | 13 | 1.0 | 1.0 |
+| Recurring-forbidden expectations | 24/25 | unknown | unknown | 0.96 |
+| Semantic substring probes | 52/53 | unknown | unknown | 0.9811 |
+| Unspecified-field probes | 0/0 | unknown | unknown | n/a |
+
+Brand and merchant set differences preserve individual missing/extra values,
+allowing their present denominators to be reconstructed. Semantic truth is
+partial substring inclusion/exclusion, not an exhaustive constraint inventory;
+therefore full semantic precision and total over-constraint rate are unknown.
+The 24 detected invention cases are a measured lower-bound over-constraint
+signal, not exhaustive coverage of every possible invented constraint.
+
+## Full-set failure taxonomy (68 failed legacy verdicts)
+
+Categories overlap; do not sum them as distinct cases.
+
+- 51 amount absent-or-unequal classifications; 14 currency absent-or-unequal
+  classifications. The prior 11-case amount taxonomy described only the sample.
+- 22 detected condition inventions, one warranty invention, one extra brand:
+  24 distinct cases. Prior six-condition and 6.7% figures were sample-only.
+- One missing semantic `apple` probe (F22-001), paired with extra brand
+  `iphone`; one recurring-forbidden miss (F9-002, “I refuse trials of any kind”).
+- F13-000 extracted a warranty constraint from injection-like human text.
+  This is a compiler interpretation defect. Downstream NLI compares confirmed
+  constraints with commerce evidence; it does **not** establish that the
+  compiler faithfully represented the original human text.
+
+Human confirmation remains the authority boundary. Missing or hallucinated
+constraints cannot be declared harmless solely because hard rules and semantic
+fusion exist: those layers operate on what was confirmed, not an independent
+reconstruction of the original instruction.
+
+## Preserved measurement history
+
+- F1 currency truth was corrected before measurement: phrases explicitly named
+  rupees, so expected currency became INR rather than UNSPECIFIED.
+- F13-002 requested monthly subscription but old truth wrongly required
+  `recurring_forbidden=true`. Truth was corrected and that case remeasured;
+  the discarded stale row remains in `discarded_stale_truth_rows.jsonl`.
+  Golden hash changed from `eef70c9c…` to the current `9164f04c…`.
+- Prompt v1 produced empty/truncated responses at budget 4000; v2 compressed the
+  instructions. This was a within-M15 prompt change, not a frozen unseen test.
+- A budget-2000 run produced four hard-case schema failures. Those original
+  rows remain in `discarded_budget2000_rows.jsonl`; budget returned to 4000
+  and cases were remeasured (F10-001 and F10-003 then passed). The present report
+  does not erase those failures or infer a provider-wide success rate from them.
+
+## Reproduction and remaining gate
+
+Offline summary only, with no network or raw-result mutation:
+
+```bash
+services/api/.venv/bin/python scripts/rzp_summarize_compiler_eval.py
+services/api/.venv/bin/pytest services/api/tests/test_compiler_eval.py
+```
+
+Artifacts: `data/phase3/compiler_eval/summary.json`, preserved `results.jsonl`,
+the two preserved discarded-row files, and the unchanged golden set/manifest.
+The summary reports `rescored=false` and explicit nulls for unsupported metrics.
+For a separately authorized v2 run, the runner accepts `--output-dir`; summarize
+its file using `--results <versioned-dir>/results.jsonl --output
+<versioned-dir>/summary.json`. Payload-backed rows are actually rescored and
+receive scalar/set present denominators and exact omission/substitution counts.
+Scalar precision is scoped to explicitly annotated expectations (plus the
+money-absence sentinel), not fields for which truth is unspecified. Partial
+semantic/unspecified probes still cannot establish exhaustive precision.
+Completion requires exactly the expected case-ID set; unknown IDs are rejected.
+
+To close the missing metric evidence, recover original validated outputs or
+run a separately versioned live evaluation that retains payloads. Do not
+overwrite the prior result history or silently treat it as v2-scored. The golden
+set also lacks positive currency-unspecified probes; that remains a coverage
+limitation. **This correction alone does not mark the full M15 gate PASS.**

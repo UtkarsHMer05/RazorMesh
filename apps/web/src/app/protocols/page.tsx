@@ -134,10 +134,7 @@ function Section({ eyebrow, title, children }: { eyebrow: string; title: string;
 }
 
 export default function ProtocolGatewayPage() {
-  const [snapshot, setSnapshot] = useState<GatewaySnapshot | null>(null);
-  useEffect(() => {
-    setSnapshot(FIXTURE_SNAPSHOT);
-  }, []);
+  const [snapshot] = useState<GatewaySnapshot>(() => FIXTURE_SNAPSHOT);
 
   const matrix = useMemo(
     () => [

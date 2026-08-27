@@ -16,7 +16,7 @@ Phase-1/2/3 invariant (P4-S01, P4-S20, P4-S21).
 from __future__ import annotations
 
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 
@@ -146,6 +146,15 @@ def evaluate_envelope(
     if env.source_protocol != SourceProtocol.INTERNAL and not env.capability_evidence:
         reasons.append(FirewallReason.CAPABILITY_MISSING)
 
+    # 5b. Unknown critical extensions fail closed.
+    if env.extension_evidence:
+        for ext in env.extension_evidence:
+            if isinstance(ext, Mapping) and ext.get("required"):
+                uri = ext.get("uri", "")
+                if not _known_extension_uri(uri):
+                    reasons.append(FirewallReason.UNKNOWN_CRITICAL_EXTENSION)
+                    break
+
     # 6. Timestamp acceptable.
     if max_age_seconds > 0:
         age = time.time() - env.received_at.timestamp()
@@ -218,6 +227,22 @@ def _extract_date(v: str) -> str | None:
     if len(parts) >= 3 and len(parts[0]) == 4 and parts[0].isdigit():
         return "-".join(parts[:3])
     return None
+
+
+_KNOWN_EXTENSION_URIS: frozenset[str] = frozenset({
+    # RazorMesh-namespaced extensions are the only known extensions
+    # in the test surface. The real registry will be loaded by the
+    # adapter at runtime; for the protocol-firewall primitive the
+    # known set is closed and explicit.
+    "https://razormesh.dev/extensions/ucp/v1",
+    "https://razormesh.dev/extensions/ap2/v0.2.0",
+    "https://razormesh.dev/extensions/acp/v0",
+    "https://razormesh.dev/extensions/a2a/v1",
+})
+
+
+def _known_extension_uri(uri: str) -> bool:
+    return uri in _KNOWN_EXTENSION_URIS
 
 
 def mark_envelope_state(

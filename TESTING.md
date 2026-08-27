@@ -419,3 +419,20 @@ On top of all Phase-1/2 gates:
    label map + env manifest validated before local import (M35).
 10. Threshold policy: calibration on validation only; single frozen-gold
     evaluation recorded once (M37); thresholds stored with model+hash.
+
+### M15 re-audit evidence gate (D-052)
+
+- Wrong-but-present amount/currency/quantity values are substitutions, not
+  omissions; regression tests must distinguish both from invented values.
+- Precision uses actual present/correct denominators within explicitly annotated
+  truth. Partial semantic substring checks do not establish exhaustive semantic
+  precision or over-constraint coverage.
+- Historical verdict-only rows cannot prove the numeric omission/substitution
+  split or exact numeric precision. Unsupported measures remain unknown; do not
+  silently reclassify historical records using a corrected evaluator.
+- Fresh runs must retain validated synthetic payloads and evaluator, golden,
+  prompt, schema and model provenance; preserve provider failures and reject
+  mismatched resumes. Use a separate versioned directory, never overwrite the
+  original 307-row evaluation.
+- Full coverage requires the exact expected case-ID set, not just a row count.
+  No API calls are permitted in evaluator/summary regression tests.

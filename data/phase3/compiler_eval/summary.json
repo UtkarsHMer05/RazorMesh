@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-08-27T08:05:43.903745+00:00",
+  "generated_at_utc": "2026-08-27T08:38:45.132563+00:00",
   "golden_set": {
     "cases": 307,
     "sha256": "9164f04c8714d711cae1a9ecba0db35853947bfec0683af9428bd4f6c86c79b7",
@@ -174,33 +174,188 @@
       }
     }
   },
+  "evidence_limits": {
+    "legacy_verdict_only_rows": 307,
+    "payload_rows": 0,
+    "rescored": false,
+    "payload_backed_rows_rescored": 0,
+    "note": "Legacy rows conflate absent/wrong-present values: precision and exact omission split unknown. Payload-backed rows are rescored with v2 within explicitly annotated truth. Final-row counts do not measure provider failure rate."
+  },
+  "field_metrics": {
+    "max_amount_minor": {
+      "expected_instances": 288,
+      "correct_expected_instances": 237,
+      "present_instances": null,
+      "precision": null,
+      "recall": 0.8229,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    },
+    "currency": {
+      "expected_instances": 288,
+      "correct_expected_instances": 274,
+      "present_instances": null,
+      "precision": null,
+      "recall": 0.9514,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    },
+    "quantity_max": {
+      "expected_instances": 36,
+      "correct_expected_instances": 36,
+      "present_instances": null,
+      "precision": null,
+      "recall": 1.0,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    },
+    "brands": {
+      "expected_instances": 54,
+      "correct_expected_instances": 54,
+      "present_instances": 55,
+      "precision": 0.9818,
+      "recall": 1.0,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "merchants": {
+      "expected_instances": 13,
+      "correct_expected_instances": 13,
+      "present_instances": 13,
+      "precision": 1.0,
+      "recall": 1.0,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "recurring_forbidden": {
+      "expected_instances": 25,
+      "correct_expected_instances": 24,
+      "present_instances": null,
+      "precision": null,
+      "recall": 0.96,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    },
+    "semantic": {
+      "expected_instances": 53,
+      "correct_expected_instances": 52,
+      "present_instances": null,
+      "precision": null,
+      "recall": 0.9811,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    },
+    "unspecified": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": null,
+      "precision": null,
+      "recall": null,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    }
+  },
   "field_recall": {
-    "brands": 1.0,
-    "currency": 0.9514,
     "max_amount_minor": 0.8229,
-    "merchants": 1.0,
+    "currency": 0.9514,
     "quantity_max": 1.0,
+    "brands": 1.0,
+    "merchants": 1.0,
     "recurring_forbidden": 0.96,
     "semantic": 0.9811,
     "unspecified": null
   },
+  "field_precision": {
+    "max_amount_minor": null,
+    "currency": null,
+    "quantity_max": null,
+    "brands": 0.9818,
+    "merchants": 1.0,
+    "recurring_forbidden": null,
+    "semantic": null,
+    "unspecified": null
+  },
   "numeric_correctness": {
     "expected_money_cases": 288,
-    "amount_omissions": 51,
-    "currency_omissions": 14,
-    "money_precision": 1.0
+    "amount_omissions_or_substitutions": 51,
+    "currency_omissions_or_substitutions": 14,
+    "amount_omissions": null,
+    "currency_omissions": null,
+    "numeric_substitutions": null,
+    "money_precision": null
   },
-  "unsafe_omissions": {
+  "legacy_omission_classifications": {
     "max_amount_minor": 51,
     "currency": 14,
     "semantic": 1,
     "recurring_forbidden": 1
+  },
+  "unsafe_omissions": null,
+  "payload_backed_field_metrics": {
+    "max_amount_minor": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": 0,
+      "precision": null,
+      "recall": null,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "currency": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": 0,
+      "precision": null,
+      "recall": null,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "quantity_max": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": 0,
+      "precision": null,
+      "recall": null,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "brands": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": 0,
+      "precision": null,
+      "recall": null,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "merchants": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": 0,
+      "precision": null,
+      "recall": null,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "recurring_forbidden": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": 0,
+      "precision": null,
+      "recall": null,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "semantic": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": 0,
+      "precision": null,
+      "recall": null,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "unspecified": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": 0,
+      "precision": null,
+      "recall": null,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    }
   },
   "hallucinated_constraints": {
     "condition": 22,
     "warranty": 1,
     "brands": 1
   },
+  "hallucination_case_count": 24,
+  "hallucination_case_rate": 0.0782,
   "mismatches": {},
   "ambiguity_handling": {
     "cases_requiring_ambiguity": 6,

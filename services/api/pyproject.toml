@@ -61,6 +61,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S105", "S106", "S107"]  # hardcoded-test-string literals only in tests
 "scripts/*" = ["T201"]
+"training/*" = ["E501", "F401", "F811", "BLE001", "B008", "S105"]
 # Alembic conventions: env.py must insert the src path before importing the app
 # (late imports are inherent); migration files follow the upstream alembic
 # template (typing.Sequence/Union); env.py falls back to the ini URL with a
@@ -70,6 +71,12 @@ ignore = [
 # any razormesh_api import so get_settings() can never resolve the dev .env;
 # env-pinning before imports is inherent (see the block comment in the file).
 "**/tests/conftest.py" = ["E402"]
+# Phase-4 protocol proof harnesses are long by design (full UCP/AP2/ACP
+# assertion tables) and intentionally enumerate legal transitions / failure
+# labels inline; brevity is not a virtue here.
+"src/razormesh_api/protocol/*_proof.py" = ["E501", "BLE001", "S105"]
+"src/razormesh_api/protocol/agentpay_x.py" = ["E501", "S105"]
+"src/razormesh_api/protocol/untrusted_agent.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.13"

@@ -1,5 +1,13 @@
 # P3-M50 — Phase-3 Completion Report (closure audit, 2026-08-27)
 
+> **RETRACTED AS CURRENT ACCEPTANCE — independent re-audit, 2026-08-27.**
+> The historical report below is preserved, but its blanket 50/50 claim is not
+> supported by the implementation. Confirmation constraints are dropped,
+> runtime semantic integration is missing, evaluation/provenance claims are
+> overstated, and full quality/clean-room gates require reruns. See
+> [current findings](PHASE3_REAUDIT_2026_08_27.md). Phase 3 remains incomplete;
+> this report does not authorize a phase transition.
+
 > This report is regenerated after the owner-mandated closure audit AND the
 > completion of the full-307 Intent-Compiler evaluation (D-051, 2026-08-27).
 > All 50 milestone rows now close with evidence.

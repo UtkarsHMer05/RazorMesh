@@ -18,10 +18,11 @@ from pydantic import BaseModel, ConfigDict, Field
 from razormesh_api.domain.intent_draft import CompilerIntentPayload
 
 GOLDEN_FORMAT_VERSION = "compiler-golden-v1"
+EVALUATOR_VERSION = "compiler-evaluator-v2"
 
 
 class Expectation(BaseModel):
-    """Manual truth for one case. ``None`` means 'must be absent'."""
+    """Partial truth: None is unchecked unless an explicit invention ban applies."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -61,6 +62,76 @@ def _norm(text: str) -> str:
     return text.strip().lower()
 
 
+@dataclass(frozen=True)
+class FieldCounts:
+    """Counts within explicitly annotated truth, not unstated semantic truth."""
+
+    expected: int
+    present: int | None
+    correct: int
+
+
+def payload_field_counts(
+    payload: CompilerIntentPayload | None, expected: Expectation
+) -> dict[str, FieldCounts]:
+    """Exact scalar/set counts; partial substring truth has no precision denominator."""
+    hard = payload.hard if payload else None
+    amount = hard.max_amount if hard else None
+    counts: dict[str, FieldCounts] = {}
+    scalars: tuple[tuple[str, int | str | bool | None, int | str | bool | None, bool], ...] = (
+        (
+            "max_amount_minor",
+            expected.max_amount_minor,
+            amount.amount_minor if amount else None,
+            expected.max_amount_minor is not None or expected.currency == "UNSPECIFIED",
+        ),
+        (
+            "currency",
+            expected.currency if expected.currency != "UNSPECIFIED" else None,
+            amount.currency if amount else None,
+            expected.currency is not None,
+        ),
+        (
+            "quantity_max",
+            expected.quantity_max,
+            hard.quantity_max if hard else None,
+            expected.quantity_max is not None,
+        ),
+        (
+            "recurring_forbidden",
+            expected.recurring_forbidden,
+            hard.recurring_forbidden if hard else None,
+            expected.recurring_forbidden is not None,
+        ),
+    )
+    for field, want, got, checked in scalars:
+        counts[field] = FieldCounts(
+            int(checked and want is not None),
+            int(checked and got is not None),
+            int(checked and want is not None and got == want),
+        )
+    sets = (
+        ("brands", expected.brands, hard.brand_allowlist if hard else ()),
+        ("merchants", expected.merchant_allowlist, hard.merchant_allowlist if hard else ()),
+    )
+    for field, wanted, actual in sets:
+        want_set, got_set = {_norm(x) for x in wanted}, {_norm(x) for x in actual}
+        counts[field] = FieldCounts(len(want_set), len(got_set), len(want_set & got_set))
+    blob = " ".join(_norm(sc.text) for sc in payload.semantic_constraints) if payload else ""
+    counts["semantic"] = FieldCounts(
+        len(expected.semantic_must_contain),
+        None,
+        sum(_norm(needle) in blob for needle in expected.semantic_must_contain),
+    )
+    actual_unspecified = {u.field for u in payload.unspecified} if payload else set()
+    counts["unspecified"] = FieldCounts(
+        len(expected.unspecified_contains),
+        None,
+        sum(field in actual_unspecified for field in expected.unspecified_contains),
+    )
+    return counts
+
+
 def evaluate_case(payload: CompilerIntentPayload | None, expected: Expectation) -> CaseVerdict:
     """Field-level verdict. Omission = stated-by-human but missing in draft;
     invention = constraint present that the human never authorized."""
@@ -81,17 +152,25 @@ def evaluate_case(payload: CompilerIntentPayload | None, expected: Expectation) 
     got_amount = hard.max_amount.amount_minor if hard.max_amount else None
     got_currency = hard.max_amount.currency if hard.max_amount else None
     if expected.max_amount_minor is not None:
-        if got_amount != expected.max_amount_minor:
+        if got_amount is None:
             omissions.append(f"max_amount_minor:{expected.max_amount_minor}")
-        if expected.currency and got_currency != expected.currency:
-            omissions.append(f"currency:{expected.currency}")
+        elif got_amount != expected.max_amount_minor:
+            mismatches.append(f"max_amount_minor:{got_amount}!={expected.max_amount_minor}")
+        if expected.currency:
+            if got_currency is None:
+                omissions.append(f"currency:{expected.currency}")
+            elif got_currency != expected.currency:
+                mismatches.append(f"currency:{got_currency}!={expected.currency}")
     elif expected.currency == "UNSPECIFIED":
         if got_amount is not None or got_currency is not None:
             inventions.append("money_without_human_statement")
 
     # --- quantity ----------------------------------------------------------
     if expected.quantity_max is not None and hard.quantity_max != expected.quantity_max:
-        omissions.append(f"quantity_max:{expected.quantity_max}")
+        if hard.quantity_max is None:
+            omissions.append(f"quantity_max:{expected.quantity_max}")
+        else:
+            mismatches.append(f"quantity_max:{hard.quantity_max}!={expected.quantity_max}")
 
     # --- brands / merchants ----------------------------------------------
     got_brands = {_norm(b) for b in hard.brand_allowlist}

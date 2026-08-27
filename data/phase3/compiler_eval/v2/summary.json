@@ -1,0 +1,744 @@
+{
+  "generated_at_utc": "2026-08-27T12:21:25.743058+00:00",
+  "golden_set": {
+    "cases": 307,
+    "sha256": "9164f04c8714d711cae1a9ecba0db35853947bfec0683af9428bd4f6c86c79b7",
+    "truth_source": "human-authored templates (never Qwen self-labels)"
+  },
+  "coverage": {
+    "final_rows": 307,
+    "of_golden": 307,
+    "sample": null,
+    "complete": true,
+    "provider_noise_rows_excluded": 0
+  },
+  "schema_validity": {
+    "ok": 304,
+    "failed": 3,
+    "schema_valid_rate": 0.9902,
+    "failure_codes": {
+      "SCHEMA_INVALID_AFTER_REPAIR": 3
+    }
+  },
+  "repair": {
+    "cases_needing_repair": 27,
+    "evaluated_cases": 307,
+    "repair_rate": 0.0879,
+    "repaired_to_valid": 24,
+    "failed_after_repair": 3,
+    "repair_success_rate": 0.8889
+  },
+  "case_pass": {
+    "passed": 242,
+    "pass_rate": 0.7883,
+    "by_difficulty": {
+      "easy": {
+        "n": 234,
+        "passed": 178,
+        "pass_rate": 0.7607,
+        "schema_ok": 233
+      },
+      "medium": {
+        "n": 43,
+        "passed": 40,
+        "pass_rate": 0.9302,
+        "schema_ok": 43
+      },
+      "hard": {
+        "n": 30,
+        "passed": 24,
+        "pass_rate": 0.8,
+        "schema_ok": 28
+      }
+    },
+    "by_category": {
+      "alias_handling": {
+        "n": 2,
+        "passed": 1,
+        "pass_rate": 0.5
+      },
+      "ambiguous_phrasing": {
+        "n": 6,
+        "passed": 5,
+        "pass_rate": 0.8333
+      },
+      "brand_constraint": {
+        "n": 48,
+        "passed": 43,
+        "pass_rate": 0.8958
+      },
+      "budget_currency_explicit": {
+        "n": 40,
+        "passed": 19,
+        "pass_rate": 0.475
+      },
+      "budget_only": {
+        "n": 84,
+        "passed": 65,
+        "pass_rate": 0.7738
+      },
+      "bundle_semantic": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "condition_new_required": {
+        "n": 24,
+        "passed": 23,
+        "pass_rate": 0.9583
+      },
+      "deadline_semantic": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "delivery_timing_semantic": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "injection_like_human_text": {
+        "n": 3,
+        "passed": 2,
+        "pass_rate": 0.6667
+      },
+      "membership_resistance": {
+        "n": 1,
+        "passed": 0,
+        "pass_rate": 0.0
+      },
+      "merchant_restriction": {
+        "n": 12,
+        "passed": 10,
+        "pass_rate": 0.8333
+      },
+      "multi_constraint": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "multi_constraint_variant": {
+        "n": 3,
+        "passed": 1,
+        "pass_rate": 0.3333
+      },
+      "negation_preservation": {
+        "n": 5,
+        "passed": 4,
+        "pass_rate": 0.8
+      },
+      "quantity": {
+        "n": 32,
+        "passed": 23,
+        "pass_rate": 0.7188
+      },
+      "recurring_forbidden_explicit": {
+        "n": 18,
+        "passed": 18,
+        "pass_rate": 1.0
+      },
+      "return_policy_semantic": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "safe_lookalike_alias": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "safe_lookalike_title_trap": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "shipping_fee_semantic": {
+        "n": 2,
+        "passed": 2,
+        "pass_rate": 1.0
+      },
+      "trial_euphemism": {
+        "n": 8,
+        "passed": 8,
+        "pass_rate": 1.0
+      },
+      "underspecified_minimal": {
+        "n": 10,
+        "passed": 10,
+        "pass_rate": 1.0
+      },
+      "variant_guard": {
+        "n": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "warranty_semantic": {
+        "n": 1,
+        "passed": 0,
+        "pass_rate": 0.0
+      }
+    }
+  },
+  "evidence_limits": {
+    "legacy_verdict_only_rows": 0,
+    "payload_rows": 304,
+    "rescored": true,
+    "payload_backed_rows_rescored": 307,
+    "note": "Legacy rows conflate absent/wrong-present values: precision and exact omission split unknown. Payload-backed rows are rescored with v2 within explicitly annotated truth. Final-row counts do not measure provider failure rate."
+  },
+  "field_metrics": {
+    "max_amount_minor": {
+      "expected_instances": 288,
+      "correct_expected_instances": 236,
+      "present_instances": 271,
+      "precision": 0.8708,
+      "recall": 0.8194,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "currency": {
+      "expected_instances": 288,
+      "correct_expected_instances": 271,
+      "present_instances": 271,
+      "precision": 1.0,
+      "recall": 0.941,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "quantity_max": {
+      "expected_instances": 36,
+      "correct_expected_instances": 33,
+      "present_instances": 33,
+      "precision": 1.0,
+      "recall": 0.9167,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "brands": {
+      "expected_instances": 54,
+      "correct_expected_instances": 52,
+      "present_instances": 53,
+      "precision": 0.9811,
+      "recall": 0.963,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "merchants": {
+      "expected_instances": 13,
+      "correct_expected_instances": 13,
+      "present_instances": 13,
+      "precision": 1.0,
+      "recall": 1.0,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "recurring_forbidden": {
+      "expected_instances": 25,
+      "correct_expected_instances": 21,
+      "present_instances": 21,
+      "precision": 1.0,
+      "recall": 0.84,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "semantic": {
+      "expected_instances": 53,
+      "correct_expected_instances": 50,
+      "present_instances": null,
+      "precision": null,
+      "recall": 0.9434,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    },
+    "unspecified": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": null,
+      "precision": null,
+      "recall": null,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    }
+  },
+  "field_recall": {
+    "max_amount_minor": 0.8194,
+    "currency": 0.941,
+    "quantity_max": 0.9167,
+    "brands": 0.963,
+    "merchants": 1.0,
+    "recurring_forbidden": 0.84,
+    "semantic": 0.9434,
+    "unspecified": null
+  },
+  "field_precision": {
+    "max_amount_minor": 0.8708,
+    "currency": 1.0,
+    "quantity_max": 1.0,
+    "brands": 0.9811,
+    "merchants": 1.0,
+    "recurring_forbidden": 1.0,
+    "semantic": null,
+    "unspecified": null
+  },
+  "numeric_correctness": {
+    "count_scope": "Omissions/substitutions count valid payloads only; whole-output failures are separate.",
+    "expected_money_cases": 288,
+    "amount_omissions_or_substitutions": 49,
+    "currency_omissions_or_substitutions": 14,
+    "amount_omissions": 14,
+    "currency_omissions": 14,
+    "numeric_substitutions": {
+      "max_amount_minor": 35,
+      "currency": 0,
+      "quantity_max": 0
+    },
+    "money_precision": 0.8708
+  },
+  "scalar_mismatch_details": {
+    "max_amount_minor": {
+      "count": 35,
+      "directions": {
+        "lower": 35
+      },
+      "cases": [
+        {
+          "case_id": "F1-009",
+          "expected": 149900,
+          "actual": 149899,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-016",
+          "expected": 149900,
+          "actual": 149899,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-023",
+          "expected": 149900,
+          "actual": 149899,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-024",
+          "expected": 1000000,
+          "actual": 999999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-030",
+          "expected": 149900,
+          "actual": 149899,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-037",
+          "expected": 149900,
+          "actual": 149899,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-038",
+          "expected": 1000000,
+          "actual": 999999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-051",
+          "expected": 149900,
+          "actual": 149899,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-052",
+          "expected": 1000000,
+          "actual": 999999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-058",
+          "expected": 149900,
+          "actual": 149899,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-065",
+          "expected": 149900,
+          "actual": 149899,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-066",
+          "expected": 1000000,
+          "actual": 999999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F1-079",
+          "expected": 149900,
+          "actual": 149899,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F15-001",
+          "expected": 400000,
+          "actual": 399999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F2-002",
+          "expected": 4000,
+          "actual": 3999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F2-004",
+          "expected": 3000,
+          "actual": 2999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F2-006",
+          "expected": 4000,
+          "actual": 3999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F2-008",
+          "expected": 3000,
+          "actual": 2999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F2-018",
+          "expected": 4000,
+          "actual": 3999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F2-024",
+          "expected": 3000,
+          "actual": 2999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F2-030",
+          "expected": 4000,
+          "actual": 3999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F2-032",
+          "expected": 3000,
+          "actual": 2999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F2-036",
+          "expected": 3000,
+          "actual": 2999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F2-038",
+          "expected": 4000,
+          "actual": 3999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F2-040",
+          "expected": 3000,
+          "actual": 2999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F3-003",
+          "expected": 80000,
+          "actual": 79999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F3-007",
+          "expected": 80000,
+          "actual": 79999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F4-013",
+          "expected": 500000,
+          "actual": 499999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F4-023",
+          "expected": 500000,
+          "actual": 499999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F4-024",
+          "expected": 500000,
+          "actual": 499999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F4-025",
+          "expected": 500000,
+          "actual": 499999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F4-030",
+          "expected": 500000,
+          "actual": 499999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F5-017",
+          "expected": 2000000,
+          "actual": 1999999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F8-002",
+          "expected": 800000,
+          "actual": 799999,
+          "delta": -1,
+          "direction": "lower"
+        },
+        {
+          "case_id": "F8-003",
+          "expected": 800000,
+          "actual": 799999,
+          "delta": -1,
+          "direction": "lower"
+        }
+      ]
+    },
+    "currency": {
+      "count": 0,
+      "directions": {},
+      "cases": []
+    },
+    "quantity_max": {
+      "count": 0,
+      "directions": {},
+      "cases": []
+    }
+  },
+  "valid_output_omissions": {
+    "recurring_forbidden": 2,
+    "max_amount_minor": 14,
+    "currency": 14,
+    "semantic": 1
+  },
+  "whole_output_failures": {
+    "cases": 3,
+    "case_ids": [
+      "F10-002",
+      "F10-004",
+      "F3-018"
+    ],
+    "expected_instances_without_output": {
+      "max_amount_minor": 3,
+      "currency": 3,
+      "quantity_max": 3,
+      "brands": 2,
+      "merchants": 0,
+      "recurring_forbidden": 2,
+      "semantic": 2,
+      "unspecified": 0
+    },
+    "note": "Absent complete outputs reduce all-case recall; not classified as individual valid-output omissions."
+  },
+  "valid_output_field_metrics": {
+    "max_amount_minor": {
+      "expected_instances": 285,
+      "correct_expected_instances": 236,
+      "present_instances": 271,
+      "precision": 0.8708,
+      "recall": 0.8281,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "currency": {
+      "expected_instances": 285,
+      "correct_expected_instances": 271,
+      "present_instances": 271,
+      "precision": 1.0,
+      "recall": 0.9509,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "quantity_max": {
+      "expected_instances": 33,
+      "correct_expected_instances": 33,
+      "present_instances": 33,
+      "precision": 1.0,
+      "recall": 1.0,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "brands": {
+      "expected_instances": 52,
+      "correct_expected_instances": 52,
+      "present_instances": 53,
+      "precision": 0.9811,
+      "recall": 1.0,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "merchants": {
+      "expected_instances": 13,
+      "correct_expected_instances": 13,
+      "present_instances": 13,
+      "precision": 1.0,
+      "recall": 1.0,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "recurring_forbidden": {
+      "expected_instances": 23,
+      "correct_expected_instances": 21,
+      "present_instances": 21,
+      "precision": 1.0,
+      "recall": 0.913,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "semantic": {
+      "expected_instances": 51,
+      "correct_expected_instances": 50,
+      "present_instances": null,
+      "precision": null,
+      "recall": 0.9804,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    },
+    "unspecified": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": null,
+      "precision": null,
+      "recall": null,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    }
+  },
+  "legacy_omission_classifications": {
+    "recurring_forbidden": 2,
+    "max_amount_minor": 14,
+    "currency": 14,
+    "semantic": 1
+  },
+  "unsafe_omissions": {
+    "recurring_forbidden": 2,
+    "max_amount_minor": 14,
+    "currency": 14,
+    "semantic": 1
+  },
+  "payload_backed_field_metrics": {
+    "max_amount_minor": {
+      "expected_instances": 288,
+      "correct_expected_instances": 236,
+      "present_instances": 271,
+      "precision": 0.8708,
+      "recall": 0.8194,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "currency": {
+      "expected_instances": 288,
+      "correct_expected_instances": 271,
+      "present_instances": 271,
+      "precision": 1.0,
+      "recall": 0.941,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "quantity_max": {
+      "expected_instances": 36,
+      "correct_expected_instances": 33,
+      "present_instances": 33,
+      "precision": 1.0,
+      "recall": 0.9167,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "brands": {
+      "expected_instances": 54,
+      "correct_expected_instances": 52,
+      "present_instances": 53,
+      "precision": 0.9811,
+      "recall": 0.963,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "merchants": {
+      "expected_instances": 13,
+      "correct_expected_instances": 13,
+      "present_instances": 13,
+      "precision": 1.0,
+      "recall": 1.0,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "recurring_forbidden": {
+      "expected_instances": 25,
+      "correct_expected_instances": 21,
+      "present_instances": 21,
+      "precision": 1.0,
+      "recall": 0.84,
+      "scope": "explicitly annotated scalar expectations / normalized entity-set members"
+    },
+    "semantic": {
+      "expected_instances": 53,
+      "correct_expected_instances": 50,
+      "present_instances": null,
+      "precision": null,
+      "recall": 0.9434,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    },
+    "unspecified": {
+      "expected_instances": 0,
+      "correct_expected_instances": 0,
+      "present_instances": null,
+      "precision": null,
+      "recall": null,
+      "scope": "expected field/probe exact-match recall only; present denominator unavailable"
+    }
+  },
+  "hallucinated_constraints": {
+    "condition": 20,
+    "warranty": 1,
+    "brands": 1
+  },
+  "hallucination_case_count": 22,
+  "hallucination_case_rate": 0.0717,
+  "mismatches": {
+    "max_amount_minor": 35,
+    "payload_missing": 3
+  },
+  "ambiguity_handling": {
+    "cases_requiring_ambiguity": 6,
+    "satisfied": 6
+  },
+  "latency_ms": {
+    "p50": 20739.4,
+    "p95": 64751.0,
+    "max": 141443.9,
+    "mean": 26824.0
+  }
+}
