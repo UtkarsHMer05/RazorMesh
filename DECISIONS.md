@@ -1412,3 +1412,42 @@ Invariant preserved: no protocol adapter calls Razorpay; no protocol
 adapter creates financial authority; tickets remain
 consume-once/context-bound; integer minor units; append-only audit;
 no fabricated certification claims.
+
+## D-051 — D-041 full-307 Intent-Compiler eval complete (P3-M15 closure)
+
+Date: 2026-08-27
+Milestone: P3-M15 (full-307 continuation; pre-M48 obligation)
+Status: Accepted
+Closes: D-041 (M15 evaluation on a stratified 90-case sample; full-307 was a
+  pre-M48 obligation) — obligation fully satisfied.
+Affected docs/artifacts: PHASE3_STATUS.md (M15/M48/M50 rows),
+  docs/PHASE3_INTENT_COMPILER_EVAL.md, data/phase3/compiler_eval/results.jsonl
+  (307 rows), data/phase3/compiler_eval/summary.json.
+
+Context: D-041 deferred full-set coverage to a pre-M48 resumable continuation.
+Two resumable passes against the real TokenRouter/Qwen planner (free-tier)
+produced a 307/307 complete run on 2026-08-27.
+
+Numbers (full-307):
+- coverage: 307/307, complete=true, provider-noise excluded 0
+- schema validity: 307/307 = 100%
+- bounded repair: 11/307 (3.58%), all repaired to valid
+- case pass: 239/307 = 0.7785 (easy 75.6% / medium 93.0% / hard 73.3%)
+- money precision 1.0; 0 mismatches; 0 invented amounts
+- unsafe omissions: max_amount 51, currency 14, semantic 1, recurring 1 (all fail-closed)
+- hallucinated constraints: condition 22, warranty 1, brands 1 (over-constraint 24/307 = 7.8%)
+- ambiguity handling: 6/6
+- field recall: brands/merchants/quantity 1.0; currency 0.9514; semantic 0.9811;
+  recurring_forbidden 0.96; max_amount_minor 0.8229
+- latency p50 29.4s / p95 122.7s / max 241.2s / mean 42.2s
+
+Decision: the full-307 run is the canonical M15 result and supersedes the N=90
+sample (the 90-sample was a pre-M48 scope-wedge per D-041, not a separate
+metric). The 22 "condition" hallucinations remain the dominant over-constraint
+cluster and the most actionable prompt lever; they are exactly the inputs the
+Phase-3 DeBERTa verifier + conservative fusion later police (D-040, M38/M40).
+
+Consequences: P3-S20 (no fabricated numbers) preserved — every cell above
+traces to `data/phase3/compiler_eval/summary.json` (sha-bound via the golden
+manifest). M48 final PASS is now unconditional; M50 may declare all 50 rows
+closed.

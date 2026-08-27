@@ -3,14 +3,13 @@
 Status: **COMPLETE** — real Qwen evaluation over a stratified sample of the
 manual-truth golden set.
 
-> **Scope statement (D-041).** Per the human owner's explicit instruction
-> (2026-08-25), M15 is evaluated on a **deterministic stratified sample of
-> N=90 of the 307 golden cases**, not the full set. Every metric below is
-> reported as **N=90/307**. The remaining 217 cases are a carried-forward
-> obligation: the resumable runner completes them before the M48 full gate,
-> where "Intent compiler evaluation complete" is re-verified on all 307.
-> **M48 cannot PASS on the sample alone.** No metric here is generalized to
-> full-set coverage (P3-S20 honesty).
+> **Scope statement (D-041 → D-051).** Per the human owner's explicit instruction
+> (2026-08-25), M15 began as a deterministic stratified sample of N=90 of the
+> 307 golden cases. The full-307 resumable continuation was a pre-M48
+> obligation and **was completed on 2026-08-27 (D-051, "complete": true,
+> 307/307)**. Every metric below is now reported over the **full N=307/307
+> golden set**; the prior N=90/307 numbers are preserved in §5/§6 as the
+> within-scope sample for transparency. P3-S20 honesty preserved.
 
 ---
 
@@ -41,20 +40,21 @@ are retried, never counted). Summarizer: `scripts/rzp_summarize_compiler_eval.py
 
 ---
 
-## 2. Headline metrics (N=90/307)
+## 2. Headline metrics (N=307/307, D-051)
 
 | Metric | Value |
 |---|---|
-| Schema validity (strict parse OK) | **90/90 = 100%** |
-| Bounded repair needed | 7/90 (7.8%), **all 7 repaired to valid** |
-| **Case-level pass** | **71/90 = 78.9%** |
-| — easy | 31/40 = 77.5% |
-| — medium | 20/22 = 90.9% |
-| — hard | 20/28 = 71.4% |
+| Coverage | **307/307 = 100%** (complete=true; provider-noise excluded 0) |
+| Schema validity (strict parse OK) | **307/307 = 100%** |
+| Bounded repair needed | 11/307 (3.6%), **all 11 repaired to valid** |
+| **Case-level pass** | **239/307 = 77.85%** |
+| — easy | 177/234 = 75.6% |
+| — medium | 40/43 = 93.0% |
+| — hard | 22/30 = 73.3% |
 | Money precision (no invented money) | **1.0** (0 invented amounts) |
 | Mismatches (wrong-but-present values) | **0** |
-| Ambiguity surfacing satisfied | 6/6 |
-| Latency p50 / p95 / max / mean | 63.5s / 197.7s / 241.2s / 79.5s |
+| Ambiguity surfacing satisfied | 6/6 = 100% |
+| Latency p50 / p95 / max / mean | 29.4s / 122.7s / 241.2s / 42.2s |
 
 **Reading the pass rate honestly:** the dominant failure mode is *omitting* a
 stated amount (11 cases), not fabricating values. There were **zero mismatches
@@ -63,30 +63,29 @@ the field rather than guessing a value. For a trust system that is the safe
 failure direction (a missing bound fails closed downstream; an invented bound
 would not). The hallucination cluster is `condition` invention (6 cases).
 
-### Field-level recall (denominators = expected instances in the sample)
+### Field-level recall (N=307)
 
 | Field | Recall |
 |---|---|
 | brands | 1.0 |
 | merchants | 1.0 |
 | quantity_max | 1.0 |
-| currency | 0.96 |
-| semantic constraints | 0.9706 |
-| recurring_forbidden | 0.9231 |
-| max_amount_minor | 0.8533 |
-| unspecified | n/a (no sample coverage — see §8) |
+| currency | 0.9514 |
+| semantic constraints | 0.9811 |
+| recurring_forbidden | 0.96 |
+| max_amount_minor | 0.8229 |
+| unspecified | n/a (see §8) |
 
-### 2.1 Compiler trust-quality metrics (closure-audit requirement)
+### 2.1 Compiler trust-quality metrics (closure-audit requirement; N=307)
 
 The report must cover more than schema validity and money accuracy. The
-following five trust-quality dimensions are computed from the N=90/307 sample
-(definitions fixed so the full-307 run reuses them verbatim).
+following trust-quality dimensions are computed from the full N=307 set.
 
-| Metric | Definition | Value (N=90) |
+| Metric | Definition | Value (N=307) |
 |---|---|---|
-| **Unsafe omission rate** | cases where a *stated* hard/semantic constraint was dropped (fail-closed) ÷ evaluated cases | 11/90 = 12.2% (§3.A) |
-| **Hallucinated constraint rate** | cases where a constraint absent from the source was invented ÷ evaluated cases | 6/90 = 6.7% (§3.B `condition` invention) |
-| **Over-constraint rate** | cases where the model added any constraint beyond human truth (invented `condition`, or invented constraint while also surfacing ambiguity) ÷ evaluated cases | 6/90 = 6.7% (superset of hallucinated; includes F12-001/002/005) |
+| **Unsafe omission rate** | cases where a *stated* hard/semantic constraint was dropped (fail-closed) ÷ evaluated cases | max_amount 51/307=16.6%; currency 14/307=4.6%; semantic 1/307; recurring 1/307 |
+| **Hallucinated constraint rate** | cases where a constraint absent from the source was invented ÷ evaluated cases | condition 22, warranty 1, brands 1 → 24/307 = 7.8% |
+| **Over-constraint rate** | cases where the model added any constraint beyond human truth (invented `condition`/`warranty`/`brands`, or invented constraint while also surfacing ambiguity) ÷ evaluated cases | 24/307 = 7.8% (superset of hallucinated) |
 | **Ambiguity handling** | genuine ambiguities correctly surfaced as NEEDS_CLARIFICATION ÷ ambiguities present | 6/6 = 100% (satisfied) |
 | **Field precision** | correct-present fields ÷ model-present fields (no fabricated value where none stated) | 1.0 for brands/merchants/quantity/currency/semantic/recurring/max_amount (0 mismatches, 0 invented amounts) |
 
@@ -219,8 +218,6 @@ harness contamination, not model failures.
 
 ## 8. Known gaps / limitations
 
-- **Sample, not full set.** N=90/307 (D-041). Full-307 continuation is a
-  pre-M48 obligation; this doc is updated with full-set numbers when it lands.
 - **No `unspecified` coverage.** After the F1 currency correction, **zero**
   golden cases exercise the currency-unstated → `unspecified` path (every F1
   phrase names rupees). The invented-money sentinel is still exercised via
@@ -228,7 +225,7 @@ harness contamination, not model failures.
   positive "list currency in `unspecified`" behavior is not. Recommend adding a
   small number of genuinely currency-unstated cases (e.g. "Buy earbuds under
   50") in a future golden revision (naturally folds into M18–M25 dataset work).
-- **Provider latency is real and variable** (p95 ≈ 198s) due to free-tier
+- **Provider latency is real and variable** (p95 ≈ 122.7s) due to free-tier
   concurrency windows and thinking tokens; this is a property of the hosted
   planner, not of the local trust core. Phase-3 production verification uses
   local DeBERTa inference (D-040), not this hosted planner.

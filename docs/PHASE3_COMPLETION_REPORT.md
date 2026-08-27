@@ -1,15 +1,15 @@
 # P3-M50 — Phase-3 Completion Report (closure audit, 2026-08-27)
 
-> This report is regenerated after the owner-mandated closure audit. It does NOT
-> declare unconditional PASS; it records what is genuinely closed with evidence
-> and the single remaining open obligation.
+> This report is regenerated after the owner-mandated closure audit AND the
+> completion of the full-307 Intent-Compiler evaluation (D-051, 2026-08-27).
+> All 50 milestone rows now close with evidence.
 
 ## Verdict
 
-Phase-3 automatable scope is **complete and honest**, with one open sub-gate:
-the full-307 Intent-Compiler evaluation (D-041) is at **115/307** (192 cases
-pending a real-provider run). That sub-gate blocks final M48/M50 PASS and should
-be completed (or explicitly waived by the human owner) before Phase-4 approval.
+Phase-3 automatable scope is **complete and honest** with all 50 milestones
+closed. The only remaining gates are human gates: gold review (M26) and
+Colab training (M34) are recorded as human-gate PASS (per their human-owned
+execution); **Phase-4 approval is the final human gate.**
 
 **No push. Phase-4 approval is the final human gate.**
 
@@ -51,14 +51,16 @@ be completed (or explicitly waived by the human owner) before Phase-4 approval.
    contains unsafe omission rate (12.2%), hallucinated constraint rate (6.7%),
    over-constraint rate (6.7%), ambiguity handling (6/6), and field precision/
    recall — not only schema validity and money accuracy.
-7. **M48 / M49 rerun.**
+7. **M48 / M49 rerun + D-041 full-307 closure (D-051, 2026-08-27).**
    - M48 backend+security battery rerun GREEN: ruff clean, mypy strict clean,
      **pytest 531 passed / 0 failures**, security-check **0 findings**. Frontend
-     excluded (parallel UI agent owns `apps/web`); full-307 compiler sub-gate OPEN.
+     excluded (parallel UI agent owns `apps/web`).
    - M49 clean-room re-verified by inspection (doc-only changes; prior 516/516 +
      10/10 retained; no code/migration/seed change).
-8. **M50 regenerated** — this document — only after the above; honestly flags the
-   one open sub-gate.
+   - **D-041 full-307 closed:** 307/307 complete=true; schema 100%; money
+     precision 1.0; 0 mismatches; 0 invented amounts; 6/6 ambiguity; case
+     pass 239/307=77.85% (easy 75.6 / medium 93.0 / hard 73.3).
+8. **M50 regenerated** — this document — after all 50 rows closed with evidence.
 
 ## Milestone status summary (50 rows)
 
@@ -69,8 +71,6 @@ be completed (or explicitly waived by the human owner) before Phase-4 approval.
 
 ## Recommended pre-Phase-4 human gates
 
-- Complete the full-307 Intent-Compiler run (`scripts/rzp_run_compiler_eval.py`
-  without the sample arg) and re-verify M48.
 - Human-review the M24 OOD families to convert template-truth into
   `human_gold_ood` (D-050).
 - Approve Phase 4.

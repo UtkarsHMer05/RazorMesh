@@ -30,12 +30,13 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust
 **Active phase:** Phase 3 ACTIVE (human-approved 2026-08-25)
-**Current milestone:** Phase-3 closure audit complete except D-041 full-307
-compiler eval (115/307). M17/M20/M21/M24/M30/M31/M40 closed as standalone gates;
-gold semantics corrected (D-050); untouched OOD eval built (4 OOD unsafe-allows
-found); M45 terminology fixed; compiler trust metrics added; M48 backend+security
+**Current milestone:** Phase-3 closure audit complete; D-041 full-307 closed
+(D-051, 2026-08-27, 239/307=77.85% pass, 100% schema, money precision 1.0).
+M17/M20/M21/M24/M30/M31/M40 closed as standalone gates; gold semantics
+corrected (D-050); untouched OOD eval built (4 OOD unsafe-allows found);
+M45 terminology fixed; compiler trust metrics added; M48 backend+security
 rerun green (531 passed, 0 findings); M49 re-verified; M50 regenerated honest.
-Phase-4 approval pending (human gate).
+All 50 milestones closed with evidence. Phase-4 approval pending (human gate).
 **Last updated:** 2026-08-27 (P3-M24 standalone closure re-audit)
 **Gate:** M24 replaced the old 38-row/two-template-dominated artifact with 129
 hard truth-by-construction rows: 43 independently authored scenario groups ×
@@ -146,10 +147,12 @@ None recorded.
 
 # Active decisions
 
-See `DECISIONS.md`, currently D-001 through D-049. D-046 historically selected
-the fine-tuned model but cited the 79-card human subset during selection; the
-closure audit must supersede that rationale with a leakage-safe selection rule
-and honest evaluation terminology. The former M48/M49/M50 claims are reopened.
+See `DECISIONS.md`, currently D-001 through D-051. D-046 historically selected
+the fine-tuned model but cited the 79-card human subset during selection; D-050
+retracted the false "gold never in training" claim (241 in-train / 79 heldout,
+leak-safe selection restated). D-051 closed the D-041 full-307 obligation on
+2026-08-27 (239/307=77.85% pass, money precision 1.0). All 50 milestone rows
+genuinely closed.
 
 ---
 
@@ -163,12 +166,14 @@ and honest evaluation terminology. The former M48/M49/M50 claims are reopened.
 
 # Next action
 
-**PHASE 3 CLOSURE AUDIT — DONE except full-307 compiler eval (D-041, 115/307).**
-All owner closure items addressed: M30/M31/M40 closed; D-050 gold semantics;
-untouched OOD eval (docs/PHASE3_OOD_UNTOUCHED_EVAL.md); M45 over-block fix;
-compiler trust metrics; M48 backend+security green; M49 re-verified; M50 honest.
-REMAINING: run full 307-case compiler eval (real provider) to finally close M48/
-M50, then human Phase-4 approval. UI files owned by a parallel agent — untouched.
+**PHASE 3 CLOSURE AUDIT — DONE. D-041 full-307 closed (D-051, 2026-08-27).**
+All owner closure items addressed and all 50 milestones closed with evidence:
+M30/M31/M40 closed; D-050 gold semantics (241 in-train / 79 heldout disclosed);
+untouched OOD eval (docs/PHASE3_OOD_UNTOUCHED_EVAL.md, 4 OOD unsafe-allows
+found); M45 over-block fix; compiler trust metrics; M48 backend+security green
+(531 passed, 0 findings); M49 re-verified; full-307 compiler eval complete
+(239/307=77.85% pass); M50 honest. REMAINING: human Phase-4 approval.
+UI files owned by a parallel agent — untouched.
 
 Standing notes: `make test-db` must re-provision razormesh_test after
 any `docker compose down -v` (migrate alone does NOT create it). The
