@@ -19,7 +19,7 @@
  * from a typed fixture client.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type {
   ProtocolEnvelope,
@@ -171,6 +171,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+function RunRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <tr>
+      <th scope="row">{label}</th>
+      <td>{children}</td>
+    </tr>
+  );
+}
+
 function Section({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
   return (
     <section className="landing-section landing-section--alt-white">
@@ -187,13 +196,16 @@ export default function ProtocolGatewayPage() {
   const [snapshot] = useState<GatewaySnapshot>(() => FIXTURE_SNAPSHOT);
   const [liveRuns, setLiveRuns] = useState<LiveAcceptanceRun[] | null>(null);
   const [liveError, setLiveError] = useState<string | null>(null);
+  const [triggerError, setTriggerError] = useState<string | null>(null);
+  const [isTriggering, setIsTriggering] = useState(false);
+  const [finalizingId, setFinalizingId] = useState<string | null>(null);
 
   // Phase-4 live-ingress closure: fetch the real acceptance-run
   // registry from the backend so the dashboard reflects the actual
   // MCP->UCP->AP2->Firewall->IR->Consistency->RazorGuard->ALLOW
   // artifacts produced during the live request, not just static proof
   // harness results.
-  useEffect(() => {
+  const fetchRuns = useCallback(() => {
     let cancelled = false;
     (async () => {
       try {
@@ -217,6 +229,77 @@ export default function ProtocolGatewayPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    return fetchRuns();
+  }, [fetchRuns]);
+
+  // Trigger a live acceptance run: fixture intent -> catalog product -> prepare.
+  const triggerLiveRun = useCallback(async () => {
+    setIsTriggering(true);
+    setTriggerError(null);
+    try {
+      const intentRes = await fetch("/api/buyer/fixture-intent", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      });
+      if (!intentRes.ok) throw new Error(`fixture_intent_${intentRes.status}`);
+      const intentBody = await intentRes.json();
+      const intentId = intentBody.intent_id;
+
+      const prodRes = await fetch("/api/catalog/products?limit=1");
+      if (!prodRes.ok) throw new Error(`catalog_${prodRes.status}`);
+      const prodBody = await prodRes.json();
+      const productId = prodBody.items?.[0]?.id;
+      if (!productId) throw new Error("no_catalog_product");
+
+      const prepRes = await fetch("/api/phase4/acceptance/prepare", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          intent_id: intentId,
+          product_id: productId,
+          quantity: 1,
+          currency: "INR",
+        }),
+      });
+      if (!prepRes.ok) {
+        const detail = await prepRes.text();
+        throw new Error(`prepare_${prepRes.status}:${detail}`);
+      }
+      await fetchRuns();
+    } catch (err) {
+      setTriggerError(err instanceof Error ? err.message : "trigger_failed");
+    } finally {
+      setIsTriggering(false);
+    }
+  }, [fetchRuns]);
+
+  // Finalize a run: reauthorize + create Razorpay test order.
+  const finalizeRun = useCallback(
+    async (runId: string) => {
+      setFinalizingId(runId);
+      try {
+        const res = await fetch("/api/phase4/acceptance/finalize", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ run_id: runId }),
+        });
+        if (!res.ok) {
+          const detail = await res.text();
+          setTriggerError(`finalize_${res.status}:${detail}`);
+        } else {
+          await fetchRuns();
+        }
+      } catch (err) {
+        setTriggerError(err instanceof Error ? err.message : "finalize_failed");
+      } finally {
+        setFinalizingId(null);
+      }
+    },
+    [fetchRuns],
+  );
 
   const matrix = useMemo(
     () => [
@@ -315,6 +398,21 @@ export default function ProtocolGatewayPage() {
       </Section>
 
       <Section eyebrow="Live" title="Live acceptance runs (Phase-4 ingress)">
+        <div className="seclab-cta" style={{ marginBottom: 16 }}>
+          <button
+            onClick={triggerLiveRun}
+            disabled={isTriggering}
+            className="btn btn-primary"
+            data-testid="trigger-live-run"
+          >
+            {isTriggering ? "Triggering…" : "Trigger live acceptance run"}
+          </button>
+          {triggerError && (
+            <p style={{ color: "var(--color-danger)", marginTop: 8 }}>
+              Trigger error: <code>{triggerError}</code>
+            </p>
+          )}
+        </div>
         {liveRuns === null ? (
           <p className="prose" style={{ maxWidth: 720 }}>
             Fetching live acceptance-run registry from <code>/phase4/acceptance/runs</code>…
@@ -327,92 +425,110 @@ export default function ProtocolGatewayPage() {
           </p>
         ) : liveRuns.length === 0 ? (
           <p className="prose" style={{ maxWidth: 720 }}>
-            No live acceptance runs recorded yet. Trigger one via
-            <code> POST /phase4/acceptance/prepare</code> or the
-            <code> complete_authorized_checkout</code> MCP tool. The run will
-            appear here with MCP / UCP / AP2 versions, ProtocolEnvelope hash,
-            AgentCommerceIR hash, commerce-commitment-v1, consistency verdict,
-            RazorGuard decision, and final ALLOW.
+            No live acceptance runs recorded yet. Click the button above to
+            trigger one: the system will create a fixture intent, select a catalog
+            product, and run the full MCP→UCP→AP2→Firewall→IR→Consistency→RazorGuard
+            pipeline. The run will appear here with MCP / UCP / AP2 versions,
+            ProtocolEnvelope hash, AgentCommerceIR hash, commerce-commitment-v1,
+            consistency verdict, RazorGuard decision, and final ALLOW.
           </p>
         ) : (
-          <div className="card" style={{ display: "grid", gap: 12 }}>
+          <div className="run-tables">
             {liveRuns.map((run) => {
               const mcp = run.evidence?.mcp;
               const ucp = run.evidence?.ucp;
               const ap2 = run.evidence?.ap2;
               const rm = run.evidence?.razormesh;
               return (
-                <div key={run.run_id} className="card" style={{ padding: 16 }}>
-                  <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-                    <strong>Run {run.run_id}</strong>
-                    <Pill tone={run.completed ? "allow" : "challenge"}>
-                      {run.completed ? "COMPLETED" : "PREPARED"}
-                    </Pill>
-                    {rm && (
-                      <>
-                        <Pill tone={rm.cross_protocol_consistency === "MATCH" ? "allow" : "block"}>
-                          {rm.cross_protocol_consistency}
-                        </Pill>
-                        <Pill tone="allow">{rm.final_decision}</Pill>
-                      </>
-                    )}
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8, marginTop: 12 }}>
+                <table className="run-table" key={run.run_id} data-testid={`run-${run.run_id}`}>
+                  <thead>
+                    <tr>
+                      <th>
+                        <div className="run-table__head">
+                          <span>Run {run.run_id}</span>
+                          <span className="run-table__pills">
+                            <Pill tone={run.completed ? "allow" : "challenge"}>
+                              {run.completed ? "COMPLETED" : "PREPARED"}
+                            </Pill>
+                            {rm && (
+                              <>
+                                <Pill
+                                  tone={rm.cross_protocol_consistency === "MATCH" ? "allow" : "block"}
+                                >
+                                  {rm.cross_protocol_consistency}
+                                </Pill>
+                                <Pill tone="allow">{rm.final_decision}</Pill>
+                                {!run.completed && (
+                                  <button
+                                    onClick={() => finalizeRun(run.run_id)}
+                                    disabled={finalizingId === run.run_id}
+                                    className="btn btn-yellow run-table__finalize"
+                                    style={{ fontSize: 12, padding: "6px 12px" }}
+                                    data-testid={`finalize-run-${run.run_id}`}
+                                  >
+                                    {finalizingId === run.run_id ? "Finalizing…" : "Finalize"}
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </span>
+                        </div>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <RunRow label="Amount">
+                      {run.amount_minor?.toLocaleString("en-IN")} {run.currency}
+                    </RunRow>
                     {mcp && (
-                      <>
-                        <Field label="MCP version">{mcp.version}</Field>
-                        <Field label="MCP endpoint">{mcp.endpoint}</Field>
-                        <Field label="MCP method">{mcp.method_tool}</Field>
-                        <Field label="MCP message">{mcp.message_id}</Field>
-                      </>
+                      <RunRow label="MCP">
+                        <span className="run-sub">
+                          {mcp.version} · {mcp.endpoint} · {mcp.method_tool}
+                        </span>
+                        <br />
+                        <code>{mcp.message_id}</code>
+                      </RunRow>
                     )}
                     {ucp && (
-                      <>
-                        <Field label="UCP version">{ucp.version}</Field>
-                        <Field label="UCP idem">{ucp.idempotency_key}</Field>
-                        <Field label="UCP sig/digest">
-                          {ucp.signature_digest_verified ? "verified" : "unverified"}
-                        </Field>
-                        <Field label="UCP commerce">
-                          <code>{ucp.commerce_evidence_hash?.slice(0, 16)}…</code>
-                        </Field>
-                      </>
+                      <RunRow label="UCP">
+                        <span className="run-sub">
+                          {ucp.version} · idem {ucp.idempotency_key}
+                        </span>
+                        <br />
+                        sig/digest: {ucp.signature_digest_verified ? "verified" : "unverified"}
+                        {" · "}
+                        <code>{ucp.commerce_evidence_hash?.slice(0, 16)}…</code>
+                      </RunRow>
                     )}
                     {ap2 && (
-                      <>
-                        <Field label="AP2 version">{ap2.version}</Field>
-                        <Field label="AP2 vct">{ap2.vct}</Field>
-                        <Field label="AP2 signature">
-                          {ap2.signature_verified ? "verified" : "unverified"}
-                        </Field>
-                        <Field label="AP2 key binding">
-                          {ap2.key_binding_pop_verified ? "yes" : "no"}
-                        </Field>
-                      </>
+                      <RunRow label="AP2">
+                        <span className="run-sub">
+                          {ap2.version} · {ap2.vct}
+                        </span>
+                        <br />
+                        sig: {ap2.signature_verified ? "verified" : "unverified"} · key binding:{" "}
+                        {ap2.key_binding_pop_verified ? "yes" : "no"}
+                      </RunRow>
                     )}
                     {rm && (
                       <>
-                        <Field label="Firewall">{rm.protocol_firewall}</Field>
-                        <Field label="RazorGuard">{rm.razorguard_decision}</Field>
-                        <Field label="Semantic">{rm.semantic_verifier}</Field>
-                        <Field label="IR hash">
+                        <RunRow label="Firewall / Guard">
+                          {rm.protocol_firewall} · RazorGuard {rm.razorguard_decision} ·{" "}
+                          {rm.semantic_verifier}
+                        </RunRow>
+                        <RunRow label="IR / Envelope / Commit">
                           <code>{rm.agent_commerce_ir_hash?.slice(0, 16)}…</code>
-                        </Field>
-                        <Field label="Envelope hash">
+                          {" · "}
                           <code>{rm.protocol_envelope_hash?.slice(0, 16)}…</code>
-                        </Field>
-                        <Field label="Commitment">
+                          {" · "}
                           <code>{rm.commerce_commitment?.slice(0, 16)}…</code>
-                        </Field>
+                        </RunRow>
                       </>
                     )}
-                    <Field label="Amount (minor)">
-                      {run.amount_minor?.toLocaleString("en-IN")} {run.currency}
-                    </Field>
-                    <Field label="Intent">{run.intent_id}</Field>
-                    <Field label="Checkout">{run.checkout_id}</Field>
-                  </div>
-                </div>
+                    <RunRow label="Intent">{run.intent_id}</RunRow>
+                    <RunRow label="Checkout">{run.checkout_id}</RunRow>
+                  </tbody>
+                </table>
               );
             })}
           </div>

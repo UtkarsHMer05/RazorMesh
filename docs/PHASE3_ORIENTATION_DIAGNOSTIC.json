@@ -1,0 +1,6947 @@
+{
+  "generated_at_utc": "2026-08-28T09:42:17.254313+00:00",
+  "purpose": "Decide whether the frozen checkpoint generalizes to the canonical runtime orientation.",
+  "scope_guards": {
+    "retrained": false,
+    "runtime_wired": false,
+    "thresholds_changed": false,
+    "dataset_files_modified": false,
+    "ood_loaded": false,
+    "frozen_test_loaded": false,
+    "phase4_touched": false,
+    "ui_touched": false
+  },
+  "artifact": {
+    "artifact_dir": "artifacts/models/incoming/phase3-finetuned",
+    "declared_base_model": "cross-encoder/nli-deberta-v3-base",
+    "config_architectures": [
+      "DebertaV2ForSequenceClassification"
+    ],
+    "config_model_type": "deberta-v2",
+    "config_num_labels": 3,
+    "config_transformers_version": "5.15.1",
+    "config_max_position_embeddings": 512,
+    "config_vocab_size": 128100,
+    "label_map": {
+      "0": "contradiction",
+      "1": "entailment",
+      "2": "neutral"
+    },
+    "label_map_agrees_with_config_id2label": true,
+    "files": {
+      "base_model.txt": {
+        "bytes": 33,
+        "sha256": "6cbf984ccc45d3c487b80b8459b9ca13663d2296186b85868b757f5f1810cd7d"
+      },
+      "config.json": {
+        "bytes": 1111,
+        "sha256": "64a92db4b94813386f0b54fecfc56b0e2dae2aed3c15fa78868988b9623ccf31"
+      },
+      "label_map.json": {
+        "bytes": 65,
+        "sha256": "165a8610bee89a759fa5909b87ed5c67044c44f8bf672ac5db1a2b0f0da3b1e4"
+      },
+      "model.safetensors": {
+        "bytes": 737722356,
+        "sha256": "77538ffdaaad581d97ed8b04f45df0624777a3c1bee873c093d2070ee4294897"
+      },
+      "tokenizer.json": {
+        "bytes": 8339973,
+        "sha256": "561fd1b229749e08cc8b9b0a77e467b07ac5549418682e603925753429a8cd3e"
+      },
+      "tokenizer_config.json": {
+        "bytes": 505,
+        "sha256": "3dd09fcbf87e99e22a6e9d359ab7ecaceca29dd3774e509df9de6a16ecdaa394"
+      }
+    }
+  },
+  "runtime": {
+    "device": "cpu",
+    "torch_version": "2.13.0",
+    "max_length": 256,
+    "batch_size": 16,
+    "model_cold_load_seconds": 4.47
+  },
+  "policy": {
+    "path": "data/phase3/policy/semantic_thresholds.json",
+    "sha256": "3005cc315c08505f969ada3bbefda3cc5831dfd177c002dff7b1033ac70ba279",
+    "policy_version": "semantic-thresholds-v2",
+    "tau_block": 0.3,
+    "tau_entail": 0.4,
+    "applied_unchanged": true
+  },
+  "dataset_hashes": {
+    "val": "551c8b44752a5b09fd0085f0ad969def1fa770cf649932e26edfcfa6abaae13a",
+    "train": "13cc5d6f130d61f1ae3040c4416072486711965a5a9bc739a7dd6ce7dbd4e552"
+  },
+  "diagnostic_set": {
+    "paired_n": 293,
+    "rows_skipped": 0,
+    "by_source_split": {
+      "train_stratified": 122,
+      "val": 171
+    },
+    "by_transform": {
+      "noop_control": 29,
+      "stripped": 264
+    },
+    "by_label": {
+      "contradiction": 96,
+      "entailment": 102,
+      "neutral": 95
+    },
+    "by_family": {
+      "brand_identity": 35,
+      "budget_ceiling": 76,
+      "bundle_obligation": 3,
+      "condition_new_only": 15,
+      "currency_binding": 42,
+      "delivery_timing": 4,
+      "injection_resistance": 11,
+      "membership_insertion": 3,
+      "merchant_restriction": 15,
+      "quantity_limit": 30,
+      "recurring_forbidden": 18,
+      "return_refund": 3,
+      "safe_lookalike": 8,
+      "seller_alias": 7,
+      "shipping_fee": 6,
+      "trial_renewal_trap": 10,
+      "variant_mismatch": 4,
+      "warranty_claim": 3
+    },
+    "by_difficulty": {
+      "easy": 201,
+      "hard": 51,
+      "medium": 41
+    },
+    "determinable_n": 162,
+    "not_determinable_n": 131,
+    "train_cells_per_family_label": 3,
+    "seed": 42
+  },
+  "summary": {
+    "legacy_macro_f1": 0.9832,
+    "canonical_macro_f1": 0.9764,
+    "delta_macro_f1": -0.0068,
+    "legacy_accuracy": 0.9829,
+    "canonical_accuracy": 0.9761,
+    "delta_accuracy": -0.0068,
+    "legacy_contradiction_recall": 0.9896,
+    "canonical_contradiction_recall": 0.9792,
+    "delta_contradiction_recall": -0.0104,
+    "legacy_unsafe_entailment_on_contradiction": 1,
+    "canonical_unsafe_entailment_on_contradiction": 2,
+    "delta_unsafe_entailment_count": 1
+  },
+  "metrics_all_paired": {
+    "legacy": {
+      "n": 293,
+      "accuracy": 0.9829,
+      "macro_f1": 0.9832,
+      "per_class": {
+        "contradiction": {
+          "support": 96,
+          "tp": 95,
+          "fp": 4,
+          "fn": 1,
+          "precision": 0.9596,
+          "recall": 0.9896,
+          "f1": 0.9744
+        },
+        "entailment": {
+          "support": 102,
+          "tp": 98,
+          "fp": 1,
+          "fn": 4,
+          "precision": 0.9899,
+          "recall": 0.9608,
+          "f1": 0.9751
+        },
+        "neutral": {
+          "support": 95,
+          "tp": 95,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "confusion_matrix_gold_rows_pred_cols": {
+        "contradiction": {
+          "contradiction": 95,
+          "entailment": 1,
+          "neutral": 0
+        },
+        "entailment": {
+          "contradiction": 4,
+          "entailment": 98,
+          "neutral": 0
+        },
+        "neutral": {
+          "contradiction": 0,
+          "entailment": 0,
+          "neutral": 95
+        }
+      },
+      "contradiction_recall": 0.9896,
+      "entailment_recall": 0.9608,
+      "neutral_recall": 1.0,
+      "unsafe_entailment_on_contradiction": 1,
+      "contradiction_predicted_as": {
+        "contradiction": 95,
+        "neutral": 0,
+        "entailment": 1
+      },
+      "entailment_predicted_as": {
+        "contradiction": 4,
+        "neutral": 0,
+        "entailment": 98
+      },
+      "neutral_promoted_to_entailment": 0,
+      "neutral_predicted_as": {
+        "contradiction": 0,
+        "neutral": 95,
+        "entailment": 0
+      }
+    },
+    "canonical": {
+      "n": 293,
+      "accuracy": 0.9761,
+      "macro_f1": 0.9764,
+      "per_class": {
+        "contradiction": {
+          "support": 96,
+          "tp": 94,
+          "fp": 4,
+          "fn": 2,
+          "precision": 0.9592,
+          "recall": 0.9792,
+          "f1": 0.9691
+        },
+        "entailment": {
+          "support": 102,
+          "tp": 98,
+          "fp": 3,
+          "fn": 4,
+          "precision": 0.9703,
+          "recall": 0.9608,
+          "f1": 0.9655
+        },
+        "neutral": {
+          "support": 95,
+          "tp": 94,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9895,
+          "f1": 0.9947
+        }
+      },
+      "confusion_matrix_gold_rows_pred_cols": {
+        "contradiction": {
+          "contradiction": 94,
+          "entailment": 2,
+          "neutral": 0
+        },
+        "entailment": {
+          "contradiction": 4,
+          "entailment": 98,
+          "neutral": 0
+        },
+        "neutral": {
+          "contradiction": 0,
+          "entailment": 1,
+          "neutral": 94
+        }
+      },
+      "contradiction_recall": 0.9792,
+      "entailment_recall": 0.9608,
+      "neutral_recall": 0.9895,
+      "unsafe_entailment_on_contradiction": 2,
+      "contradiction_predicted_as": {
+        "contradiction": 94,
+        "neutral": 0,
+        "entailment": 2
+      },
+      "entailment_predicted_as": {
+        "contradiction": 4,
+        "neutral": 0,
+        "entailment": 98
+      },
+      "neutral_promoted_to_entailment": 1,
+      "neutral_predicted_as": {
+        "contradiction": 0,
+        "neutral": 94,
+        "entailment": 1
+      }
+    }
+  },
+  "metrics_determinable_subset": {
+    "legacy": {
+      "n": 162,
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "per_class": {
+        "contradiction": {
+          "support": 22,
+          "tp": 22,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "entailment": {
+          "support": 48,
+          "tp": 48,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "neutral": {
+          "support": 92,
+          "tp": 92,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "confusion_matrix_gold_rows_pred_cols": {
+        "contradiction": {
+          "contradiction": 22,
+          "entailment": 0,
+          "neutral": 0
+        },
+        "entailment": {
+          "contradiction": 0,
+          "entailment": 48,
+          "neutral": 0
+        },
+        "neutral": {
+          "contradiction": 0,
+          "entailment": 0,
+          "neutral": 92
+        }
+      },
+      "contradiction_recall": 1.0,
+      "entailment_recall": 1.0,
+      "neutral_recall": 1.0,
+      "unsafe_entailment_on_contradiction": 0,
+      "contradiction_predicted_as": {
+        "contradiction": 22,
+        "neutral": 0,
+        "entailment": 0
+      },
+      "entailment_predicted_as": {
+        "contradiction": 0,
+        "neutral": 0,
+        "entailment": 48
+      },
+      "neutral_promoted_to_entailment": 0,
+      "neutral_predicted_as": {
+        "contradiction": 0,
+        "neutral": 92,
+        "entailment": 0
+      }
+    },
+    "canonical": {
+      "n": 162,
+      "accuracy": 0.9938,
+      "macro_f1": 0.9947,
+      "per_class": {
+        "contradiction": {
+          "support": 22,
+          "tp": 22,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "entailment": {
+          "support": 48,
+          "tp": 48,
+          "fp": 1,
+          "fn": 0,
+          "precision": 0.9796,
+          "recall": 1.0,
+          "f1": 0.9897
+        },
+        "neutral": {
+          "support": 92,
+          "tp": 91,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9891,
+          "f1": 0.9945
+        }
+      },
+      "confusion_matrix_gold_rows_pred_cols": {
+        "contradiction": {
+          "contradiction": 22,
+          "entailment": 0,
+          "neutral": 0
+        },
+        "entailment": {
+          "contradiction": 0,
+          "entailment": 48,
+          "neutral": 0
+        },
+        "neutral": {
+          "contradiction": 0,
+          "entailment": 1,
+          "neutral": 91
+        }
+      },
+      "contradiction_recall": 1.0,
+      "entailment_recall": 1.0,
+      "neutral_recall": 0.9891,
+      "unsafe_entailment_on_contradiction": 0,
+      "contradiction_predicted_as": {
+        "contradiction": 22,
+        "neutral": 0,
+        "entailment": 0
+      },
+      "entailment_predicted_as": {
+        "contradiction": 0,
+        "neutral": 0,
+        "entailment": 48
+      },
+      "neutral_promoted_to_entailment": 1,
+      "neutral_predicted_as": {
+        "contradiction": 0,
+        "neutral": 91,
+        "entailment": 1
+      }
+    }
+  },
+  "metrics_val_only": {
+    "legacy": {
+      "n": 171,
+      "accuracy": 0.9825,
+      "macro_f1": 0.9826,
+      "per_class": {
+        "contradiction": {
+          "support": 54,
+          "tp": 53,
+          "fp": 2,
+          "fn": 1,
+          "precision": 0.9636,
+          "recall": 0.9815,
+          "f1": 0.9725
+        },
+        "entailment": {
+          "support": 61,
+          "tp": 59,
+          "fp": 1,
+          "fn": 2,
+          "precision": 0.9833,
+          "recall": 0.9672,
+          "f1": 0.9752
+        },
+        "neutral": {
+          "support": 56,
+          "tp": 56,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "confusion_matrix_gold_rows_pred_cols": {
+        "contradiction": {
+          "contradiction": 53,
+          "entailment": 1,
+          "neutral": 0
+        },
+        "entailment": {
+          "contradiction": 2,
+          "entailment": 59,
+          "neutral": 0
+        },
+        "neutral": {
+          "contradiction": 0,
+          "entailment": 0,
+          "neutral": 56
+        }
+      },
+      "contradiction_recall": 0.9815,
+      "entailment_recall": 0.9672,
+      "neutral_recall": 1.0,
+      "unsafe_entailment_on_contradiction": 1,
+      "contradiction_predicted_as": {
+        "contradiction": 53,
+        "neutral": 0,
+        "entailment": 1
+      },
+      "entailment_predicted_as": {
+        "contradiction": 2,
+        "neutral": 0,
+        "entailment": 59
+      },
+      "neutral_promoted_to_entailment": 0,
+      "neutral_predicted_as": {
+        "contradiction": 0,
+        "neutral": 56,
+        "entailment": 0
+      }
+    },
+    "canonical": {
+      "n": 171,
+      "accuracy": 0.9708,
+      "macro_f1": 0.9711,
+      "per_class": {
+        "contradiction": {
+          "support": 54,
+          "tp": 52,
+          "fp": 2,
+          "fn": 2,
+          "precision": 0.963,
+          "recall": 0.963,
+          "f1": 0.963
+        },
+        "entailment": {
+          "support": 61,
+          "tp": 59,
+          "fp": 3,
+          "fn": 2,
+          "precision": 0.9516,
+          "recall": 0.9672,
+          "f1": 0.9593
+        },
+        "neutral": {
+          "support": 56,
+          "tp": 55,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9821,
+          "f1": 0.991
+        }
+      },
+      "confusion_matrix_gold_rows_pred_cols": {
+        "contradiction": {
+          "contradiction": 52,
+          "entailment": 2,
+          "neutral": 0
+        },
+        "entailment": {
+          "contradiction": 2,
+          "entailment": 59,
+          "neutral": 0
+        },
+        "neutral": {
+          "contradiction": 0,
+          "entailment": 1,
+          "neutral": 55
+        }
+      },
+      "contradiction_recall": 0.963,
+      "entailment_recall": 0.9672,
+      "neutral_recall": 0.9821,
+      "unsafe_entailment_on_contradiction": 2,
+      "contradiction_predicted_as": {
+        "contradiction": 52,
+        "neutral": 0,
+        "entailment": 2
+      },
+      "entailment_predicted_as": {
+        "contradiction": 2,
+        "neutral": 0,
+        "entailment": 59
+      },
+      "neutral_promoted_to_entailment": 1,
+      "neutral_predicted_as": {
+        "contradiction": 0,
+        "neutral": 55,
+        "entailment": 1
+      }
+    }
+  },
+  "metrics_train_stratified_only": {
+    "legacy": {
+      "n": 122,
+      "accuracy": 0.9836,
+      "macro_f1": 0.9839,
+      "per_class": {
+        "contradiction": {
+          "support": 42,
+          "tp": 42,
+          "fp": 2,
+          "fn": 0,
+          "precision": 0.9545,
+          "recall": 1.0,
+          "f1": 0.9767
+        },
+        "entailment": {
+          "support": 41,
+          "tp": 39,
+          "fp": 0,
+          "fn": 2,
+          "precision": 1.0,
+          "recall": 0.9512,
+          "f1": 0.975
+        },
+        "neutral": {
+          "support": 39,
+          "tp": 39,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "confusion_matrix_gold_rows_pred_cols": {
+        "contradiction": {
+          "contradiction": 42,
+          "entailment": 0,
+          "neutral": 0
+        },
+        "entailment": {
+          "contradiction": 2,
+          "entailment": 39,
+          "neutral": 0
+        },
+        "neutral": {
+          "contradiction": 0,
+          "entailment": 0,
+          "neutral": 39
+        }
+      },
+      "contradiction_recall": 1.0,
+      "entailment_recall": 0.9512,
+      "neutral_recall": 1.0,
+      "unsafe_entailment_on_contradiction": 0,
+      "contradiction_predicted_as": {
+        "contradiction": 42,
+        "neutral": 0,
+        "entailment": 0
+      },
+      "entailment_predicted_as": {
+        "contradiction": 2,
+        "neutral": 0,
+        "entailment": 39
+      },
+      "neutral_promoted_to_entailment": 0,
+      "neutral_predicted_as": {
+        "contradiction": 0,
+        "neutral": 39,
+        "entailment": 0
+      }
+    },
+    "canonical": {
+      "n": 122,
+      "accuracy": 0.9836,
+      "macro_f1": 0.9839,
+      "per_class": {
+        "contradiction": {
+          "support": 42,
+          "tp": 42,
+          "fp": 2,
+          "fn": 0,
+          "precision": 0.9545,
+          "recall": 1.0,
+          "f1": 0.9767
+        },
+        "entailment": {
+          "support": 41,
+          "tp": 39,
+          "fp": 0,
+          "fn": 2,
+          "precision": 1.0,
+          "recall": 0.9512,
+          "f1": 0.975
+        },
+        "neutral": {
+          "support": 39,
+          "tp": 39,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      },
+      "confusion_matrix_gold_rows_pred_cols": {
+        "contradiction": {
+          "contradiction": 42,
+          "entailment": 0,
+          "neutral": 0
+        },
+        "entailment": {
+          "contradiction": 2,
+          "entailment": 39,
+          "neutral": 0
+        },
+        "neutral": {
+          "contradiction": 0,
+          "entailment": 0,
+          "neutral": 39
+        }
+      },
+      "contradiction_recall": 1.0,
+      "entailment_recall": 0.9512,
+      "neutral_recall": 1.0,
+      "unsafe_entailment_on_contradiction": 0,
+      "contradiction_predicted_as": {
+        "contradiction": 42,
+        "neutral": 0,
+        "entailment": 0
+      },
+      "entailment_predicted_as": {
+        "contradiction": 2,
+        "neutral": 0,
+        "entailment": 39
+      },
+      "neutral_promoted_to_entailment": 0,
+      "neutral_predicted_as": {
+        "contradiction": 0,
+        "neutral": 39,
+        "entailment": 0
+      }
+    }
+  },
+  "noop_control": {
+    "n": 29,
+    "note": "Rows already canonical in the frozen corpus: legacy and canonical inputs are byte-identical, so any flip here is harness nondeterminism rather than orientation.",
+    "flips": 0
+  },
+  "policy_legacy": {
+    "tau_block": 0.3,
+    "tau_entail": 0.4,
+    "action_distribution": {
+      "BLOCK": 99,
+      "CHALLENGE": 95,
+      "PASS": 99
+    },
+    "contradiction_unsafe_allow": 1,
+    "contradiction_not_blocked": 1,
+    "contradiction_support": 96,
+    "entailment_false_block": 4,
+    "entailment_support": 102,
+    "neutral_passed": 0,
+    "neutral_support": 95
+  },
+  "policy_canonical": {
+    "tau_block": 0.3,
+    "tau_entail": 0.4,
+    "action_distribution": {
+      "BLOCK": 98,
+      "CHALLENGE": 94,
+      "PASS": 101
+    },
+    "contradiction_unsafe_allow": 2,
+    "contradiction_not_blocked": 2,
+    "contradiction_support": 96,
+    "entailment_false_block": 4,
+    "entailment_support": 102,
+    "neutral_passed": 1,
+    "neutral_support": 95
+  },
+  "paired_flips": {
+    "n": 293,
+    "unchanged": 291,
+    "changed": 2,
+    "change_rate": 0.0068,
+    "correct_to_incorrect": 2,
+    "incorrect_to_correct": 0,
+    "per_class": {
+      "contradiction": {
+        "unchanged": 95,
+        "changed": 1,
+        "correct_to_incorrect": 1,
+        "incorrect_to_correct": 0
+      },
+      "entailment": {
+        "unchanged": 102,
+        "changed": 0,
+        "correct_to_incorrect": 0,
+        "incorrect_to_correct": 0
+      },
+      "neutral": {
+        "unchanged": 94,
+        "changed": 1,
+        "correct_to_incorrect": 1,
+        "incorrect_to_correct": 0
+      }
+    },
+    "legacy_pred_rows_canonical_pred_cols": {
+      "contradiction": {
+        "contradiction": 98,
+        "entailment": 1,
+        "neutral": 0
+      },
+      "entailment": {
+        "contradiction": 0,
+        "entailment": 99,
+        "neutral": 0
+      },
+      "neutral": {
+        "contradiction": 0,
+        "entailment": 1,
+        "neutral": 94
+      }
+    },
+    "dangerous_contradiction_to_entailment_ids": [
+      "air_75F951637BE07F890F8BEE8B04"
+    ],
+    "dangerous_contradiction_to_entailment_count": 1
+  },
+  "per_family": {
+    "brand_identity": {
+      "n": 35,
+      "labels": {
+        "contradiction": 11,
+        "entailment": 12,
+        "neutral": 12
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 11,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "budget_ceiling": {
+      "n": 76,
+      "labels": {
+        "contradiction": 23,
+        "entailment": 28,
+        "neutral": 25
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 0.9737,
+      "delta_accuracy": -0.0263,
+      "contradiction_support": 23,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 0.9565217391304348,
+      "delta_contradiction_recall": -0.0435
+    },
+    "bundle_obligation": {
+      "n": 3,
+      "labels": {
+        "contradiction": 1,
+        "entailment": 1,
+        "neutral": 1
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 1,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "condition_new_only": {
+      "n": 15,
+      "labels": {
+        "contradiction": 5,
+        "entailment": 5,
+        "neutral": 5
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 5,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "currency_binding": {
+      "n": 42,
+      "labels": {
+        "contradiction": 14,
+        "entailment": 14,
+        "neutral": 14
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 14,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "delivery_timing": {
+      "n": 4,
+      "labels": {
+        "contradiction": 1,
+        "entailment": 2,
+        "neutral": 1
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 1,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "injection_resistance": {
+      "n": 11,
+      "labels": {
+        "contradiction": 3,
+        "entailment": 5,
+        "neutral": 3
+      },
+      "legacy_accuracy": 0.6364,
+      "canonical_accuracy": 0.6364,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 3,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "membership_insertion": {
+      "n": 3,
+      "labels": {
+        "contradiction": 1,
+        "entailment": 1,
+        "neutral": 1
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 1,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "merchant_restriction": {
+      "n": 15,
+      "labels": {
+        "contradiction": 5,
+        "entailment": 5,
+        "neutral": 5
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 5,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "quantity_limit": {
+      "n": 30,
+      "labels": {
+        "contradiction": 10,
+        "entailment": 10,
+        "neutral": 10
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 10,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "recurring_forbidden": {
+      "n": 18,
+      "labels": {
+        "contradiction": 6,
+        "entailment": 6,
+        "neutral": 6
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 6,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "return_refund": {
+      "n": 3,
+      "labels": {
+        "contradiction": 1,
+        "entailment": 1,
+        "neutral": 1
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 1,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "safe_lookalike": {
+      "n": 8,
+      "labels": {
+        "contradiction": 3,
+        "entailment": 3,
+        "neutral": 2
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 3,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "seller_alias": {
+      "n": 7,
+      "labels": {
+        "contradiction": 3,
+        "entailment": 2,
+        "neutral": 2
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 3,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "shipping_fee": {
+      "n": 6,
+      "labels": {
+        "contradiction": 2,
+        "entailment": 2,
+        "neutral": 2
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 2,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "trial_renewal_trap": {
+      "n": 10,
+      "labels": {
+        "contradiction": 4,
+        "entailment": 3,
+        "neutral": 3
+      },
+      "legacy_accuracy": 0.9,
+      "canonical_accuracy": 0.9,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 4,
+      "legacy_contradiction_recall": 0.75,
+      "canonical_contradiction_recall": 0.75,
+      "delta_contradiction_recall": 0.0
+    },
+    "variant_mismatch": {
+      "n": 4,
+      "labels": {
+        "contradiction": 2,
+        "entailment": 1,
+        "neutral": 1
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 2,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    },
+    "warranty_claim": {
+      "n": 3,
+      "labels": {
+        "contradiction": 1,
+        "entailment": 1,
+        "neutral": 1
+      },
+      "legacy_accuracy": 1.0,
+      "canonical_accuracy": 1.0,
+      "delta_accuracy": 0.0,
+      "contradiction_support": 1,
+      "legacy_contradiction_recall": 1.0,
+      "canonical_contradiction_recall": 1.0,
+      "delta_contradiction_recall": 0.0
+    }
+  },
+  "decision": {
+    "retrain_required": true,
+    "reasons": [
+      "1 gold contradictions flipped contradiction->entailment",
+      "policy unsafe-allow on contradictions rose by 1",
+      "gold contradictions escaping BLOCK rose by 1"
+    ],
+    "thresholds_used": {
+      "macro_f1_degradation": 0.05,
+      "contradiction_recall_degradation": 0.05,
+      "any_unsafe_contradiction_to_entailment": true,
+      "any_policy_escape": true
+    }
+  },
+  "cases": [
+    {
+      "case_id": "air_011AAE4A4EBE6C3BF95D6A1486",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0002,
+        0.9997
+      ],
+      "canonical_probs": [
+        0.0031,
+        0.0057,
+        0.9912
+      ]
+    },
+    {
+      "case_id": "air_029827B790FA0BA458B082BDE0",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0001,
+        0.0
+      ],
+      "canonical_probs": [
+        0.999,
+        0.0005,
+        0.0005
+      ]
+    },
+    {
+      "case_id": "air_08RRBE8OUABNOAACDDO7H2HG22",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_0KV9VA6I139DPDLGILD7T8J1KN",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_0NPSFMPM1DT91PBMOJ07GMJU6C",
+      "family": "recurring_forbidden",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_0SDOIOBRQGSKKOP4DODB3BJ0UP",
+      "family": "merchant_restriction",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_0SNHUCERQ1PRTI6G4H0ATTBQ3C",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0006,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_135TL6HPGM10T53OVHHFMKVJ57",
+      "family": "recurring_forbidden",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_157DADC955C34F503FBFBDBEB7",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0004,
+        0.9987,
+        0.0009
+      ]
+    },
+    {
+      "case_id": "air_17731029BC8BA46FF07E78274F",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0006,
+        0.9986,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0003,
+        0.9989,
+        0.0009
+      ]
+    },
+    {
+      "case_id": "air_186SDR5UGI7G5M3AOGQD0U8E4Q",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_1FQU18THFL74N6M37UBMCLKU7Q",
+      "family": "recurring_forbidden",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_1G8LBLDS6C3RFQFOF5PPEB696G",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_1TK6UU4BIU49CPS67KMRIHPCI2",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_20GGD7LIHUD1GLUO8KGBIIK82U",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_20T3MQKRB6FCBP6BFODALFV948",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_23QL974NJSL8V0AAM0NJJRR007",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_26MBBJOV6D7S23VQKL8AFO1NV0",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_28CPP6SAAUFURHNMH3GH5RU0D6",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_294RHD8EOSJQ3M2JUCQ4PC7RVE",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_2D976331676O5D7HQKN34PLK3P",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_2SI56HHJI0GDIPPVF45PO1VPJ3",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_3872D6S03FUO1HBO5TPFTG2VR2",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.001,
+        0.9979,
+        0.0012
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_39B239E327920DA937496FD020",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.0001,
+        0.9996
+      ],
+      "canonical_probs": [
+        0.0435,
+        0.6393,
+        0.3172
+      ]
+    },
+    {
+      "case_id": "air_3C9D66A671BBD081B711539AD2",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0004,
+        0.9987,
+        0.0009
+      ]
+    },
+    {
+      "case_id": "air_3T239U1FE2U2IFLT98TIC6UR3H",
+      "family": "quantity_limit",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_3U8Q2TBSF1TBDUJNNVQUUD9IGP",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_3V31S2KOVC6NVCAAQ15DFFN3QE",
+      "family": "recurring_forbidden",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0006,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_4E049B84DDCB25C6F043B1B8B8",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0049,
+        0.9935,
+        0.0016
+      ]
+    },
+    {
+      "case_id": "air_4FB0BD171E9CFBDC6ED8C65828",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0005,
+        0.9986,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0005,
+        0.9985,
+        0.0009
+      ]
+    },
+    {
+      "case_id": "air_4UVSGDD05JH1HQL0NBLCJ2IO6G",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_51F2A1DF5572F6BA4A62A07D67",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0006,
+        0.9984,
+        0.001
+      ],
+      "canonical_probs": [
+        0.0006,
+        0.9985,
+        0.0009
+      ]
+    },
+    {
+      "case_id": "air_5BKLC0UE6FI9I0B9HE9LBDK344",
+      "family": "quantity_limit",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_5D4PHGGDVLL3HC9GJVL8JA3O9S",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_5F973E56DC29570D428771AC89",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0008,
+        0.9981,
+        0.0011
+      ]
+    },
+    {
+      "case_id": "air_5FCA849964C8E39DDAA6E80179",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9998
+      ],
+      "canonical_probs": [
+        0.0025,
+        0.0002,
+        0.9973
+      ]
+    },
+    {
+      "case_id": "air_5H9G8FIQ94VD7S5DUBNKOGC0GO",
+      "family": "condition_new_only",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_5NQ6TBO68J5Q6LK576NG3K9GI1",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_61C635D66BD78A663DC0E676B7",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0003,
+        0.0001,
+        0.9996
+      ],
+      "canonical_probs": [
+        0.0006,
+        0.0005,
+        0.9989
+      ]
+    },
+    {
+      "case_id": "air_64HU4UU087LNTNS6DR535MQNCJ",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_64HV5ACLP3GMEP8G3V3IQ7GNLI",
+      "family": "quantity_limit",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_694SVQUR6VT6VLO9A1LIUICERH",
+      "family": "brand_identity",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_6QL8GG1TLHP9H1NTI4LN703NEP",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_72DC6B34BC069D62992ACC372C",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0004,
+        0.9986,
+        0.001
+      ]
+    },
+    {
+      "case_id": "air_75F951637BE07F890F8BEE8B04",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.9996,
+        0.0002,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.0008,
+        0.9981,
+        0.0011
+      ]
+    },
+    {
+      "case_id": "air_777E9B5013A5B72D4FB3E3C799",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9987,
+        0.001
+      ],
+      "canonical_probs": [
+        0.036,
+        0.9599,
+        0.004
+      ]
+    },
+    {
+      "case_id": "air_7IN1281NTHBSFMLQ5QUT14PIKK",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_7KU7U98LEDV0A97O79F0A93GJH",
+      "family": "quantity_limit",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_7MIRK98O128Q6792UO93CFHKAB",
+      "family": "quantity_limit",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_828S1U3MILO5VJCUN3T67L79UK",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_8HFK1BHPE77NF2SKJI4ICS353S",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_8JFOI64OE6OCH9353ORMP98LLJ",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_8PG32L9JAL8LKC36TIGN1UK2F7",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_8RVUQGH35CSNF27IAK5O7KP7SO",
+      "family": "quantity_limit",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_8VKRLK1QNM61VO9LJHP22OKIQV",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_91TVKOVD7LF13BJDACCM1EE8HK",
+      "family": "brand_identity",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9998,
+        0.0,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_9C75F0QL8TLPVUGPBJ7TORKU3O",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_A27A6A6D67A53E0A6CE129E153",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9997,
+        0.0003,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9975,
+        0.0022,
+        0.0003
+      ]
+    },
+    {
+      "case_id": "air_A2V8QDNU6KE1J1DHVR0R0MAI92",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_A80SVNPMSF0JFBNSPSEJ6KI2Q3",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_ATBS7RAH3E726M0OG02OQNH8A4",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_B5KOCP54CSLMHKPGQ2BM9IUVQQ",
+      "family": "quantity_limit",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_B5RVJCU1KLDP78I61H5GIGMD5L",
+      "family": "merchant_restriction",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_BHTTH4VGOCNHG4A2UITCL7SDRQ",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9988,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_BQ7Q8OS48C6UG29IS9CTTS1LPU",
+      "family": "merchant_restriction",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_BTB49BV11EN5TA3K53484KPCC7",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9988,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_C3HI6CPRPPBQD10E4DF95RNSOL",
+      "family": "quantity_limit",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_CICRGA2N0TEVCII442N4HK3F23",
+      "family": "condition_new_only",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_CLSM9DU154SSU1E7HI82K5E1A0",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_CQ7F9NUPFIT1CU34BE06SP37PF",
+      "family": "merchant_restriction",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_D46OQ1BV1HHIVKNPN1KU176T3P",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_D5S9KA19427739F2471CDPUK7N",
+      "family": "recurring_forbidden",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_D638A949A1C9375A3A7A2BE6C4",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9912,
+        0.0014,
+        0.0074
+      ],
+      "canonical_probs": [
+        0.999,
+        0.0002,
+        0.0007
+      ]
+    },
+    {
+      "case_id": "air_D7H9OA3UONEGH6G19M1Q4TDVA1",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_DAFFVG2LQD55KREM53MHSQ7B20",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_DKUQLH3CBRLIK6LM4CDCKK6U7F",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_E0GQDEADQBB3DEOJPQFO2BS4TL",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0006,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_E6F90DB737A53AA3CE6BDB0C99",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9998
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0013,
+        0.9986
+      ]
+    },
+    {
+      "case_id": "air_E7BNVES1LV4FNLM4F3LECC5EJV",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_E90I8NVR6M1F6HC1Q1KH71UB6N",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_EBFNDFCMBPP6M46UR1P8C3P169",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_EJU94454A8RI7OCMDCG5V5N9I5",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_ENVHJJL3JSA90CDKRMA0BTK0U4",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0005,
+        0.9983,
+        0.0012
+      ],
+      "canonical_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_EOQ51JMTU800S7PNOEO417AJRI",
+      "family": "condition_new_only",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.999,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_ETA8PULB5IH9FDLAUR9SSPG6J0",
+      "family": "quantity_limit",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_F1J7QBLMSSEJO7JATKPAC66DG5",
+      "family": "quantity_limit",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_FA9ON1K7AVU0SF21KNQV4KAV86",
+      "family": "brand_identity",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_FB69293FVSC2GU2CBOPQFF72VD",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_FBCM6H5KLA5ODJF78VEBI6GH0D",
+      "family": "quantity_limit",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_FC9C459C1C13ACBB9B670BDB9A",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0002,
+        0.0,
+        0.9998
+      ],
+      "canonical_probs": [
+        0.0047,
+        0.0011,
+        0.9942
+      ]
+    },
+    {
+      "case_id": "air_FJG6D206BREJP0ENQA73M8ODO1",
+      "family": "recurring_forbidden",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_FSA2HT0PI7O7G71T72TGSVNPC9",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_G9BHTVCH27GNAAKBDKTL6T6TFD",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_GVVF1S880B2KUE8AKNDB7CJ7DV",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_H0LSGNMAFCET92IEK65DTMGBCN",
+      "family": "quantity_limit",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_H630E3EFLF2EQ0SG2JI8UQIKUH",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_H6B2NFDHEJ131L6U69VUP5T5A3",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_HFC6EPO5HU20Q6IP64VSKULI2B",
+      "family": "quantity_limit",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_HO64MFHSDFB67AINBGQL5P1AHD",
+      "family": "injection_resistance",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_HUBO730HJK0RFV47EB15NJANKG",
+      "family": "recurring_forbidden",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_I2LDVJ3KG2AFN6CB2FG7365B67",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_I2Q220BH6BP1MCC5TT7IL607CU",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_I6JA2V7SGP2SI4B17NMNK144G0",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_I7068L0UOKV3P5OK91SP1NQ282",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.999,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_IDCFHUI0PRFEK9S238N3ROOQ5N",
+      "family": "brand_identity",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_IFIOD9OIBN3EEAISO4IP0ORHTV",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9998
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_IRO7V4P0L1L9G9GKODDSJRQPSJ",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_ISOLMSNL0QCQUG4NK0E7K5E1UV",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_IU24OT15R9FSF48CAGRR7NAJTB",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9988,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_IUPDAC6I8KFFVEHF3V62I3ETFA",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_IVNH1AF5EK5N82390BPRH77OVN",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_J67JSLL0SNVR87FQS8O8JGI8IN",
+      "family": "recurring_forbidden",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0006,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_JCDESDMLFLPU34DODLC98UHEO2",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_JDP5R45VGRGFLBRPL74F8AM30U",
+      "family": "brand_identity",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_K4GB6T40K7NQ990ML4LFOKL5PS",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9987,
+        0.001
+      ],
+      "canonical_probs": [
+        0.0003,
+        0.9988,
+        0.0009
+      ]
+    },
+    {
+      "case_id": "air_KP4IESR9NR5EKJPSR9Q0IVK4P8",
+      "family": "condition_new_only",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_L5K43VVRONJ3SNLEONT13IFQS4",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_L8R0NEEKBP1G2UQEJ719TFB9EB",
+      "family": "quantity_limit",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9997,
+        0.0001,
+        0.0002
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_LH350F427T16RP8NVOFUCPV182",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0004,
+        0.9988,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_LJ5LPNQFLE98EEDA6DUTJFO1MQ",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_LLMFU917IMKVDJML094K0BVDV3",
+      "family": "brand_identity",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_LPH3FJ8JK27LN6BUF2M58VAF6K",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_M64ESNQEQVQ04L9VPTSRA50P3O",
+      "family": "quantity_limit",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_MHAMLR4VDVTVOBDMT57MCRN5KN",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_MMDK1US5C10A3Q36HHI9S4CJ1U",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_N1RFKI4BQGFVD669Q26GBSSQTF",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_N4DJ912UNU1B4405RR0S5JM0V5",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_N4O5PL8AQ68PVFQBI0ECIRQ010",
+      "family": "brand_identity",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_N75RO99CU1E1EABU384EJS11UL",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.999,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_N8HERU73568O8D62659JVSGP6D",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9998
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_NKSVGRVBEQGO9JD5QSHKL1S4CA",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_NPQ5950T0UOPJPFQQ7GVCP0DNL",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0006,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_NQ9OVKEE5KFNTI3DK3Q9RD6GI7",
+      "family": "brand_identity",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_O4VHDH5RALRAS7QDTJ5OHF0NNH",
+      "family": "quantity_limit",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_OGHLPAJ079GKU90T9C9IKS53K4",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_OGU7ARO8PSJU83D995HR6VPNO9",
+      "family": "condition_new_only",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0004,
+        0.9986,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_OSI2IDLS8E0TN1OAMUQSHMRBUL",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0004,
+        0.9988,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_PEV1ESB7TK5S1MJ2CQCOBEVPR0",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_PLGOHE0BKMI6590S39M4TJ2IU7",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9988,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_PNU53LDB6DLHOV6JA5QSU3HT79",
+      "family": "merchant_restriction",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_Q3MMSMLIU5N4M454G14H949DLL",
+      "family": "injection_resistance",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9925,
+        0.0038,
+        0.0037
+      ],
+      "canonical_probs": [
+        0.9925,
+        0.0038,
+        0.0037
+      ]
+    },
+    {
+      "case_id": "air_Q3ROVJV99GFTS13MBQDQ0UE373",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_QCFA1J0DMJPH7DJV3KFFKNGG5T",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_QGJ0G6ILF57P4770OI1K8UAEUU",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_QJ07L2H9P7P9EHVV9K8BP17VFS",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_QRQVBBN4IHCPIPO0FECKSC3TFI",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9998
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_RAHRL3D9NC0CONIUFKFU2NDBEK",
+      "family": "quantity_limit",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_RBHTQS40R88D1P1D26IBUGL6V1",
+      "family": "merchant_restriction",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_RFORQ9V55C5ET6VMU53J7URAD5",
+      "family": "condition_new_only",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_RH1V4UMETA914NRU7I19D1A526",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_RM85HG5LLDFBII5BH8HP5KEF8C",
+      "family": "quantity_limit",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0006,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_RT8L2O5C0OAP0CVG02E80E6PSQ",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9988,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_SJIFLR08A4DNRG7RN7B5RBT0OF",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_SU2DMTCL5R8QES9FIB34TITMG7",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_T15PVHK49L7RJ7MG29QGVGEUTQ",
+      "family": "quantity_limit",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_T9UL6OTMJAPRLTVU3LA37HSNQO",
+      "family": "quantity_limit",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_TC2LSTKAENV3FJK60U4LIVKGF5",
+      "family": "quantity_limit",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_TRPUPEA1GGLOOU1GC3EKFPCKO0",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_TSAJ1U160853CU62ASK8H1B9S5",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_U596K6BM5E322KLN233QGVTBMK",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_U7KS1EJ674J796U6TH8KVCMEJJ",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_UFDQMNUL8C9O4GCA7DJGRFQ80F",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_UHNIDJ7JGDV0M357L2MKTQOQRQ",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_UK1CBTT4DS8EITKS22VMB134VM",
+      "family": "recurring_forbidden",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_UMK2LVVHRU0TCRKU9N1HC5J1OS",
+      "family": "trial_renewal_trap",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0007,
+        0.9981,
+        0.0012
+      ],
+      "canonical_probs": [
+        0.0007,
+        0.9981,
+        0.0012
+      ]
+    },
+    {
+      "case_id": "air_UTERBVS0M91SB1ER54LEO3NRP0",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9997
+      ]
+    },
+    {
+      "case_id": "air_V6EH06TFJ17D7EGOCE5CNCOSGN",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_V6QMLT6VDAS3H5D7L1IK4NUUFA",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_VAB7I5MTU9BVNJS0JGK48PD7JV",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_VB049KKLHM9ODFUFEJ3KM4V5B9",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_VDVORFFJ9C5DDVCNOQFAT0VFRC",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "val",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_00369HEA00QPSVD0CNE0KM0CQF",
+      "family": "trial_renewal_trap",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0004,
+        0.9987,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_05NJ6SD5I864IA09BKL1D7BM2O",
+      "family": "merchant_restriction",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_0B82NG4EURVONE5LHCAR3MQQRJ",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_1DET9GT41J6H916MNP3EF0VU6N",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_1G39FUS5IMR9RVPQDQFM0QQ39F",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_1HN9C58UCK7MC6Q4OU2UGNSDVF",
+      "family": "variant_mismatch",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_1R48FGGH6SFAL3FGU5OHF1OOPJ",
+      "family": "quantity_limit",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_1TN1CEMNKHAQMDD89RQUJVQ5NT",
+      "family": "quantity_limit",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0006,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_1U7VUPP5K3F559KVCN2DHMGGVS",
+      "family": "shipping_fee",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_25F6Q23AGV5EOH3LVCHI3L24KK",
+      "family": "seller_alias",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.999,
+        0.0002,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.999,
+        0.0002,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_2HKVI5FEF5TPIEQ8GQ9CKB5C56",
+      "family": "membership_insertion",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0006,
+        0.9984,
+        0.001
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_2LORPTMLT29TPJQ214N7E0G6ML",
+      "family": "injection_resistance",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_38J7MN246GTNPNOLANM0VCA6SQ",
+      "family": "merchant_restriction",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_3FACQPIQKT47Q1V4ERUOKJ4G8T",
+      "family": "recurring_forbidden",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_3K7UMGKKRU3D54MCOMU6GKB721",
+      "family": "delivery_timing",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_4LFTF0PKJA4OVBV96AOCSMBPRR",
+      "family": "merchant_restriction",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_53UT0SIMIT7H0D8BFD1ER1K15Q",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_55AA53650ECBBE3F0DF8659E25",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9937,
+        0.0033,
+        0.003
+      ]
+    },
+    {
+      "case_id": "air_5GKDVL8M2Q3LO90HU9SBFEE973",
+      "family": "seller_alias",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_6GJT344HQN8S7PAO5PQSRD699M",
+      "family": "safe_lookalike",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9948,
+        0.0044,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.9948,
+        0.0044,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_6JKSI2MNJ5DUO0UQH4N7ULVGGU",
+      "family": "injection_resistance",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9986,
+        0.0011
+      ],
+      "canonical_probs": [
+        0.0006,
+        0.9985,
+        0.0009
+      ]
+    },
+    {
+      "case_id": "air_6RJF59466EJU32OPD1T6JFL24S",
+      "family": "condition_new_only",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_73TB3B4OB3K2BBUQGBRR3JSRA2",
+      "family": "recurring_forbidden",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_76IDNAH844QMJB1PUIIEO4OVD3",
+      "family": "trial_renewal_trap",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0001,
+        0.0
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0001,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_7MKOD9TFCQCKJBQTM02OHHCQIA",
+      "family": "safe_lookalike",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9975,
+        0.0023
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.9975,
+        0.0023
+      ]
+    },
+    {
+      "case_id": "air_7OLLIIHI3AB0E93KH4V8J0UTD8",
+      "family": "bundle_obligation",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_7R7R5076Q3J3KC5K97T6EJPJA5",
+      "family": "trial_renewal_trap",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0005,
+        0.9986,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_8UVHUR19SV26KK02BBAAK56LIT",
+      "family": "condition_new_only",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_A20G1ON5L7KBBIK8F26IQJI7IC",
+      "family": "quantity_limit",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_AAIN7GHFM4SH7MT0NQQDQ2LE94",
+      "family": "injection_resistance",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_AKEMFD82P9849OV4KS0QHARDOE",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_B0SQNI1HO60E8AQ44DQIGFCQC6",
+      "family": "bundle_obligation",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9988,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0009
+      ]
+    },
+    {
+      "case_id": "air_B3DOD92JRLNPUBGCCB2ENN33DC",
+      "family": "brand_identity",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_B5NMR877B0C73D1CL99A37F6QF",
+      "family": "shipping_fee",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_BBALBE2CRTQ8F2C8HS5AFAOT4D",
+      "family": "safe_lookalike",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0005,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_BVURRPUNQM1FP5373DS6GRLFCE",
+      "family": "seller_alias",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_C2RLQ8E03T7TS7BJTU9I6BBD28",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_C7CTIBLT5055UPA4D9GNASETI9",
+      "family": "quantity_limit",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_CFF12G6TNUTBK0DTUD564NN55O",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0004,
+        0.9988,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_CI0LBG94EM8TBNOV3DMJ3TH2G9",
+      "family": "injection_resistance",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_CNHPQR3BAT0UH388DF6TI55IBN",
+      "family": "injection_resistance",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_D3E63P2GBLRO9Q7FSV7EN14CSN",
+      "family": "merchant_restriction",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_D71FG5FON89TAS2DD3IHV85U89",
+      "family": "quantity_limit",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_DI65R23L390BA7B55DTDODLCBI",
+      "family": "recurring_forbidden",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_DL29UBQH6QS1UNDQ2UPN8B7BOS",
+      "family": "delivery_timing",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_E5813D5EB02E5C48D6355D3E65",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0093,
+        0.0127,
+        0.978
+      ],
+      "canonical_probs": [
+        0.0093,
+        0.0127,
+        0.978
+      ]
+    },
+    {
+      "case_id": "air_EBPHRP03S2VAMK6OM45Q7HA31H",
+      "family": "shipping_fee",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_EEKIKKU49VR8NLMUJB1NDG2HET",
+      "family": "delivery_timing",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0006,
+        0.9906,
+        0.0088
+      ],
+      "canonical_probs": [
+        0.0006,
+        0.9906,
+        0.0088
+      ]
+    },
+    {
+      "case_id": "air_ESGFJ5CDDCDH16DNSIBG0E07N4",
+      "family": "merchant_restriction",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_FAL5SRLCCIJ18ACEG34L14LQMD",
+      "family": "brand_identity",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_FDNR7Q6N4JAOFBM1IBTFHAIG4S",
+      "family": "trial_renewal_trap",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_FG0IRHK8DSB5KBIC0S530BAORC",
+      "family": "quantity_limit",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0004,
+        0.9987,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_G1IMUVB6HQ505GAEAMAQH5BK5C",
+      "family": "trial_renewal_trap",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_GC726M0S6O7OBH95NQK5I9QQ9V",
+      "family": "recurring_forbidden",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_GODA4NRVLNPEQS2ED9JP70PQVM",
+      "family": "condition_new_only",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_HDOHBIE4KBN1EG9IGCJ57925VN",
+      "family": "return_refund",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9987,
+        0.001
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.9987,
+        0.001
+      ]
+    },
+    {
+      "case_id": "air_HGLN6CC62177QJ50JGSBKC9U13",
+      "family": "recurring_forbidden",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_HHC1JJONNE4E2O60422LTKU9LG",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_HKJTQIC6QF2H3RUFHEEKMMKF01",
+      "family": "condition_new_only",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_HQA070AE3AVVOMCCJ7N55P7GEG",
+      "family": "condition_new_only",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0006,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_HTJTNNT8AFCPT7ETCT23H6B086",
+      "family": "condition_new_only",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9988,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_IBQ81BATLDC2HA4R0BFV1NI4FH",
+      "family": "injection_resistance",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_INEGK2EHSULCAHN404CUDO6E40",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_IUDFOUQ58TALH5NUMUFCLHG5EB",
+      "family": "recurring_forbidden",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_IULV3B1MOL88DEGACADTIUHI4L",
+      "family": "safe_lookalike",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_J473JJU3AIAPNA9O5AS1SVK3TK",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0006,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_J625G2Q7RJSCT3GLMS3TT31F8C",
+      "family": "merchant_restriction",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_J6E8C6L30750J2HUEFKVSC2TFS",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_J6LRPUK7SIR82GCK8EM6EE0GCA",
+      "family": "currency_binding",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_JRUKD8JDRU3AJ29LOB9E4SCK7P",
+      "family": "budget_ceiling",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_K5RBE8QTS6DLU3UV43A1EFBHMK",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_K8VSVFKU61R5T18T4ES2D8U5S7",
+      "family": "brand_identity",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0001,
+        0.0002
+      ],
+      "canonical_probs": [
+        0.9998,
+        0.0001,
+        0.0002
+      ]
+    },
+    {
+      "case_id": "air_L2KG9A4AHF7PQ49AVLO6JP6FDT",
+      "family": "safe_lookalike",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9988,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_L50R369E3AU0CT29O2LF0V6TK6",
+      "family": "merchant_restriction",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0006,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_LAJKO7CBHFKKJSDTID9QH4S35T",
+      "family": "return_refund",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_LCI5C9HLSNQ7TNU31B02P6SNF2",
+      "family": "bundle_obligation",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0005,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_LDLIT4H965FQ675MMHGRAC94VI",
+      "family": "trial_renewal_trap",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_LKKEMJ8UEDM69SHR7NRPA8AS1B",
+      "family": "trial_renewal_trap",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0006,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_LO8VNQLVTF0OUATA5UDIA54LBC",
+      "family": "warranty_claim",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_LQ5TAH01VAKROR4S36DF6DOU6Q",
+      "family": "injection_resistance",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_LT3U6KHDQVTBPIHVJQNN401RKQ",
+      "family": "seller_alias",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_M3MG2CS1RGM2GE8PLLMK1IV0V3",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_M7G0KJPP927F6TQ4IKJ20J9S1L",
+      "family": "trial_renewal_trap",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0001,
+        0.0
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0001,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_MFLO5EPPNV5ODO3HDM6JOJSC9C",
+      "family": "recurring_forbidden",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_NH8S3Q6M8TOFSGM7S03AJ0UECE",
+      "family": "return_refund",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0007,
+        0.9992
+      ]
+    },
+    {
+      "case_id": "air_O9G22F99JDNNH1MPJVK3RO8NAR",
+      "family": "warranty_claim",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_OE1SGMP13UN2AS6FQC9DU2NNLP",
+      "family": "recurring_forbidden",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_OF9NVOR3VF8QN7S5MI15LJF9FR",
+      "family": "variant_mismatch",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9994,
+        0.0004,
+        0.0002
+      ],
+      "canonical_probs": [
+        0.9994,
+        0.0004,
+        0.0002
+      ]
+    },
+    {
+      "case_id": "air_OHL1630TH8HEHK7IV0VS671SCB",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_OOJGAGAT9VG09C8G3692SS2IKB",
+      "family": "membership_insertion",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_OOOJSVOIDBVEGTPPE8JVFEFQT1",
+      "family": "budget_ceiling",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_PJBOLLPTGC10855RRUGELUVTUO",
+      "family": "shipping_fee",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_PO7F2UVAUCMKHT2PCGA3341HE2",
+      "family": "budget_ceiling",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_Q39HT5O81CPSBPHQ94V0UQO2M7",
+      "family": "safe_lookalike",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9988,
+        0.001
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_QC8Q10EI0KJNE4FK063U16P69C",
+      "family": "merchant_restriction",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_QFC8317CFOP48P80HUKJOJ6UKV",
+      "family": "currency_binding",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9988,
+        0.001
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_QQ0HBM8MC9VEGI1JFOI91GKCIS",
+      "family": "quantity_limit",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_QT981KMIP1ESPJ241GGALN2AVD",
+      "family": "condition_new_only",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_R3UR3B6PIK0921FMEE5VGUK2CM",
+      "family": "recurring_forbidden",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_R8SEB070QUOLTTP7BN99DLFEN8",
+      "family": "warranty_claim",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_REDVAHSONA8BUBR6E0VU2JCVET",
+      "family": "safe_lookalike",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0005,
+        0.9994
+      ]
+    },
+    {
+      "case_id": "air_RJKUJ55794O2UB43U7A8LI59MB",
+      "family": "shipping_fee",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_RO1O99LPAJAD59NG1I37UGHJ8T",
+      "family": "trial_renewal_trap",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_RPVSBDI2M90IH6VTB60JV2LTOE",
+      "family": "seller_alias",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_RRDI91SINLPTGK5340J1VOMLIN",
+      "family": "condition_new_only",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_SEER0DM080JN1IMK78H68MBAKI",
+      "family": "merchant_restriction",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_SOSCRUFEV6G36CIFNRDTG121EM",
+      "family": "currency_binding",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_SQ1EO9146RKFEQVGQ17H4C54GO",
+      "family": "shipping_fee",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0002,
+        0.9989,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_T2FK3K8DB729L66KUF3UMRB2GO",
+      "family": "seller_alias",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0003,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_T2GG6E39ULK8CL3R1V09DU4U35",
+      "family": "delivery_timing",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0003,
+        0.9989,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_TKBHVTNVNNCMOMACITSJ994O0J",
+      "family": "variant_mismatch",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_TLOEQB67S2GKSD633G4BMS7CBT",
+      "family": "condition_new_only",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_TVL9HGQBVGIJ2KLR9J80FO0L19",
+      "family": "brand_identity",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0004,
+        0.9988,
+        0.0008
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_U2NI8UDJOUGQE69L0137UGPJ83",
+      "family": "injection_resistance",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_UIT206R66LIRC26UGTVUKIKBNP",
+      "family": "variant_mismatch",
+      "label": "entailment",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "entailment",
+      "canonical_pred": "entailment",
+      "legacy_probs": [
+        0.0007,
+        0.9984,
+        0.0009
+      ],
+      "canonical_probs": [
+        0.0002,
+        0.999,
+        0.0008
+      ]
+    },
+    {
+      "case_id": "air_UN7AOUFTSO09IFOU9MCH1396SR",
+      "family": "quantity_limit",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_UO9LE7S8HJEQ1JDJEP8F7PCQUH",
+      "family": "injection_resistance",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9996
+      ]
+    },
+    {
+      "case_id": "air_UUHBKDR9DOUMFVIQUCGS58N1KS",
+      "family": "quantity_limit",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9998,
+        0.0001,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_UUQTAHRQNGGV4E3DFCQNLESLBB",
+      "family": "brand_identity",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9999
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    },
+    {
+      "case_id": "air_V732V20JC047RIFT3MTFB35DF1",
+      "family": "safe_lookalike",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "noop_control",
+      "determinable": true,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ],
+      "canonical_probs": [
+        0.9999,
+        0.0,
+        0.0001
+      ]
+    },
+    {
+      "case_id": "air_VDL703NJDPCONVPG1MUSQP4V04",
+      "family": "seller_alias",
+      "label": "contradiction",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": false,
+      "legacy_pred": "contradiction",
+      "canonical_pred": "contradiction",
+      "legacy_probs": [
+        1.0,
+        0.0,
+        0.0
+      ],
+      "canonical_probs": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "case_id": "air_VOBKC6FATT57MDQ9GLSOF1IHV5",
+      "family": "membership_insertion",
+      "label": "neutral",
+      "source_split": "train_stratified",
+      "transform": "stripped",
+      "determinable": true,
+      "legacy_pred": "neutral",
+      "canonical_pred": "neutral",
+      "legacy_probs": [
+        0.0001,
+        0.0001,
+        0.9998
+      ],
+      "canonical_probs": [
+        0.0001,
+        0.0004,
+        0.9995
+      ]
+    }
+  ]
+}

@@ -1,5 +1,16 @@
 # PHASE3_STATUS.md — Phase-3 AI/ML Trust Layer Evidence
 
+> **PHASE-3 DATASET + SEMANTIC RUNTIME CORRECTION COMPLETE (2026-08-28).**
+> The correction ordered by the 2026-08-28 brief is finished and fully gated:
+> frozen_v2 canonical-orientation dataset (leakage gate PASS), v2 retrained
+> checkpoint revalidated on val/test/untouched-OOD, and the fine-tuned
+> DeBERTa verifier WIRED as the active runtime semantic stage (default
+> backend, fail-closed, hash-enforced, live Phase-4 E2E 13/13 with the real
+> model; backend suite 755 passed). Evidence:
+> docs/PHASE3_DATASET_AND_RUNTIME_FINAL_AUDIT.md (checklist §10),
+> docs/PHASE3_MODEL_SETUP.md, docs/PHASE3_MODEL_REVALIDATION.md.
+> Historical rows below are prior-state evidence, not retroactively edited.
+
 > **CURRENT RE-AUDIT: INCOMPLETE (2026-08-27).** Historical PASS rows below are
 > not current acceptance. Reproduced failures reopen M15–M17, M25–M27,
 > M30–M39, and M41–M50; pure M40 fusion tests do not establish runtime wiring.

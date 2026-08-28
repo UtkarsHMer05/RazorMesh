@@ -107,11 +107,24 @@ def test_semantic_assessment_is_deterministic() -> None:
 
 
 def test_no_transformer_dependency_imported() -> None:
-    """Phase-1 boundary: no ML framework may be loaded by this module."""
+    """Phase-1 boundary: importing the semantic seam must not REQUIRE ML.
+
+    The optional ``semantic`` dependency group (production demo runtime)
+    legitimately loads torch lazily when the DeBERTa verifier runs, so the
+    in-process assertion would see it once any real-model test has run. The
+    invariant is import-time independence, proven in a clean subprocess where
+    importing ``razormesh_api.semantic`` alone must pull no ML machinery.
+    """
+    import subprocess
     import sys
 
-    import razormesh_api.semantic  # noqa: F401
-
-    for banned in ("transformers", "torch", "onnxruntime"):
-        module = sys.modules.get(banned)
-        assert module is None, f"{banned} must not be imported in Phase 1"
+    code = (
+        "import sys; import razormesh_api.semantic; "
+        "banned = ('transformers', 'torch', 'onnxruntime'); "
+        "loaded = [m for m in banned if m in sys.modules]; "
+        "assert not loaded, f'{loaded} must not be imported by razormesh_api.semantic'"
+    )
+    result = subprocess.run(  # noqa: S603 - fixed constant command, no untrusted input
+        [sys.executable, "-c", code], capture_output=True, text=True, timeout=120
+    )
+    assert result.returncode == 0, result.stderr

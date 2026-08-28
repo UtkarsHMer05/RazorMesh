@@ -152,7 +152,9 @@ test.describe("P2-M46: stubbed-checkout E2E", () => {
     await page.goto("/buyer");
 
     await page.getByTestId("step-catalog").waitFor();
-    await page.getByText("Create fixture authorization").click();
+    // 2026-08-28 buyer UI auto-creates the fixture intent on mount, so the
+    // manual "Create fixture authorization" button no longer renders.
+    await page.getByTestId("intent-id").waitFor();
     await page.getByRole("radio").first().check();
     await page.getByText("Propose checkout").click();
     await page.getByTestId("authorization-binding").waitFor();
@@ -197,7 +199,8 @@ test.describe("P2-M46: stubbed-checkout E2E", () => {
       callbackBody: { state: "FAILED" },
     });
     await page.goto("/buyer");
-    await page.getByText("Create fixture authorization").click();
+    // fixture intent is auto-created on mount (2026-08-28 buyer UI)
+    await page.getByTestId("intent-id").waitFor();
     await page.getByRole("radio").first().check();
     await page.getByText("Propose checkout").click();
     await page.getByTestId("pay-action").click();
@@ -224,7 +227,8 @@ test.describe("P2-M46: stubbed-checkout E2E", () => {
   }) => {
     await stubWorld(page, { failCallbackNetwork: true, statusState: "PROVIDER_UNKNOWN" });
     await page.goto("/buyer");
-    await page.getByText("Create fixture authorization").click();
+    // fixture intent is auto-created on mount (2026-08-28 buyer UI)
+    await page.getByTestId("intent-id").waitFor();
     await page.getByRole("radio").first().check();
     await page.getByText("Propose checkout").click();
     await page.getByTestId("pay-action").click();

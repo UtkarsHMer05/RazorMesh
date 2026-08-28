@@ -309,9 +309,7 @@ def build_material_mutations() -> list[DifferentialResult]:
     ]
 
 
-TITLE_PRESENTATION_ONLY = (
-    "Bose QuietComfort Earbuds (Black, 2024 Edition — Premium Packaging)"
-)
+TITLE_PRESENTATION_ONLY = "Bose QuietComfort Earbuds (Black, 2024 Edition — Premium Packaging)"
 
 
 def build_presentation_mutations() -> list[DifferentialResult]:

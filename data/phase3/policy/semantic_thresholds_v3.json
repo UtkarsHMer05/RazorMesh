@@ -1,0 +1,39 @@
+{
+  "policy_version": "semantic-thresholds-v3",
+  "model": "phase3-finetuned-v2",
+  "model_artifact": "/Users/utkarshkhajuria/Desktop/RazorMesh/artifacts/models/incoming/phase3-finetuned-v2",
+  "model_sha256": "163864e04a07fb56e51526f2f05dab3be742a9f1f290a561fc97fedd8f3c6995",
+  "base_model": "cross-encoder/nli-deberta-v3-base",
+  "label_map": {
+    "0": "contradiction",
+    "1": "entailment",
+    "2": "neutral"
+  },
+  "calibrated_on": "frozen_v2 validation split ONLY (never test, never OOD, never human-gold)",
+  "rows_used": 143,
+  "labels_on_val": {
+    "contradiction": 57,
+    "entailment": 53,
+    "neutral": 33
+  },
+  "val_sha256": "1ca90288a3c8d25100c28d3de1374c80900644a8c652173c7fc6ea7716dbaae6",
+  "selected": {
+    "tau_block": 0.05,
+    "tau_entail": 0.9,
+    "contradiction_recall_on_val": 0.8947368421052632,
+    "block_precision_on_val": 0.9622641509433962,
+    "block_f2_on_val": 0.907473309608541,
+    "false_blocks_on_val_entailment": 2.0,
+    "unsafe_entailment_on_val_contradiction": 3.0
+  },
+  "constraints": {
+    "max_false_block_rate_on_entailment": 0.05,
+    "objective": "F2.0 of BLOCK class (recall-weighted)",
+    "tie_break": "smallest tau_block, then largest tau_entail"
+  },
+  "action_rule": "BLOCK if p_contradiction>=tau_block; else ENTAIL/PASS if p_entailment>=tau_entail; else CHALLENGE",
+  "fusion_note": "semantics can only STRICTEN deterministic RazorGuard decisions",
+  "gold_validation_status": "GOLD_VALIDATED",
+  "supersedes": "semantic-thresholds-v2 (calibrated for the v1 checkpoint on frozen_v1 val; retained untouched)",
+  "created_at_utc": "2026-08-28T14:04:10.005912+00:00"
+}

@@ -194,7 +194,7 @@ master prompt.
 
 This flow exercises: Confirmed Intent → (live Phase-4 protocol
 gateway at `/mcp-mount/mcp`) → DecisionEngine/RazorGuard +
-SemanticVerifier → ExecutionTicket → Razorpay Test Checkout →
+SemanticVerifier (2026-08-28 correction: the REAL fine-tuned DeBERTa runtime — backend `deberta`, model `phase3-finetuned-v2`, policy `semantic-thresholds-v3`; fail-closed to CHALLENGE if the artifact is unavailable) → ExecutionTicket → Razorpay Test Checkout →
 verified callback/webhook → audit. ACP remains a separately proven
 compatibility path (proof harness only, not in the live checkout
 chain).

@@ -365,8 +365,16 @@ Phase 1:
 - `NullSemanticVerifier`
 - `DeterministicScenarioSemanticVerifier`
 
-Future:
-- DeBERTa-v3 NLI verifier.
+Active (Phase-3 correction, 2026-08-28):
+- `DebertaNLISemanticVerifier` — the fine-tuned artifact
+  `artifacts/models/incoming/phase3-finetuned-v2` (base
+  cross-encoder/nli-deberta-v3-base) is an ACTIVE runtime semantic verifier
+  behind `SEMANTIC_VERIFIER_BACKEND=deberta` (default). It loads once per
+  backend process from an optional uv dependency group (`torch`+`transformers`,
+  no-torch installs fail closed to CHALLENGE instead of substituting the
+  keyword verifier). Historical intermediate state: DeBERTa was
+  evaluation-only before this correction; the deterministic keyword verifier
+  remains available only as the explicitly labeled `deterministic_test_stub`.
 
 ## PaymentProvider
 
@@ -504,7 +512,7 @@ Actual versions MUST be live-resolved and written to `VERSION_MANIFEST.md`.
 Replace mock provider with Razorpay test-mode adapter while keeping RazorGuard unchanged.
 
 ## Phase 3
-Add structured-output LLM intent compiler and DeBERTa semantic verifier; fine-tune only if benchmark demonstrates value.
+Add structured-output LLM intent compiler and DeBERTa semantic verifier; fine-tune only if benchmark demonstrates value. (Correction 2026-08-28: the fine-tuned canonical-orientation v2 checkpoint is now the wired runtime verifier; see docs/PHASE3_DATASET_AND_RUNTIME_FINAL_AUDIT.md.)
 
 ## Phase 4
 Add real agent-commerce adapters/protocol work and expanded held-out benchmark.
@@ -607,8 +615,11 @@ trusted human authorization text
 current sanitized commerce evidence (provenance-tagged, deterministic builder)
     → SemanticEvidenceBuilder → (premise, hypothesis) pairs
         hypothesis ← confirmed authorization ONLY
-    → DebertaNLISemanticVerifier (pure inference; no provider/DB/network)
-        → calibrated semantic action PASS/CHALLENGE/BLOCK (frozen thresholds)
+    → DebertaNLISemanticVerifier (pure inference; no provider/DB/network;
+      ACTIVE runtime default — fine-tuned phase3-finetuned-v2 artifact,
+      per-process singleton, weights-hash enforced on load, fail-closed)
+        → calibrated semantic action PASS/CHALLENGE/BLOCK (frozen thresholds,
+          semantic-thresholds-v3: tau_block=0.05, tau_entail=0.9)
     → conservative fusion (D-039): semantics can only STRICTEN hard decisions
     → existing Phase-2 executor path unchanged
 ```

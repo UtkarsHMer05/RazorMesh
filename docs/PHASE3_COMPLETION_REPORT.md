@@ -7,6 +7,14 @@
 > overstated, and full quality/clean-room gates require reruns. See
 > [current findings](PHASE3_REAUDIT_2026_08_27.md). Phase 3 remains incomplete;
 > this report does not authorize a phase transition.
+>
+> **2026-08-28 correction:** the dataset/runtime findings ("runtime semantic
+> integration is missing") have been repaired and gated — frozen_v2 dataset,
+> v2 checkpoint, and the fine-tuned DeBERTa verifier are now the active
+> runtime semantic stage (D-053). See
+> docs/PHASE3_DATASET_AND_RUNTIME_FINAL_AUDIT.md. This historical report
+> remains retracted as current acceptance; other re-audit findings (compiler
+> evidence, gold terminology) are unchanged by this correction.
 
 > This report is regenerated after the owner-mandated closure audit AND the
 > completion of the full-307 Intent-Compiler evaluation (D-051, 2026-08-27).

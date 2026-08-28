@@ -1,0 +1,467 @@
+{
+  "generated_at_utc": "2026-08-28T14:09:20.582314+00:00",
+  "runtime": {
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.13.15",
+    "torch": "2.13.0",
+    "device": "cpu"
+  },
+  "policy_v3": {
+    "path": "data/phase3/policy/semantic_thresholds_v3.json",
+    "sha256": "bd8fea4347e72b6c2e7c14ba7dc4a1e0d43b5e1ce0b722d61742a4069d04a070",
+    "selected": {
+      "tau_block": 0.05,
+      "tau_entail": 0.9,
+      "contradiction_recall_on_val": 0.8947368421052632,
+      "block_precision_on_val": 0.9622641509433962,
+      "block_f2_on_val": 0.907473309608541,
+      "false_blocks_on_val_entailment": 2.0,
+      "unsafe_entailment_on_val_contradiction": 3.0
+    }
+  },
+  "policy_v2_historical": {
+    "path": "data/phase3/policy/semantic_thresholds.json",
+    "sha256": "3005cc315c08505f969ada3bbefda3cc5831dfd177c002dff7b1033ac70ba279",
+    "selected": {
+      "tau_block": 0.3,
+      "tau_entail": 0.4,
+      "contradiction_recall_on_val": 0.9815,
+      "block_precision_on_val": 0.9636,
+      "block_f2_on_val": 0.9779,
+      "false_blocks_on_val_entailment": 2
+    }
+  },
+  "contamination_guards": {
+    "threshold_calibration_uses": "frozen_v2 val ONLY (scripts/rzp_calibrate_thresholds_v2.py)",
+    "frozen_v2_test_used_for_selection": false,
+    "untouched_ood_used_for_selection_or_calibration": false,
+    "blind_human_heldout_exists": false,
+    "human_heldout_note": "Dataset audit \u00a76: reviewed human cards are 241 train + 43 val + 36 test, all previously used. The untouched OOD set is the only external evaluation."
+  },
+  "models": {
+    "v2_corrected": {
+      "artifact_dir": "artifacts/models/incoming/phase3-finetuned-v2",
+      "model_sha256": "163864e04a07fb56e51526f2f05dab3be742a9f1f290a561fc97fedd8f3c6995",
+      "cold_load_seconds": 2.33,
+      "threshold_policy": {
+        "tau_block": 0.05,
+        "tau_entail": 0.9,
+        "contradiction_recall_on_val": 0.8947368421052632,
+        "block_precision_on_val": 0.9622641509433962,
+        "block_f2_on_val": 0.907473309608541,
+        "false_blocks_on_val_entailment": 2.0,
+        "unsafe_entailment_on_val_contradiction": 3.0
+      },
+      "evaluations": {
+        "frozen_v2_val": {
+          "latency_seconds_for_n": {
+            "n": 143,
+            "seconds": 2.51
+          },
+          "metrics": {
+            "n": 143,
+            "accuracy": 0.8671,
+            "macro_f1": 0.8571,
+            "per_class": {
+              "contradiction": {
+                "support": 57,
+                "precision": 0.9057,
+                "recall": 0.8421,
+                "f1": 0.8727
+              },
+              "entailment": {
+                "support": 53,
+                "precision": 0.9074,
+                "recall": 0.9245,
+                "f1": 0.9159
+              },
+              "neutral": {
+                "support": 33,
+                "precision": 0.75,
+                "recall": 0.8182,
+                "f1": 0.7826
+              }
+            },
+            "confusion_matrix": {
+              "contradiction": {
+                "contradiction": 48,
+                "neutral": 6,
+                "entailment": 3
+              },
+              "entailment": {
+                "entailment": 49,
+                "neutral": 3,
+                "contradiction": 1
+              },
+              "neutral": {
+                "neutral": 27,
+                "entailment": 2,
+                "contradiction": 4
+              }
+            }
+          },
+          "safety": {
+            "policy": {
+              "tau_block": 0.05,
+              "tau_entail": 0.9
+            },
+            "action_distribution": {
+              "PASS": 52,
+              "CHALLENGE": 33,
+              "BLOCK": 58
+            },
+            "gold_contradictions": 57,
+            "gold_contradiction_escaping_BLOCK": 6,
+            "unsafe_contradiction_to_PASS": 3,
+            "gold_entailments": 53,
+            "false_BLOCK_on_entailment": 2,
+            "gold_neutrals": 33,
+            "neutral_wrongly_PASS": 2
+          }
+        },
+        "frozen_v2_test": {
+          "latency_seconds_for_n": {
+            "n": 126,
+            "seconds": 1.98
+          },
+          "metrics": {
+            "n": 126,
+            "accuracy": 0.8254,
+            "macro_f1": 0.8245,
+            "per_class": {
+              "contradiction": {
+                "support": 44,
+                "precision": 0.8462,
+                "recall": 0.75,
+                "f1": 0.7952
+              },
+              "entailment": {
+                "support": 40,
+                "precision": 0.7917,
+                "recall": 0.95,
+                "f1": 0.8636
+              },
+              "neutral": {
+                "support": 42,
+                "precision": 0.8462,
+                "recall": 0.7857,
+                "f1": 0.8148
+              }
+            },
+            "confusion_matrix": {
+              "contradiction": {
+                "contradiction": 33,
+                "entailment": 5,
+                "neutral": 6
+              },
+              "entailment": {
+                "entailment": 38,
+                "contradiction": 2
+              },
+              "neutral": {
+                "neutral": 33,
+                "entailment": 5,
+                "contradiction": 4
+              }
+            }
+          },
+          "safety": {
+            "policy": {
+              "tau_block": 0.05,
+              "tau_entail": 0.9
+            },
+            "action_distribution": {
+              "PASS": 42,
+              "CHALLENGE": 42,
+              "BLOCK": 42
+            },
+            "gold_contradictions": 44,
+            "gold_contradiction_escaping_BLOCK": 9,
+            "unsafe_contradiction_to_PASS": 3,
+            "gold_entailments": 40,
+            "false_BLOCK_on_entailment": 3,
+            "gold_neutrals": 42,
+            "neutral_wrongly_PASS": 4
+          }
+        },
+        "untouched_ood_129": {
+          "latency_seconds_for_n": {
+            "n": 129,
+            "seconds": 2.21
+          },
+          "metrics": {
+            "n": 129,
+            "accuracy": 0.9457,
+            "macro_f1": 0.946,
+            "per_class": {
+              "contradiction": {
+                "support": 43,
+                "precision": 0.9302,
+                "recall": 0.9302,
+                "f1": 0.9302
+              },
+              "entailment": {
+                "support": 43,
+                "precision": 0.913,
+                "recall": 0.9767,
+                "f1": 0.9438
+              },
+              "neutral": {
+                "support": 43,
+                "precision": 1.0,
+                "recall": 0.9302,
+                "f1": 0.9639
+              }
+            },
+            "confusion_matrix": {
+              "contradiction": {
+                "contradiction": 40,
+                "entailment": 3
+              },
+              "entailment": {
+                "entailment": 42,
+                "contradiction": 1
+              },
+              "neutral": {
+                "neutral": 40,
+                "contradiction": 2,
+                "entailment": 1
+              }
+            }
+          },
+          "safety": {
+            "policy": {
+              "tau_block": 0.05,
+              "tau_entail": 0.9
+            },
+            "action_distribution": {
+              "PASS": 45,
+              "CHALLENGE": 39,
+              "BLOCK": 45
+            },
+            "gold_contradictions": 43,
+            "gold_contradiction_escaping_BLOCK": 2,
+            "unsafe_contradiction_to_PASS": 2,
+            "gold_entailments": 43,
+            "false_BLOCK_on_entailment": 1,
+            "gold_neutrals": 43,
+            "neutral_wrongly_PASS": 1
+          }
+        }
+      }
+    },
+    "v1_legacy": {
+      "artifact_dir": "artifacts/models/incoming/phase3-finetuned",
+      "model_sha256": "77538ffdaaad581d97ed8b04f45df0624777a3c1bee873c093d2070ee4294897",
+      "cold_load_seconds": 0.56,
+      "threshold_policy": {
+        "tau_block": 0.3,
+        "tau_entail": 0.4,
+        "contradiction_recall_on_val": 0.9815,
+        "block_precision_on_val": 0.9636,
+        "block_f2_on_val": 0.9779,
+        "false_blocks_on_val_entailment": 2
+      },
+      "evaluations": {
+        "frozen_v2_val": {
+          "latency_seconds_for_n": {
+            "n": 143,
+            "seconds": 2.44
+          },
+          "metrics": {
+            "n": 143,
+            "accuracy": 0.6154,
+            "macro_f1": 0.5349,
+            "per_class": {
+              "contradiction": {
+                "support": 57,
+                "precision": 0.6023,
+                "recall": 0.9298,
+                "f1": 0.731
+              },
+              "entailment": {
+                "support": 53,
+                "precision": 0.725,
+                "recall": 0.5472,
+                "f1": 0.6237
+              },
+              "neutral": {
+                "support": 33,
+                "precision": 0.4,
+                "recall": 0.1818,
+                "f1": 0.25
+              }
+            },
+            "confusion_matrix": {
+              "contradiction": {
+                "contradiction": 53,
+                "entailment": 3,
+                "neutral": 1
+              },
+              "entailment": {
+                "entailment": 29,
+                "neutral": 8,
+                "contradiction": 16
+              },
+              "neutral": {
+                "neutral": 6,
+                "contradiction": 19,
+                "entailment": 8
+              }
+            }
+          },
+          "safety": {
+            "policy": {
+              "tau_block": 0.3,
+              "tau_entail": 0.4
+            },
+            "action_distribution": {
+              "PASS": 39,
+              "CHALLENGE": 15,
+              "BLOCK": 89
+            },
+            "gold_contradictions": 57,
+            "gold_contradiction_escaping_BLOCK": 4,
+            "unsafe_contradiction_to_PASS": 3,
+            "gold_entailments": 53,
+            "false_BLOCK_on_entailment": 17,
+            "gold_neutrals": 33,
+            "neutral_wrongly_PASS": 8
+          }
+        },
+        "frozen_v2_test": {
+          "latency_seconds_for_n": {
+            "n": 126,
+            "seconds": 1.98
+          },
+          "metrics": {
+            "n": 126,
+            "accuracy": 0.6746,
+            "macro_f1": 0.6593,
+            "per_class": {
+              "contradiction": {
+                "support": 44,
+                "precision": 0.6379,
+                "recall": 0.8409,
+                "f1": 0.7255
+              },
+              "entailment": {
+                "support": 40,
+                "precision": 0.6889,
+                "recall": 0.775,
+                "f1": 0.7294
+              },
+              "neutral": {
+                "support": 42,
+                "precision": 0.7391,
+                "recall": 0.4048,
+                "f1": 0.5231
+              }
+            },
+            "confusion_matrix": {
+              "contradiction": {
+                "contradiction": 37,
+                "entailment": 7
+              },
+              "entailment": {
+                "entailment": 31,
+                "neutral": 6,
+                "contradiction": 3
+              },
+              "neutral": {
+                "contradiction": 18,
+                "entailment": 7,
+                "neutral": 17
+              }
+            }
+          },
+          "safety": {
+            "policy": {
+              "tau_block": 0.3,
+              "tau_entail": 0.4
+            },
+            "action_distribution": {
+              "PASS": 45,
+              "CHALLENGE": 23,
+              "BLOCK": 58
+            },
+            "gold_contradictions": 44,
+            "gold_contradiction_escaping_BLOCK": 7,
+            "unsafe_contradiction_to_PASS": 7,
+            "gold_entailments": 40,
+            "false_BLOCK_on_entailment": 3,
+            "gold_neutrals": 42,
+            "neutral_wrongly_PASS": 7
+          }
+        },
+        "untouched_ood_129": {
+          "latency_seconds_for_n": {
+            "n": 129,
+            "seconds": 2.13
+          },
+          "metrics": {
+            "n": 129,
+            "accuracy": 0.5504,
+            "macro_f1": 0.4823,
+            "per_class": {
+              "contradiction": {
+                "support": 43,
+                "precision": 0.5067,
+                "recall": 0.8837,
+                "f1": 0.6441
+              },
+              "entailment": {
+                "support": 43,
+                "precision": 0.6818,
+                "recall": 0.6977,
+                "f1": 0.6897
+              },
+              "neutral": {
+                "support": 43,
+                "precision": 0.3,
+                "recall": 0.0698,
+                "f1": 0.1132
+              }
+            },
+            "confusion_matrix": {
+              "contradiction": {
+                "contradiction": 38,
+                "entailment": 4,
+                "neutral": 1
+              },
+              "entailment": {
+                "entailment": 30,
+                "neutral": 6,
+                "contradiction": 7
+              },
+              "neutral": {
+                "contradiction": 30,
+                "neutral": 3,
+                "entailment": 10
+              }
+            }
+          },
+          "safety": {
+            "policy": {
+              "tau_block": 0.3,
+              "tau_entail": 0.4
+            },
+            "action_distribution": {
+              "PASS": 44,
+              "CHALLENGE": 10,
+              "BLOCK": 75
+            },
+            "gold_contradictions": 43,
+            "gold_contradiction_escaping_BLOCK": 5,
+            "unsafe_contradiction_to_PASS": 4,
+            "gold_entailments": 43,
+            "false_BLOCK_on_entailment": 7,
+            "gold_neutrals": 43,
+            "neutral_wrongly_PASS": 10
+          }
+        }
+      }
+    }
+  }
+}

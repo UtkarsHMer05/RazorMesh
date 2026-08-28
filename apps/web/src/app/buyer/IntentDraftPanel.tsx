@@ -13,6 +13,20 @@ import { useCallback, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
+const _CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+function genUlid(): string {
+  const now = Date.now();
+  let value = BigInt(now) << BigInt(80);
+  const randBytes = new Uint8Array(10);
+  crypto.getRandomValues(randBytes);
+  for (let i = 0; i < 10; i++) value |= BigInt(randBytes[i]) << BigInt((9 - i) * 8);
+  let id = "";
+  for (let shift = 125; shift >= 0; shift -= 5) {
+    id += _CROCKFORD[Number((value >> BigInt(shift)) & BigInt(31))];
+  }
+  return id;
+}
+
 interface SemanticVerdict {
   action: "PASS" | "CHALLENGE" | "BLOCK";
   p_entailment: number;
@@ -40,7 +54,7 @@ interface DraftView {
   confirmed_generation: number | null;
 }
 
-export function IntentDraftPanel() {
+export function IntentDraftPanel({ onDraftConfirmed }: { onDraftConfirmed?: (draft: DraftView) => void }) {
   const [text, setText] = useState("");
   const [draft, setDraft] = useState<DraftView | null>(null);
   const [semantic, setSemantic] = useState<SemanticVerdict | null>(null);
@@ -57,8 +71,8 @@ export function IntentDraftPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           authorization_text: text,
-          principal_id: `usr_${crypto.randomUUID().replace(/-/g, "")}`,
-          agent_id: `agt_${crypto.randomUUID().replace(/-/g, "")}`,
+          principal_id: `usr_${genUlid()}`,
+          agent_id: `agt_${genUlid()}`,
         }),
       });
       if (!res.ok) throw new Error((await res.json()).detail?.code ?? "compile failed");
@@ -87,7 +101,11 @@ export function IntentDraftPanel() {
         });
         const body = await res.json();
         if (!res.ok) throw new Error(body.detail?.code ?? `${action} failed`);
-        setDraft({ ...draft, state: body.state ?? "CONFIRMED", ...body });
+        const updated = { ...draft, state: body.state ?? "CONFIRMED", ...body };
+        setDraft(updated);
+        if (action === "confirm" && onDraftConfirmed) {
+          onDraftConfirmed(updated);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {

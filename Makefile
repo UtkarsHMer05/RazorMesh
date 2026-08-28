@@ -15,8 +15,8 @@ UV      := uv
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
-setup: ## Install backend deps (uv sync), frontend deps (pnpm), generate dev keys
-	$(UV) sync --project $(API_DIR)
+setup: ## Install backend deps (uv sync incl. semantic group), frontend deps (pnpm), generate dev keys
+	$(UV) sync --project $(API_DIR) --group semantic
 	@if [ -d "$(WEB_DIR)" ]; then cd $(WEB_DIR) && pnpm install; else echo "skip pnpm: $(WEB_DIR) not scaffolded yet"; fi
 	@$(MAKE) --no-print-directory keys
 
@@ -39,8 +39,8 @@ typecheck: ## Static type checks (mypy backend, tsc frontend)
 
 test: test-backend test-frontend ## Run full local test suite
 
-test-backend: ## Backend pytest suite (unit/integration/security/concurrency)
-	$(UV) run --project $(API_DIR) pytest
+test-backend: ## Backend pytest suite (unit/integration/security/concurrency + live DeBERTa runtime)
+	$(UV) run --project $(API_DIR) --group semantic pytest
 
 test-frontend: ## Frontend vitest suite
 	@if [ -d "$(WEB_DIR)" ]; then cd $(WEB_DIR) && pnpm test; else echo "frontend not scaffolded yet"; fi
@@ -74,8 +74,8 @@ seed: ## Load synthetic merchant catalog (idempotent)
 
 dev: dev-api ## Convenience alias
 
-dev-api: ## Run FastAPI locally (127.0.0.1:8000)
-	$(UV) run --project $(API_DIR) uvicorn razormesh_api.api.main:app --host 127.0.0.1 --port 8000 --reload
+dev-api: ## Run FastAPI locally (127.0.0.1:8000) with the DeBERTa semantic runtime
+	$(UV) run --project $(API_DIR) --group semantic uvicorn razormesh_api.api.main:app --host 127.0.0.1 --port 8000 --reload
 
 dev-web: ## Run Next.js locally (localhost:3000)
 	@if [ -d "$(WEB_DIR)" ]; then cd $(WEB_DIR) && pnpm dev; else echo "frontend not scaffolded yet"; fi

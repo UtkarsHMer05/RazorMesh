@@ -89,6 +89,7 @@ Decision reference:
 
 | Date | Milestone | Component | Old | New | Reason |
 |---|---|---|---|---|---|
+| 2026-08-28 | Phase-3 correction (runtime semantic verifier) | torch + transformers (services/api optional `semantic` dependency group) | not installed in API env | torch==2.13.0, transformers==5.15.1 (exact pins) | Production backend is the fine-tuned DeBERTa verifier (D-053); optional group keeps lightweight installs torch-free (fail-closed); exact pins match the versions used to train/revalidate/benchmark the v2 artifact; pip-audit clean at gate time |
 | 2026-08-25 | P3-M06 (planned; install at M28+/M31) | transformers | — | 5.15.1 | current stable live-resolved from PyPI; DeBERTa-v3 supported since 4.13+ per model card |
 | 2026-08-25 | P3-M06 (planned; install at M19+) | datasets | — | >=5.0.1 | current stable; PYSEC-2026-3716 fixed in 5.0.1 → advisory-driven floor |
 | 2026-08-25 | P3-M06 (planned; notebook bundle M31/M32) | accelerate | — | 1.14.0 | current stable, HF Trainer backend |

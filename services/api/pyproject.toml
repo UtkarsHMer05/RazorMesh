@@ -29,6 +29,16 @@ dev = [
     "pip-audit==2.10.1",
     "httpx2==2.12.0",
 ]
+# Optional runtime group for the fine-tuned DeBERTa semantic verifier
+# (Phase-3 correction brief §11/§14/§16). Kept OUT of the default install so
+# lightweight API/CI environments stay torch-free; those environments fail
+# CLOSED to CHALLENGE (never a silent keyword-verifier substitution).
+# Pinned to the exact versions used to train, revalidate and benchmark the
+# frozen v2 artifact (see docs/PHASE3_MODEL_SETUP.md).
+semantic = [
+    "torch==2.13.0",
+    "transformers==5.15.1",
+]
 
 [build-system]
 requires = ["hatchling"]

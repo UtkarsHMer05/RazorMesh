@@ -4,6 +4,16 @@
 **Status:** `AUTONOMOUS_50_OF_50_PASS / AWAITING_FINAL_HUMAN_ACCEPTANCE`.
 **Mode:** Autonomous M01..M50 completed locally; no human gate before M50. The single final human gate is OUTSIDE the milestone count (one prepared Razorpay Test-mode transaction, per master prompt §22 and §28).
 
+> **2026-08-28 update (Phase-3 correction):** the acceptance path's semantic
+> stage now runs the real fine-tuned DeBERTa verifier
+> (`phase3-finetuned-v2`, policy `semantic-thresholds-v3`, backend
+> `deberta`) — no keyword-only runtime is presented as Phase-3 semantics.
+> Final human acceptance evidence will record `semantic_backend`, model
+> version/hash, probabilities and policy version. Live-ingress E2E 13/13
+> with the real model; backend 755 passed. See
+> docs/PHASE3_DATASET_AND_RUNTIME_FINAL_AUDIT.md §7. Awaiting human
+> acceptance unchanged.
+
 | Milestone | Status | Notes |
 |---|---|---|
 | M01 Repository / Governance / UI Baseline Inspection | PASS | 2026-08-27, commit 336f907; no code changes |

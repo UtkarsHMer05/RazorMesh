@@ -157,6 +157,11 @@ class CheckoutService:
     def engine(self) -> DecisionEngine:
         return self._engine
 
+    @property
+    def ledger(self) -> EvidenceLedger:
+        """Read-only access for dependent trust stages (semantic audit)."""
+        return self._ledger
+
     # ------------------------------------------------------------------
     # proposal (server-authoritative amounts)
     # ------------------------------------------------------------------

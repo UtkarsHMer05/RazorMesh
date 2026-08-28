@@ -23,6 +23,11 @@ def record_semantic_verification(
     attempt_id: str,
     verdict: SemanticVerdict,
     actor: str = "semantic-verifier",
+    semantic_backend: str = "deberta",
+    model_version: str = "",
+    model_artifact_hash: str = "",
+    pair_count: int = 0,
+    duration_ms: float = 0.0,
 ) -> None:
     ledger.append(
         event_type="SEMANTIC_VERIFICATION_RUN",
@@ -30,14 +35,20 @@ def record_semantic_verification(
         intent_id=intent_id,
         payload={
             "execution_attempt_id": attempt_id,
+            "semantic_backend": semantic_backend,
             "model_id": verdict.model_id,
+            "model_version": model_version,
+            "model_artifact_hash": model_artifact_hash,
             "policy_version": verdict.policy_version,
+            "pair_count": pair_count,
             "p_entailment": round(verdict.p_entailment, 6),
             "p_neutral": round(verdict.p_neutral, 6),
             "p_contradiction": round(verdict.p_contradiction, 6),
             "action": verdict.action.value,
+            "decision": verdict.action.value,
             "fail_closed": verdict.fail_closed,
             "reason": verdict.reason,
+            "duration_ms": round(duration_ms, 3),
             "text_stored": False,
         },
     )

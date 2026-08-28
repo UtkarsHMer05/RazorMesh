@@ -94,6 +94,76 @@ async function reachCheckoutPhase(fetchMock: ReturnType<typeof mockFetch>) {
   await waitFor(() => expect(captured).not.toBeNull());
 }
 
+describe("P3-M17: AI draft budget filters products", () => {
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  it("confirmed draft max_amount hides products above the budget", async () => {
+    const fetchMock = vi
+      .fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+        if (url.includes("/catalog/products")) {
+          return json({
+            items: [
+              { id: "p_cheap", title: "Cheap headphones", brand: null, price_minor: 300000, shipping_minor: 0, currency: "INR" },
+              { id: "p_expensive", title: "Expensive headphones", brand: null, price_minor: 700000, shipping_minor: 0, currency: "INR" },
+              { id: "p_speaker", title: "Bluetooth Speaker", brand: null, price_minor: 100000, shipping_minor: 0, currency: "INR" },
+            ],
+          });
+        }
+        if (url.includes("/buyer/fixture-intent")) return json({ intent_id: "intent_test" });
+        if (url.includes("/compile")) {
+          return json({
+            draft_id: "drf_test",
+            state: "DRAFT",
+            payload: {
+              product_summary: "headphones",
+              hard: { max_amount: { amount_minor: 500000, currency: "INR" } },
+              ambiguities: [],
+              unspecified: [],
+            },
+            compiler_model: "test",
+            prompt_version: "v1",
+            superseded_by: null,
+            intent_id: null,
+            confirmed_generation: null,
+          });
+        }
+        if (url.includes("/confirm")) return json({ draft_id: "drf_test", state: "CONFIRMED", intent_id: "intent_test" });
+        throw new Error(`unexpected: ${url}`);
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("crypto", {
+      randomUUID: () => "00000000-0000-4000-8000-000000000001",
+      getRandomValues: (arr: Uint8Array) => arr.fill(1),
+    });
+
+    render(<BuyerPage />);
+    await screen.findByTestId("product-list");
+    await screen.findByTestId("intent-id");
+
+    // Compile and confirm the draft with a 5000-rupee budget
+    await screen.findByTestId("nl-input");
+    fireEvent.change(screen.getByTestId("nl-input"), { target: { value: "Buy headphones under 5000 rupees" } });
+    fireEvent.click(screen.getByTestId("compile-btn"));
+    await screen.findByTestId("draft-view");
+    fireEvent.click(screen.getByTestId("confirm-draft"));
+    await waitFor(() => expect(screen.getByTestId("confirmed-note")).toBeInTheDocument());
+
+    // Only the cheap headphones should remain — expensive headphones AND
+    // the Bluetooth Speaker should both be filtered (price + product type)
+    const radios = await screen.findAllByRole("radio");
+    expect(radios).toHaveLength(1);
+    expect(radios[0].closest("label")?.textContent).toContain("Cheap headphones");
+    // The non-headphone product (Bluetooth Speaker) must not appear
+    expect(screen.queryByText(/Bluetooth Speaker/i)).toBeNull();
+  });
+});
+
 describe("P2-M40: buyer UI re-syncs payment truth from the server", () => {
   beforeEach(() => {
     statusResponse = { state: "EXECUTING" };

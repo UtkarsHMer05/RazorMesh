@@ -30,14 +30,35 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust
 **Active phase:** Phase 4 ACTIVE (M01–M50 AUTONOMOUS PASS, awaiting human acceptance)
-**Current milestone:** M50 — Phase-4 final completion report shipped.
-**Last updated:** 2026-08-27 (Phase-4 M49/M50 re-run green).
-**Gate (Phase 4 final M49):** `services/api` ruff clean / mypy clean / pytest
+**Current milestone:** Phase-3 dataset + semantic-runtime correction COMPLETE (2026-08-28).
+**Last updated:** 2026-08-28 (Phase-3 correction: frozen_v2 dataset, v2 checkpoint,
+DeBERTa wired as the live runtime semantic verifier; backend 755 passed incl.
+13/13 live-ingress E2E with the real model; ruff/mypy clean; frontend gates green).
+**Gate (Phase 4 final M49, historical):** `services/api` ruff clean / mypy clean / pytest
 718/718 PASS; `apps/web` typecheck 0 errors / lint 0 errors / vitest 76 PASS /
 `next build` 6 static routes. AgentPay-X 191/191 with 100% safe-pass, 100%
 attack-block, 0 false-allow, 0 false-block.
-**Evidence pack:** `docs/PHASE4_FINAL_COMPLETION_REPORT.md`.
+**Evidence pack (correction):** `docs/PHASE3_DATASET_AND_RUNTIME_FINAL_AUDIT.md`.
 **Autonomous flag:** `AUTONOMOUS_50_OF_50_PASS / AWAITING_FINAL_HUMAN_ACCEPTANCE`.
+
+Phase-3 correction essentials (D-053):
+- frozen_v2 AgentPay-IR v0.2 = canonical orientation (premise=evidence,
+  hypothesis=authorization), 648/143/126 splits + untouched OOD 129, leakage
+  gate PASS, 35/35 families.
+- Runtime artifact `artifacts/models/incoming/phase3-finetuned-v2`
+  (sha256 163864e0…, base cross-encoder/nli-deberta-v3-base, label map
+  0=contradiction/1=entailment/2=neutral), policy `semantic-thresholds-v3`
+  (tau_block=0.05, tau_entail=0.9; calibrated on frozen_v2 val ONLY).
+- `SEMANTIC_VERIFIER_BACKEND=deberta` is the production/default backend;
+  torch 2.13.0 + transformers 5.15.1 live in the OPTIONAL uv group
+  `semantic`; no-torch envs fail CLOSED to CHALLENGE (never keyword fallback).
+  Per-process singleton load + manifest-hash enforcement; keyword verifier is
+  only the labeled `deterministic_test_stub`.
+- `make test-backend` / `make dev-api` / `make setup` use `--group semantic`.
+- Orientation diagnostic (RETRAIN_REQUIRED=YES) and v1-vs-v2 revalidation
+  numbers live in docs/PHASE3_ORIENTATION_DIAGNOSTIC.md and
+  docs/PHASE3_MODEL_REVALIDATION.md; perf in docs/PHASE3_RUNTIME_PERFORMANCE.md
+  (cold 0.61s, p50 51.9ms, p95 65.1ms, RSS 792MiB).
 
 Historical Phase-3 re-audit facts (2026-08-27) are preserved above and
 remain valid — they describe the prior Phase-3 state and are not
@@ -137,7 +158,11 @@ M49 re-run; awaiting human acceptance per `docs/PHASE4_FINAL_COMPLETION_REPORT.m
 
 Carried forward (out of Phase-4 scope, unchanged from prior audit):
 - `services/api/scripts/*` and `services/api/training/phase3/*` ruff drifts.
-- 4 pre-existing E2E failures in `e2e/gold-reviewer.spec.ts`.
+- 4 pre-existing E2E failures in `e2e/gold-reviewer.spec.ts` (unchanged;
+  2026-08-28 additionally repaired the stale checkout E2E locators for the
+  auto-create fixture-intent UI: checkout.spec 3/3; the one-off
+  `e2e/snapshot.spec.ts` capture utility (self-described, not a regression
+  test) fails on mobile fullPage screenshot in this environment).
 - Historical Phase-3 re-audit observations preserved above remain valid
   as prior-state evidence; they are not retroactively retracted by Phase 4.
 
@@ -145,8 +170,12 @@ Historical Phase-3 audit notes (kept intact per existing-file protection):
 - Concurrent Phase-4 changes previously broke whole-worktree gates; resolved
   by ruff per-file-ignores for `protocol/*_proof.py`, `agentpay_x.py`,
   `untrusted_agent.py`, and `training/*`.
-- Confirmation discards merchant/semantic/product restrictions; confirmed AI
-  authority is not connected to buyer checkout; browser IDs are invalid ULIDs.
+  - Confirmation discards merchant/semantic/product restrictions; confirmed AI
+  authority is not connected to buyer checkout; browser IDs are invalid ULIDs
+  (FIXED 2026-08-28: IntentDraftPanel now generates Crockford-base32 ULIDs via
+  genUlid() instead of UUIDv4; product list dynamically filtered by confirmed
+  draft's max_amount + product_summary constraints with budget-only fallback;
+  e2e compile+confirm+checkout+pay verified with real TokenRouter API).
 - Production checkout never ran the Phase-3 evidence/verifier/fusion stage
   in the prior state; M43 UI evidence was unreachable. (Phase 4 did not
   modify Phase-3 logic; this remains a prior-state observation.)
@@ -190,10 +219,12 @@ by title as well as ID until the governance collision is separately reconciled.
 
 # Next action
 
-Wait for human acceptance of the Phase-4 final completion report
-(`docs/PHASE4_FINAL_COMPLETION_REPORT.md`). After acceptance, the next
-lawful action is to push the existing local milestone commit(s); no
-code change is required.
+Phase-3 correction is COMPLETE and fully gated (2026-08-28). Wait for human
+acceptance of Phase 4; the acceptance run will execute the real DeBERTa
+semantic stage and record `semantic_backend`/model hash/probabilities. After
+acceptance, the next lawful action is to push the existing local milestone
+commit(s) (weights stay git-ignored; docs/PHASE3_MODEL_SETUP.md documents the
+artifact).
 
 Historical Phase-3 re-audit queue remains preserved above as
 prior-state evidence; it is not the current active queue.

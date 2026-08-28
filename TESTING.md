@@ -436,3 +436,23 @@ On top of all Phase-1/2 gates:
   original 307-row evaluation.
 - Full coverage requires the exact expected case-ID set, not just a row count.
   No API calls are permitted in evaluator/summary regression tests.
+
+### Phase-3 correction gate (D-053, 2026-08-28) — permanent release gate
+
+- Backend suite MUST run with the optional `semantic` dependency group
+  (`uv run --project services/api --group semantic pytest`; `make
+  test-backend` does this) so the live Phase-4 chain is exercised against the
+  real fine-tuned DeBERTa runtime, not a stub.
+- Release-blocking assertions: label-map ordering (0=contradiction,
+  1=entailment, 2=neutral); artifact-manifest hash enforcement (mismatch
+  cannot run); per-process singleton verifier cache; fail-closed matrix
+  (missing model, unknown backend, inference error -> CHALLENGE; hard BLOCK
+  stays BLOCK); conservative pair aggregation (any BLOCK -> BLOCK);
+  `deterministic_test_stub` never reports itself as DeBERTa; orchestrator
+  wiring matches settings; Phase-4 live-ingress E2E green with the real
+  model.
+- Environments WITHOUT the semantic group must fail closed (semantic stage
+  CHALLENGE), never crash and never silently substitute the keyword verifier.
+- Runtime performance baseline is recorded in
+  docs/PHASE3_RUNTIME_PERFORMANCE.md; re-record after any model/threshold
+  change.

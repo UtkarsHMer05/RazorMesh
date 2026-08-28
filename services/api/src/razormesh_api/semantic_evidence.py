@@ -10,6 +10,12 @@ sanitized commerce evidence. Guarantees (P3-S05):
 - untrusted product/seller text cannot inject a new hypothesis: it is only
   ever embedded inside the PREMISE where it can lower trust, never raise it.
 
+Phase-3 correction (§2/§17): pair texts follow the canonical orientation and
+the frozen AgentPay-IR v2 corpus phrasing the fine-tuned model was trained on
+(``data/phase3/dataset/frozen_v2``). A pair is emitted ONLY for an aspect the
+confirmed authorization actually constrains — an aspect with no authorization
+term has no hypothesis to verify.
+
 Pure function over plain data; no I/O; no model calls.
 """
 
@@ -28,6 +34,11 @@ class CommerceEvidence:
     seller_name: str | None
     recurring_terms: bool
     shipping_included: bool | None = None
+    # Server-recomputed checkout total (sum of unit_price x quantity + tax+shipping+fees).
+    # When present the budget pair states the FINAL total, matching the corpus
+    # ``price_constraint`` template; when absent the builder falls back to the
+    # listing price. Default None keeps historical construction sites valid.
+    final_total_minor: int | None = None
 
 
 @dataclass(frozen=True)
@@ -37,11 +48,13 @@ class EvidencePair:
     aspect: str
 
 
-def _cap_text(amount_minor: int | None, currency: str | None) -> str:
-    if amount_minor is None or currency is None:
-        return "an unspecified budget"
+_CURRENCY_SYMBOLS = {"INR": "₹", "USD": "$", "EUR": "€", "GBP": "£"}
+
+
+def _money_text(amount_minor: int, currency: str | None) -> str:
     major = amount_minor / 100
-    return f"{currency} {major:,.2f}"
+    symbol = _CURRENCY_SYMBOLS.get((currency or "").upper())
+    return f"{symbol}{major:,.2f}" if symbol else f"{currency or ''} {major:,.2f}".strip()
 
 
 def build_pairs(
@@ -51,57 +64,89 @@ def build_pairs(
     currency: str,
     recurring_forbidden: bool,
     brand_allowlist: tuple[str, ...] = (),
+    allowed_conditions: tuple[str, ...] | None = None,
 ) -> list[EvidencePair]:
-    """One pair per verifiable aspect of the confirmed authorization."""
-    pairs: list[EvidencePair] = []
-    cap = _cap_text(max_amount_minor, currency)
+    """One pair per verifiable aspect of the confirmed authorization.
 
-    price_text = (
-        f"The listing price is {evidence.price_minor / 100:,.2f} {evidence.currency}."
-        if evidence.price_minor is not None and evidence.currency
-        else "The listing does not display a comparable total price."
-    )
+    ``allowed_conditions=None`` means the human placed no condition
+    requirement on this intent and no condition pair is built (unknown
+    evidence would otherwise map to NEUTRAL → CHALLENGE for legitimately
+    permissive authorizations).
+    """
+    pairs: list[EvidencePair] = []
+
+    if evidence.final_total_minor is not None:
+        price_text = (
+            "The tax-inclusive final total is "
+            f"{_money_text(evidence.final_total_minor, evidence.currency or currency)} "
+            "with no later mandatory fees."
+        )
+    elif evidence.price_minor is not None and evidence.currency:
+        price_text = f"The listing price is {_money_text(evidence.price_minor, evidence.currency)}."
+    else:
+        price_text = "The listing does not display a comparable total price."
     pairs.append(
         EvidencePair(
             premise=f"Product page states: {evidence.item_title}. {price_text}",
-            hypothesis=f"The purchase stays within the authorized budget of {cap}.",
+            hypothesis=(
+                "The human authorized a final payable total no higher than "
+                f"{_money_text(max_amount_minor, currency)}."
+            ),
             aspect="budget_ceiling",
         )
     )
 
     if brand_allowlist:
-        listed_brand = (evidence.brand or "").strip().casefold()
-        allowed = ", ".join(b.casefold() for b in brand_allowlist)
+        allowed = " or ".join(b.casefold() for b in brand_allowlist)
         pairs.append(
             EvidencePair(
-                premise=(
-                    f"Seller/listing identifies the brand as '{evidence.brand or 'unknown'}'."
-                ),
-                hypothesis=(f"The authorized brand restriction ({allowed}) is satisfied."),
+                premise=f"The brand field reads {evidence.brand or 'unknown'}.",
+                hypothesis=f"The human authorized only {allowed} branded products.",
                 aspect="brand_identity",
             )
         )
-        _ = listed_brand
 
-    condition = (evidence.condition or "unknown").strip().casefold()
-    pairs.append(
-        EvidencePair(
-            premise=f"Listing states the item condition as: {condition}.",
-            hypothesis="The human requires the item to be new.",
-            aspect="condition_new_only",
+    if allowed_conditions is not None:
+        condition = (evidence.condition or "").strip().casefold()
+        if condition in allowed_conditions:
+            premise = f"The item condition field reads {condition.capitalize()} - factory sealed."
+        elif condition:
+            premise = (
+                f"The item condition field reads {condition.capitalize()} "
+                "- as stated by the seller."
+            )
+        else:
+            premise = "The item condition is not stated on the listing."
+        if len(allowed_conditions) == 1:
+            only = next(iter(allowed_conditions))
+            hypothesis = (
+                "The human authorized only a factory-new, previously unused item."
+                if only == "new"
+                else f"The human authorized only a {only} item."
+            )
+        else:
+            ordered = ", ".join(sorted(allowed_conditions)[:-1])
+            last = sorted(allowed_conditions)[-1]
+            hypothesis = f"The human authorized only a {ordered} or {last} item."
+        pairs.append(
+            EvidencePair(
+                premise=premise,
+                hypothesis=hypothesis,
+                aspect="condition_new_only",
+            )
         )
-    )
 
     if recurring_forbidden:
         renewal_note = (
-            "auto-renewing subscription terms are disclosed"
+            "The purchase includes a plan that continues at a periodic fee "
+            "every month with no action required."
             if evidence.recurring_terms
-            else "no auto-renewing subscription terms are disclosed"
+            else "The order line shows no renewal and no recurring fee after purchase."
         )
         pairs.append(
             EvidencePair(
-                premise=(f"Checkout disclosure states that {renewal_note} for this item."),
-                hypothesis="The human forbade any recurring charges.",
+                premise=renewal_note,
+                hypothesis="The human authorized a one-time purchase with no recurring charge.",
                 aspect="recurring_forbidden",
             )
         )

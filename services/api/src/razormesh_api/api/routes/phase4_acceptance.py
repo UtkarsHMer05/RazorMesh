@@ -20,6 +20,7 @@ the payment provider, shell access, or arbitrary networking.
 
 from __future__ import annotations
 
+from pathlib import Path as FilePath
 from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Path
@@ -50,15 +51,19 @@ def build_orchestrator() -> Phase4AcceptanceOrchestrator:
     """Construct an orchestrator with the real buyer-flow services.
 
     Nothing here can force an ALLOW: the orchestrator reaches RazorGuard
-    through ``CheckoutService``, and the semantic seam defaults to the
-    credential-free deterministic verifier, which can only make the
-    outcome stricter.
+    through ``CheckoutService``, and the semantic stage defaults to the
+    fine-tuned DeBERTa NLI verifier (``SEMANTIC_VERIFIER_BACKEND=deberta``).
+    The deterministic keyword verifier is used only when explicitly selected
+    via ``deterministic_test_stub`` and is reported as such.
     """
     settings: Settings = get_settings()
     repos_obj = _repos(settings=settings)
     keys_obj = _keys(settings=settings)
     return Phase4AcceptanceOrchestrator(
         checkout_service=_service(repos=repos_obj, keys=keys_obj),
+        semantic_model_dir=FilePath(settings.semantic_model_path),
+        semantic_policy_path=FilePath(settings.semantic_policy_path),
+        semantic_backend=settings.semantic_verifier_backend,
     )
 
 

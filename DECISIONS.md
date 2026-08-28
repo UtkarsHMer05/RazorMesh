@@ -1487,3 +1487,53 @@ Consequences: no security requirement is relaxed; benchmark/ML completion remain
 blocked. Existing Phase-4 commits and dirty files are preserved, not endorsed or
 expanded. A scoped regression pass is not full M48 or clean-room M49 acceptance.
 Exact reproductions and remaining repairs are in the dated re-audit report.
+
+## D-053 — Wire the fine-tuned canonical-orientation DeBERTa as the runtime SemanticVerifier (Phase-3 correction, 2026-08-28)
+
+Context: The Phase-3 correction brief (human-ordered, 2026-08-28) established
+that "Phase-1 forbids DeBERTa inference as a production dependency" was NOT
+the intended Phase-3 architecture; the true invariant is AI IS NOT AUTHORITY.
+The paired orientation diagnostic
+(docs/PHASE3_ORIENTATION_DIAGNOSTIC.md) showed the v1 checkpoint degrades in
+the canonical runtime orientation (1 gold contradiction flipped
+contradiction->entailment; RETRAIN_REQUIRED=YES), so a corrected dataset and
+checkpoint were required.
+
+Decision:
+1. AgentPay-IR v0.2 (frozen_v2) freezes the canonical orientation uniformly:
+   premise = current sanitized commerce evidence; hypothesis = normalized
+   human authorization constraint. Leakage gate PASS (zero cross-split
+   overlap at split_group/content/normalized/Jaccard>=0.85 level; 35/35
+   families; 330 conceptual parents).
+2. The runtime verifier is the fine-tuned v2 checkpoint
+   (artifacts/models/incoming/phase3-finetuned-v2, base
+   cross-encoder/nli-deberta-v3-base, sha256 163864e0…, seed 42,
+   label map 0=contradiction/1=entailment/2=neutral) behind
+   SEMANTIC_VERIFIER_BACKEND=deberta (default), with thresholds frozen in
+   semantic-thresholds-v3 (tau_block=0.05, tau_entail=0.9; calibrated on
+   frozen_v2 val ONLY). The deterministic keyword verifier survives ONLY as
+   the explicitly labeled deterministic_test_stub backend; it is never a
+   silent production substitute.
+3. torch 2.13.0 + transformers 5.15.1 ship as an OPTIONAL uv dependency group
+   (`semantic`) so lightweight installs stay torch-free; such installs fail
+   CLOSED to CHALLENGE (never crash, never silently substitute). The API
+   loads the model once per process and enforces the manifest weights hash on
+   load.
+4. Runtime pair construction emits corpus-aligned atomic pairs ONLY for
+   aspects the confirmed authorization constrains (§17): budget (final
+   server-recomputed total), recurring (only when forbidden), brand (only
+   with an allowlist), condition (only when the intent constrains condition).
+   This prevents "unknown evidence -> NEUTRAL -> CHALLENGE" on legitimately
+   permissive authorizations while fail-closed behavior is preserved for
+   aspects actually at stake.
+5. Fusion invariant unchanged (D-039): semantics may only STRICTEN; all 3x3
+   hard x semantic combinations are exhaustively tested; conservative
+   pair aggregation (any BLOCK -> BLOCK) is bound to a real pair verdict.
+
+Consequences: DeBERTa is an ACTIVE runtime semantic verifier (no longer
+"evaluation-only", which now describes only the historical intermediate
+state); deterministic RazorGuard remains the sole financial authority; the
+model still cannot create tickets, confirm authorization, call providers, or
+mutate checkout facts. Full regression: backend 755 passed with the live
+DeBERTa runtime, ruff/mypy clean, frontend gates green
+(docs/PHASE3_DATASET_AND_RUNTIME_FINAL_AUDIT.md).

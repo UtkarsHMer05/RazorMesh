@@ -52,7 +52,10 @@ describe("P3-M17: intent draft panel", () => {
         }),
       });
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubGlobal("crypto", { randomUUID: () => "00000000-0000-4000-8000-000000000001" });
+    vi.stubGlobal("crypto", {
+      randomUUID: () => "00000000-0000-4000-8000-000000000001",
+      getRandomValues: (arr: Uint8Array) => arr.fill(1),
+    });
 
     render(<IntentDraftPanel />);
     fireEvent.change(screen.getByTestId("nl-input"), {
@@ -93,7 +96,10 @@ describe("P3-M17: intent draft panel", () => {
         }),
       }),
     );
-    vi.stubGlobal("crypto", { randomUUID: () => "00000000-0000-4000-8000-000000000002" });
+    vi.stubGlobal("crypto", {
+      randomUUID: () => "00000000-0000-4000-8000-000000000002",
+      getRandomValues: (arr: Uint8Array) => arr.fill(2),
+    });
 
     render(<IntentDraftPanel />);
     fireEvent.change(screen.getByTestId("nl-input"), { target: { value: "Buy headphones" } });

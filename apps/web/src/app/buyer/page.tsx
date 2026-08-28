@@ -66,6 +66,20 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 const fmtINR = (minor: number) =>
   `₹${(minor / 100).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
 
+const _extractKeywords = (summary: string): string[] => {
+  const cleaned = summary.replace(/^requested\s+/i, "");
+  const parts = cleaned.split(/[\s/,(]+/).filter((w) => w.length >= 3);
+  return parts.length > 0 ? parts : [];
+};
+
+const _matchesProductType = (title: string, brand: string | null, keywords: string[]): boolean => {
+  const haystack = `${title} ${brand ?? ""}`.toLowerCase();
+  return keywords.some((kw) => {
+    const lower = kw.toLowerCase();
+    return haystack.includes(lower) || haystack.includes(lower.replace(/s$/, ""));
+  });
+};
+
 export default function BuyerPage() {
   const [intentId, setIntentId] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -77,6 +91,8 @@ export default function BuyerPage() {
   const lastLaunchRef = useRef<NonNullable<ExecutionState["launch"]> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [maxBudgetMinor, setMaxBudgetMinor] = useState<number | null>(null);
+  const [productSummary, setProductSummary] = useState<string>("");
 
   useEffect(() => {
     let ignore = false;
@@ -300,13 +316,31 @@ export default function BuyerPage() {
   const stepClass = (done: boolean, active: boolean) =>
     `card ${styles.step} ${done ? styles['step-done'] : ''} ${active ? styles['step-active'] : ''}`;
 
+  const displayProducts = (() => {
+    const budgetFiltered = products.filter(
+      (p) => maxBudgetMinor === null || p.price_minor <= maxBudgetMinor,
+    );
+    if (!productSummary) return budgetFiltered;
+    const keywords = _extractKeywords(productSummary);
+    if (keywords.length === 0) return budgetFiltered;
+    const typeFiltered = budgetFiltered.filter((p) => _matchesProductType(p.title, p.brand, keywords));
+    return typeFiltered.length > 0 ? typeFiltered : budgetFiltered;
+  })();
+
   return (
     <section aria-labelledby="buyer-title">
       <div className="container">
         <h1 className="page-title" id="buyer-title" style={{ marginBottom: 24 }}>
           Buyer experience
         </h1>
-        <IntentDraftPanel />
+        <IntentDraftPanel
+          onDraftConfirmed={(draft) => {
+            const hard = draft.payload?.hard as Record<string, unknown> | undefined;
+            const maxAmount = hard?.max_amount as { amount_minor?: number } | undefined;
+            setMaxBudgetMinor(maxAmount?.amount_minor ?? null);
+            setProductSummary(draft.payload?.product_summary ?? "");
+          }}
+        />
         <p className="page-sub">
           Fixture authorization → catalog → proposed checkout → RazorGuard decision →
           simulated execution. Every decision is produced by the backend — never by this UI.
@@ -339,8 +373,8 @@ export default function BuyerPage() {
           <p>Loading catalog…</p>
         ) : (
           <ul data-testid="product-list">
-            {products.slice(0, 12).map((p) => (
-              <li key={p.id}>
+            {displayProducts.slice(0, 20).map((p) => (
+                <li key={p.id}>
                 <label>
                   <input
                     type="radio"

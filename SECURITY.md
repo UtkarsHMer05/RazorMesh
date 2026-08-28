@@ -444,6 +444,17 @@ measured and disclosed.
 **P3-S20** No fabricated model/benchmark metrics; every number traces to a
 recorded artifact with hash.
 
+> **Runtime status (2026-08-28, D-053):** P3-S05..S20 are enforced by the
+> WIRED runtime semantic stage — the fine-tuned canonical-orientation v2
+> artifact (`phase3-finetuned-v2`, backend `deberta` default, thresholds
+> `semantic-thresholds-v3`), per-process singleton load with manifest hash
+> enforcement, fail-closed on any failure (P3-S08), keyword verifier only as
+> the labeled `deterministic_test_stub`. P3-S18 now reads: NLI-only output is
+> not payment authority; it strictly tightens the deterministic RazorGuard
+> decision. Historical intermediate state (keyword verifier as the runtime
+> seam, DeBERTa evaluation-only) is preserved in the dated re-audit and
+> superseded by docs/PHASE3_DATASET_AND_RUNTIME_FINAL_AUDIT.md.
+
 Defensive scenario families T25+ (Security Lab, M41): disguised subscription,
 refurbished-vs-new condition, seller alias/ambiguity, hidden renewal,
 bundle obligation, double negation, prompt injection, safe lookalikes — each

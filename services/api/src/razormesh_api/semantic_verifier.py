@@ -125,15 +125,42 @@ class DebertaNLISemanticVerifier:
         version: str = self._policy["policy_version"]
         return version
 
+    @property
+    def model_version(self) -> str:
+        """Short non-secret artifact identifier (correction brief §15/§21)."""
+        return str(self._policy.get("model") or self._model_dir.name)
+
+    def _verify_artifact_integrity(self) -> None:
+        """If a model_manifest.json ships with the artifact, enforce its hash.
+
+        A manifest with a mismatching model SHA-256 must fail closed (correction
+        brief §15/§20): the load raises and ``verify`` converts that into a
+        CHALLENGE verdict rather than running tampered weights.
+        """
+        manifest_path = self._model_dir / "model_manifest.json"
+        if not manifest_path.exists():
+            return
+        manifest = json.loads(manifest_path.read_text())
+        weights = self._model_dir / "model.safetensors"
+        expected = manifest.get("model_sha256")
+        if not isinstance(expected, str) or not expected:
+            raise ValueError("model_manifest.json missing model_sha256")
+        import hashlib
+
+        digest = hashlib.sha256(weights.read_bytes()).hexdigest()
+        if digest != expected:
+            raise ValueError(f"model artifact hash mismatch: manifest={expected} actual={digest}")
+
     def _ensure_loaded(self) -> None:
         if self._model is not None:
             return
-        import torch  # type: ignore[import-not-found]
-        from transformers import (  # type: ignore[import-not-found]
+        import torch
+        from transformers import (
             AutoModelForSequenceClassification,
             AutoTokenizer,
         )
 
+        self._verify_artifact_integrity()
         tok = AutoTokenizer.from_pretrained(str(self._model_dir))
         mdl = AutoModelForSequenceClassification.from_pretrained(str(self._model_dir))
         mdl.eval()

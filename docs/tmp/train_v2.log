@@ -1,0 +1,70 @@
+canonical corpus: train=648 val=143 device=cpu threads=6
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Map:   0%|          | 0/648 [00:00<?, ? examples/s]Map: 100%|██████████| 648/648 [00:00<00:00, 12655.27 examples/s]
+Map:   0%|          | 0/143 [00:00<?, ? examples/s]Map: 100%|██████████| 143/143 [00:00<00:00, 15681.49 examples/s]
+Loading weights:   0%|          | 0/202 [00:00<?, ?it/s]Loading weights: 100%|██████████| 202/202 [00:00<00:00, 5735.04it/s]
+  0%|          | 0/123 [00:00<?, ?it/s]  1%|          | 1/123 [00:04<08:54,  4.38s/it]  2%|▏         | 2/123 [00:07<07:35,  3.76s/it]  2%|▏         | 3/123 [00:10<06:26,  3.22s/it]  3%|▎         | 4/123 [00:12<05:48,  2.93s/it]  4%|▍         | 5/123 [00:15<05:20,  2.72s/it]  5%|▍         | 6/123 [00:17<05:22,  2.76s/it]  6%|▌         | 7/123 [00:20<05:17,  2.73s/it]  7%|▋         | 8/123 [00:23<05:12,  2.71s/it]  7%|▋         | 9/123 [00:25<05:07,  2.70s/it]  8%|▊         | 10/123 [00:28<05:01,  2.66s/it]                                                {'loss': '3.684', 'grad_norm': '129.5', 'learning_rate': '1.5e-05', 'epoch': '0.2469'}
+  8%|▊         | 10/123 [00:28<05:01,  2.66s/it]  9%|▉         | 11/123 [00:31<04:52,  2.61s/it] 10%|▉         | 12/123 [00:33<04:42,  2.54s/it] 11%|█         | 13/123 [00:35<04:35,  2.51s/it] 11%|█▏        | 14/123 [00:38<04:26,  2.45s/it] 12%|█▏        | 15/123 [00:40<04:14,  2.36s/it] 13%|█▎        | 16/123 [00:42<04:12,  2.36s/it] 14%|█▍        | 17/123 [00:45<04:12,  2.38s/it] 15%|█▍        | 18/123 [00:47<04:12,  2.41s/it] 15%|█▌        | 19/123 [00:50<04:11,  2.42s/it] 16%|█▋        | 20/123 [00:52<04:10,  2.43s/it]                                                {'loss': '2.402', 'grad_norm': '72.42', 'learning_rate': '1.874e-05', 'epoch': '0.4938'}
+ 16%|█▋        | 20/123 [00:52<04:10,  2.43s/it] 17%|█▋        | 21/123 [00:54<04:09,  2.45s/it] 18%|█▊        | 22/123 [00:57<03:58,  2.37s/it] 19%|█▊        | 23/123 [00:59<03:52,  2.32s/it] 20%|█▉        | 24/123 [01:02<04:02,  2.45s/it] 20%|██        | 25/123 [01:04<03:54,  2.39s/it] 21%|██        | 26/123 [01:06<03:45,  2.33s/it] 22%|██▏       | 27/123 [01:08<03:45,  2.35s/it] 23%|██▎       | 28/123 [01:12<04:07,  2.61s/it] 24%|██▎       | 29/123 [01:16<05:04,  3.24s/it] 24%|██▍       | 30/123 [01:20<05:18,  3.42s/it]                                                {'loss': '1.78', 'grad_norm': '26.1', 'learning_rate': '1.694e-05', 'epoch': '0.7407'}
+ 24%|██▍       | 30/123 [01:20<05:18,  3.42s/it] 25%|██▌       | 31/123 [01:23<05:08,  3.35s/it] 26%|██▌       | 32/123 [01:27<05:10,  3.41s/it] 27%|██▋       | 33/123 [01:31<05:14,  3.50s/it] 28%|██▊       | 34/123 [01:34<05:06,  3.45s/it] 28%|██▊       | 35/123 [01:37<05:00,  3.41s/it] 29%|██▉       | 36/123 [01:41<05:05,  3.52s/it] 30%|███       | 37/123 [01:45<05:15,  3.67s/it] 31%|███       | 38/123 [01:48<04:55,  3.47s/it] 32%|███▏      | 39/123 [01:51<04:41,  3.35s/it] 33%|███▎      | 40/123 [01:54<04:21,  3.15s/it]                                                {'loss': '1.726', 'grad_norm': '33.01', 'learning_rate': '1.514e-05', 'epoch': '0.9877'}
+ 33%|███▎      | 40/123 [01:54<04:21,  3.15s/it] 33%|███▎      | 41/123 [01:56<03:45,  2.75s/it]
+  0%|          | 0/9 [00:00<?, ?it/s][A
+ 22%|██▏       | 2/9 [00:00<00:01,  5.63it/s][A
+ 33%|███▎      | 3/9 [00:00<00:01,  4.91it/s][A
+ 44%|████▍     | 4/9 [00:00<00:01,  4.48it/s][A
+ 56%|█████▌    | 5/9 [00:01<00:00,  4.31it/s][A
+ 67%|██████▋   | 6/9 [00:01<00:00,  4.22it/s][A
+ 78%|███████▊  | 7/9 [00:01<00:00,  4.17it/s][A
+ 89%|████████▉ | 8/9 [00:01<00:00,  4.19it/s][A
+100%|██████████| 9/9 [00:02<00:00,  4.19it/s][A                                                
+                                             [A{'eval_loss': '0.725', 'eval_runtime': '2.386', 'eval_samples_per_second': '59.93', 'eval_steps_per_second': '3.772', 'epoch': '1'}
+ 33%|███▎      | 41/123 [01:58<03:45,  2.75s/it]
+100%|██████████| 9/9 [00:02<00:00,  4.19it/s][A
+                                             [ATraceback (most recent call last):
+  File "/Users/utkarshkhajuria/Desktop/RazorMesh/services/ml-venv/lib/python3.13/site-packages/transformers/trainer.py", line 3164, in _determine_best_metric
+    metric_value = metrics[metric_to_check]
+                   ~~~~~~~^^^^^^^^^^^^^^^^^
+KeyError: 'eval_macro_f1'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/Users/utkarshkhajuria/Desktop/RazorMesh/scripts/rzp_train_phase3_v2.py", line 262, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/Users/utkarshkhajuria/Desktop/RazorMesh/scripts/rzp_train_phase3_v2.py", line 200, in main
+    result = trainer.train()
+  File "/Users/utkarshkhajuria/Desktop/RazorMesh/services/ml-venv/lib/python3.13/site-packages/transformers/trainer.py", line 1449, in train
+    return inner_training_loop(
+        args=args,
+    ...<2 lines>...
+        ignore_keys_for_eval=ignore_keys_for_eval,
+    )
+  File "/Users/utkarshkhajuria/Desktop/RazorMesh/services/ml-venv/lib/python3.13/site-packages/transformers/trainer.py", line 1531, in _inner_training_loop
+    self._run_epoch(
+    ~~~~~~~~~~~~~~~^
+        model=model,
+        ^^^^^^^^^^^^
+    ...<9 lines>...
+        steps_trained_in_current_epoch=steps_trained_in_current_epoch,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/utkarshkhajuria/Desktop/RazorMesh/services/ml-venv/lib/python3.13/site-packages/transformers/trainer.py", line 1832, in _run_epoch
+    self._maybe_log_save_evaluate(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        self._tr_loss,
+        ^^^^^^^^^^^^^^
+    ...<6 lines>...
+        learning_rate=learning_rate,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/utkarshkhajuria/Desktop/RazorMesh/services/ml-venv/lib/python3.13/site-packages/transformers/trainer.py", line 2114, in _maybe_log_save_evaluate
+    is_new_best_metric = self._determine_best_metric(metrics=metrics, trial=trial)
+  File "/Users/utkarshkhajuria/Desktop/RazorMesh/services/ml-venv/lib/python3.13/site-packages/transformers/trainer.py", line 3166, in _determine_best_metric
+    raise KeyError(
+    ...<2 lines>...
+    ) from exc
+KeyError: "The `metric_for_best_model` training argument is set to 'eval_macro_f1', which is not found in the evaluation metrics. The available evaluation metrics are: ['eval_loss', 'eval_runtime', 'eval_samples_per_second', 'eval_steps_per_second', 'epoch']. Consider changing the `metric_for_best_model` via the TrainingArguments."
+ 33%|███▎      | 41/123 [01:59<03:58,  2.91s/it]

@@ -1,0 +1,230 @@
+{
+  "manifest": {
+    "schema_version": "agentpay-ir-v0.2",
+    "dataset_version": "frozen_v2",
+    "orientation": "premise=current sanitized commerce evidence; hypothesis=normalized human authorization constraint",
+    "created_at_utc": "2026-08-28T11:16:50.594706+00:00",
+    "generator": "scripts/rzp_build_agentpay_ir_v2.py",
+    "counts": {
+      "train": 648,
+      "val": 143,
+      "test": 126
+    },
+    "labels_by_split": {
+      "train": {
+        "contradiction": 234,
+        "entailment": 232,
+        "neutral": 182
+      },
+      "val": {
+        "contradiction": 57,
+        "entailment": 53,
+        "neutral": 33
+      },
+      "test": {
+        "contradiction": 44,
+        "entailment": 40,
+        "neutral": 42
+      }
+    },
+    "labels_overall": {
+      "contradiction": 335,
+      "entailment": 325,
+      "neutral": 257
+    },
+    "families": {
+      "aliases": 22,
+      "ambiguous_evidence": 23,
+      "automatic_renewal": 19,
+      "brand_identity": 37,
+      "bundles": 25,
+      "currency": 26,
+      "delivery_constraint": 25,
+      "double_negation": 17,
+      "equivalent_benign_wording": 29,
+      "euphemistic_subscription": 21,
+      "fulfillment_constraint": 21,
+      "irrelevant_hostile_text": 18,
+      "membership_insertion": 23,
+      "merchant_description_manipulation": 22,
+      "merchant_identity": 27,
+      "misleading_negation": 23,
+      "price_constraint": 39,
+      "product_condition": 41,
+      "product_equivalence": 35,
+      "product_identity": 53,
+      "product_title_manipulation": 20,
+      "prompt_injection_like_merchant_text": 27,
+      "quantity": 27,
+      "quantity_units": 24,
+      "recurring_subscription": 29,
+      "return_condition": 25,
+      "safe_lookalikes": 20,
+      "safe_paraphrases": 25,
+      "seller_authorization": 20,
+      "seller_identity": 26,
+      "semantic_fees": 24,
+      "shipping_obligation": 23,
+      "trial_to_paid_renewal": 24,
+      "variant": 36,
+      "warranty_condition": 21
+    },
+    "subfamilies": {
+      "aggressive_but_benign": 20,
+      "benign_synonyms": 29,
+      "brand_allowlist": 37,
+      "colloquial_evidence": 25,
+      "condition_new_only": 41,
+      "delivery_option": 25,
+      "entity_alias": 22,
+      "equivalent_naming": 35,
+      "exact_product": 53,
+      "fulfillment_option": 21,
+      "inert_hostility": 18,
+      "injection_resistance": 27,
+      "insufficient_information": 23,
+      "mandatory_extras": 25,
+      "mandatory_fee": 24,
+      "max_total": 39,
+      "membership_opt_in": 23,
+      "merchant_allowlist": 27,
+      "negation_scope": 23,
+      "nested_negation": 17,
+      "prose_vs_structure": 22,
+      "quantity_max": 27,
+      "recurring_forbidden": 29,
+      "renewal_default": 19,
+      "return_window": 25,
+      "selected_variant": 36,
+      "seller_allowlist": 26,
+      "seller_permission": 20,
+      "settlement_currency": 26,
+      "shipping_free": 23,
+      "soft_recurring_language": 21,
+      "title_vs_order_line": 20,
+      "trial_conversion": 24,
+      "unit_of_measure": 24,
+      "warranty_required": 21
+    },
+    "authorization_fields": {
+      "brand_allowlist": 37,
+      "condition_new_only": 64,
+      "currency": 26,
+      "delivery_constraint": 25,
+      "fulfillment_constraint": 21,
+      "human_confirmation_required": 44,
+      "max_amount_minor": 126,
+      "merchant_allowlist": 49,
+      "product_identity": 113,
+      "quantity_max": 51,
+      "recurring_forbidden": 190,
+      "return_window_min_days": 25,
+      "seller_allowlist": 46,
+      "shipping_free": 23,
+      "variant_identity": 56,
+      "warranty_required": 21
+    },
+    "evidence_fields": {
+      "auto_renewal_flag": 19,
+      "checkout_quantity": 51,
+      "consent_event": 17,
+      "delivery_option": 25,
+      "fee_breakdown": 49,
+      "final_total": 47,
+      "fulfillment_option": 21,
+      "manufacturer_identity": 37,
+      "membership_enrollment": 23,
+      "merchant_free_text": 105,
+      "merchant_registry": 49,
+      "product_condition": 64,
+      "product_description": 22,
+      "product_title": 20,
+      "recurring_terms": 79,
+      "return_policy": 25,
+      "selected_sku": 124,
+      "seller_identity": 46,
+      "settlement_currency": 26,
+      "shipping_line": 23,
+      "trial_conversion": 24,
+      "warranty_registry": 21
+    },
+    "source": {
+      "deterministic": 917
+    },
+    "safe_or_attack": {
+      "ambiguous": 91,
+      "attack": 705,
+      "safe": 121
+    },
+    "difficulty": {
+      "easy": 27,
+      "hard": 498,
+      "medium": 392
+    },
+    "parents": 330,
+    "files": {
+      "train.jsonl": "ac3d77ea168988bea11f60d895c79abe3086946caa5010fa0f2d0a6f3e1f6d1e",
+      "val.jsonl": "1ca90288a3c8d25100c28d3de1374c80900644a8c652173c7fc6ea7716dbaae6",
+      "test.jsonl": "b7d836b7785df4ec813e5738e97c38893bfe9f4109834e92fdd922a5346cc416"
+    },
+    "leakage_passed": true
+  },
+  "leakage": {
+    "passed": true,
+    "counts": {
+      "train": 648,
+      "val": 143,
+      "test": 126
+    },
+    "labels_by_split": {
+      "train": {
+        "contradiction": 234,
+        "entailment": 232,
+        "neutral": 182
+      },
+      "val": {
+        "contradiction": 57,
+        "entailment": 53,
+        "neutral": 33
+      },
+      "test": {
+        "contradiction": 44,
+        "entailment": 40,
+        "neutral": 42
+      }
+    },
+    "leaked_split_groups": [],
+    "leaked_content_hashes": [],
+    "leaked_normalized_pairs": [],
+    "empty_label_splits": [],
+    "cross_split_overlaps": [
+      {
+        "pair": "train::val",
+        "record_id_overlap": 0,
+        "content_sha256_overlap": 0,
+        "normalized_pair_overlap": 0,
+        "split_group_overlap": 0,
+        "template_family_overlap": 22
+      },
+      {
+        "pair": "train::test",
+        "record_id_overlap": 0,
+        "content_sha256_overlap": 0,
+        "normalized_pair_overlap": 0,
+        "split_group_overlap": 0,
+        "template_family_overlap": 9
+      },
+      {
+        "pair": "val::test",
+        "record_id_overlap": 0,
+        "content_sha256_overlap": 0,
+        "normalized_pair_overlap": 0,
+        "split_group_overlap": 0,
+        "template_family_overlap": 4
+      }
+    ],
+    "near_duplicate_cross_split": [],
+    "template_family_straddle_note": "template_family_id intentionally spans splits: it names the phrasing shape, not the case. The leakage gate runs on split_group, content and normalized pair instead, which is strictly stronger than v0.1.",
+    "template_family_straddle_count": 29
+  }
+}

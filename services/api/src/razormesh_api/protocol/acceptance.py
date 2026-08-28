@@ -43,6 +43,7 @@ import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -53,7 +54,6 @@ if TYPE_CHECKING:
 
 from ..semantic import (
     DeterministicKeywordVerifier,
-    SemanticVerdict,
     SemanticVerifier,
 )
 from .ap2_verifier import (
@@ -168,6 +168,16 @@ class AcceptanceProtocolEvidence:
     semantic_verifier_source: str
     final_decision: str
     decided_at: str
+    # Correction brief §21: semantic runtime truth recorded on the acceptance
+    # evidence. Defaults keep construction sites that predate the correction
+    # valid; the live finalize path always fills them.
+    semantic_backend: str = "deberta"
+    semantic_model_version: str = ""
+    semantic_model_artifact_hash: str = ""
+    semantic_policy_version: str = ""
+    semantic_pair_count: int = 0
+    semantic_probabilities: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    semantic_fail_closed: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -210,6 +220,13 @@ class AcceptanceProtocolEvidence:
                 "razorguard_decision": self.razorguard_decision,
                 "semantic_verifier": self.semantic_verifier,
                 "semantic_verifier_source": self.semantic_verifier_source,
+                "semantic_backend": self.semantic_backend,
+                "semantic_model_version": self.semantic_model_version,
+                "semantic_model_artifact_hash": self.semantic_model_artifact_hash,
+                "semantic_policy_version": self.semantic_policy_version,
+                "semantic_pair_count": self.semantic_pair_count,
+                "semantic_probabilities": list(self.semantic_probabilities),
+                "semantic_fail_closed": self.semantic_fail_closed,
                 "final_decision": self.final_decision,
                 "decided_at": self.decided_at,
             },
@@ -490,12 +507,18 @@ class Phase4AcceptanceOrchestrator:
         checkout_service: CheckoutService,
         semantic_verifier: SemanticVerifier | None = None,
         semantic_verifier_id: str | None = None,
+        semantic_model_dir: Path | None = None,
+        semantic_policy_path: Path | None = None,
+        semantic_backend: str = "deberta",
     ) -> None:
         self._checkout = checkout_service
         self._verifier: SemanticVerifier = (
             semantic_verifier if semantic_verifier is not None else DeterministicKeywordVerifier()
         )
         self._verifier_id = semantic_verifier_id or type(self._verifier).__name__
+        self._semantic_model_dir = semantic_model_dir
+        self._semantic_policy_path = semantic_policy_path
+        self._semantic_backend = semantic_backend
 
     # -- prepare: Confirmed Intent -> MCP -> UCP -> AP2 -> Firewall -> IR
     def prepare(
@@ -692,18 +715,51 @@ class Phase4AcceptanceOrchestrator:
                 rejection_stage="consistency",
             )
 
-        # 8) SemanticVerifier seam, run independently of RazorGuard.
-        #    The production rule engine does NOT register the semantic
-        #    rule, so the acceptance path invokes the seam here on the
-        #    IR's presentation-only (untrusted) text. RazorGuard already
-        #    decided the financial authority above; this step can only
-        #    make the outcome stricter, and any non-SAFE verdict fails
-        #    closed. The recorded label is the verdict the seam actually
-        #    returned, never a re-derivation of the RazorGuard decision.
+        # 8) SemanticVerifier stage. Production default is the fine-tuned
+        #    DeBERTa NLI verifier over canonical (evidence, authorization)
+        #    pairs. RazorGuard already decided the financial authority above;
+        #    the semantics can only make the outcome stricter (never looser).
+        #    Any model/configuration failure fails CLOSED to CHALLENGE, and
+        #    the keyword verifier is never a silent production substitute.
         razorguard = authz.outcome.decision.value
-        assessment = self._verifier.assess(_ir_untrusted_texts(ir))
-        semantic_verdict = assessment.verdict.value
-        if semantic_verdict != SemanticVerdict.SAFE.value:
+        from ..domain.ids import IntentId
+        from ..revalidation import domain_intent_from_row
+        from ..semantic_runtime import run_semantic_runtime
+        from ..semantic_verifier import DeterministicDecision
+
+        intent_row = self._checkout.repos.intents.get(IntentId(intent_id))
+        if intent_row is None:
+            return OrchestratorResult(
+                run=AcceptanceRun(
+                    run_id=run_id,
+                    intent_id=intent_id,
+                    checkout_id=checkout_id,
+                    product_id=product_id,
+                    quantity=quantity,
+                    amount_minor=ir.totals.total_minor,
+                    currency=currency,
+                    idempotency_key=idempotency_key,
+                    evidence=_empty_evidence(),
+                ),
+                consumed=False,
+                rejection_reason="intent_not_found",
+                rejection_stage="semantic_verifier",
+            )
+        intent_contract = domain_intent_from_row(intent_row)
+        deterministic = DeterministicDecision(razorguard)
+        semantic = run_semantic_runtime(
+            intent=intent_contract,
+            envelope=proposal.envelope,
+            deterministic=deterministic,
+            intent_id=intent_id,
+            attempt_id=f"run:{run_id}",
+            ledger=self._checkout.ledger,
+            model_dir=self._semantic_model_dir,
+            policy_path=self._semantic_policy_path,
+            semantic_backend=self._semantic_backend,
+        )
+        semantic_verdict = semantic.semantic_action.value
+        if semantic.final_decision != DeterministicDecision.ALLOW:
             return OrchestratorResult(
                 run=AcceptanceRun(
                     run_id=run_id,
@@ -751,7 +807,18 @@ class Phase4AcceptanceOrchestrator:
             cross_protocol_consistency=ConsistencyState.MATCH.value,
             razorguard_decision=razorguard,
             semantic_verifier=semantic_verdict,
-            semantic_verifier_source=self._verifier_id,
+            semantic_verifier_source=semantic.model_id,
+            semantic_backend=semantic.semantic_backend,
+            semantic_model_version=semantic.model_version,
+            semantic_model_artifact_hash=semantic.model_artifact_hash,
+            semantic_policy_version=semantic.policy_version,
+            semantic_pair_count=semantic.pair_count,
+            semantic_probabilities=(
+                semantic.p_contradiction,
+                semantic.p_entailment,
+                semantic.p_neutral,
+            ),
+            semantic_fail_closed=semantic.fail_closed,
             final_decision="ALLOW",
             decided_at=datetime.now(UTC).isoformat(),
         )

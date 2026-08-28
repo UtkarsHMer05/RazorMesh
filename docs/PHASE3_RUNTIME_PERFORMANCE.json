@@ -1,0 +1,27 @@
+{
+  "generated_at_utc": "2026-08-28T14:40:14.904984+00:00",
+  "model_dir": "artifacts/models/incoming/phase3-finetuned-v2",
+  "policy_version": "semantic-thresholds-v3",
+  "runtime": {
+    "platform": "macOS-26.5-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "python": "3.13.15",
+    "torch": "2.13.0",
+    "device": "cpu",
+    "threads": 6
+  },
+  "cold_load_seconds": 0.61,
+  "warm_pair_latency_ms": {
+    "n": 40,
+    "p50": 51.9,
+    "p95": 65.1,
+    "mean": 53.3
+  },
+  "transaction_latency_ms_by_pair_count": {
+    "1": 51.0,
+    "5": 242.4,
+    "10": 524.5
+  },
+  "peak_process_rss_mb": 792.3,
+  "model_size_mb": 703.5
+}

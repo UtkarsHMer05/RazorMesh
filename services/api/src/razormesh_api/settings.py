@@ -45,6 +45,16 @@ class Settings(BaseSettings):
     planner_model: str = "qwen/qwen3.8-max-free"
     tokenrouter_timeout_seconds: float = Field(default=30.0, gt=0, le=120)
 
+    # ------------------------------------------------------------------
+    # Semantic verifier runtime (P3-M40 corrected; correction brief §14)
+    # ------------------------------------------------------------------
+    # Production/default backend is the fine-tuned DeBERTa NLI verifier.
+    # "deterministic_test_stub" is an EXPLICIT test/fallback selection and is
+    # never silently substituted while the app reports a DeBERTa runtime.
+    semantic_verifier_backend: Literal["deberta", "deterministic_test_stub"] = "deberta"
+    semantic_model_path: str = "artifacts/models/incoming/phase3-finetuned-v2"
+    semantic_policy_path: str = "data/phase3/policy/semantic_thresholds_v3.json"
+
     @property
     def tokenrouter_credentials_present(self) -> bool:
         return bool(self.tokenrouter_api_key.get_secret_value())
