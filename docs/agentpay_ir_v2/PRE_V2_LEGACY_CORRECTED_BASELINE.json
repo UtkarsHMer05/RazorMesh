@@ -1,0 +1,45 @@
+{
+  "baseline_name": "PRE_V2_LEGACY_CORRECTED_BASELINE",
+  "recorded_at": "2026-08-29",
+  "artifact_dir": "artifacts/models/incoming/phase3-finetuned-v2",
+  "files": {
+    "base_model.txt": {
+      "sha256": "6cbf984ccc45d3c487b80b8459b9ca13663d2296186b85868b757f5f1810cd7d",
+      "bytes": 33
+    },
+    "config.json": {
+      "sha256": "3c1af9ff4ac1b457bf3d597eb2d4650229022205922c5ce368c15dcfd8f400aa",
+      "bytes": 1117
+    },
+    "label_map.json": {
+      "sha256": "165a8610bee89a759fa5909b87ed5c67044c44f8bf672ac5db1a2b0f0da3b1e4",
+      "bytes": 65
+    },
+    "metrics.json": {
+      "sha256": "d2ceed51c540ca74e775f507acb9c43ab2e5568317d2466c9a58ea8151eb38c4",
+      "bytes": 216
+    },
+    "model.safetensors": {
+      "sha256": "163864e04a07fb56e51526f2f05dab3be742a9f1f290a561fc97fedd8f3c6995",
+      "bytes": 737722356
+    },
+    "model_manifest.json": {
+      "sha256": "b06a5e180ab277925329c67f09ea22c2185147fb8466b7ef235e0fae4436e60f",
+      "bytes": 3528
+    },
+    "tokenizer.json": {
+      "sha256": "561fd1b229749e08cc8b9b0a77e467b07ac5549418682e603925753429a8cd3e",
+      "bytes": 8339973
+    },
+    "tokenizer_config.json": {
+      "sha256": "3dd09fcbf87e99e22a6e9d359ab7ecaceca29dd3774e509df9de6a16ecdaa394",
+      "bytes": 505
+    },
+    "training_args.bin": {
+      "sha256": "309aa6b5daf0e786e2eaf29a7955d75b9954aae54f4bf7070c515a6da1946c3b",
+      "bytes": 5265
+    }
+  },
+  "naming_rule": "never call this AgentPay-IR v2; future v2 artifact lives at artifacts/models/incoming/agentpay-ir-v2-finetuned/",
+  "base_model": "cross-encoder/nli-deberta-v3-base"
+}

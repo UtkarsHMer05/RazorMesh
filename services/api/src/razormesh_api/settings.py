@@ -51,8 +51,12 @@ class Settings(BaseSettings):
     # Production/default backend is the fine-tuned DeBERTa NLI verifier.
     # "deterministic_test_stub" is an EXPLICIT test/fallback selection and is
     # never silently substituted while the app reports a DeBERTa runtime.
-    semantic_verifier_backend: Literal["deberta", "deterministic_test_stub"] = "deberta"
+    # "deberta_v2" is the AgentPay-IR v2 candidate backend (master prompt
+    # §16A scaffolding): it runs the artifact at semantic_model_path_v2 and
+    # fails CLOSED when that artifact is absent — never a keyword fallback.
+    semantic_verifier_backend: Literal["deberta", "deberta_v2", "deterministic_test_stub"] = "deberta"
     semantic_model_path: str = "artifacts/models/incoming/phase3-finetuned-v2"
+    semantic_model_path_v2: str = "artifacts/models/incoming/agentpay-ir-v2-finetuned"
     semantic_policy_path: str = "data/phase3/policy/semantic_thresholds_v3.json"
 
     @property

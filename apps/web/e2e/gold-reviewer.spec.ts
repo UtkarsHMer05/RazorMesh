@@ -1,4 +1,15 @@
 import { expect, test } from "@playwright/test";
+
+/**
+ * PVB013 (2026-08-29): SUPERSEDED — this spec targeted the retired Phase-3 v1
+ * gold_review.html artifact (window.ROWS embedded). The v1 gold pack is no
+ * longer on review duty and the AgentPay-IR v2 reviewer (apps/web/src/app/reviewer)
+ * replaces this flow with fresh coverage in e2e/reviewer-v2.spec.ts.
+ * Isolated as obsolete tooling per PVB013; kept for history.
+ */
+test.beforeEach(() => {
+  test.skip(true, "superseded by AgentPay-IR v2 reviewer (PVB013 isolation, 2026-08-29)");
+});
 import { createHash } from "node:crypto";
 import * as nodePath from "node:path";
 

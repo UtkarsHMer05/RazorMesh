@@ -1,0 +1,17 @@
+{
+  "pack": "REVIEW_PACK_V2",
+  "cards": 701,
+  "strata": 25,
+  "label_span_required": [
+    "contradiction",
+    "entailment",
+    "neutral",
+    "ambiguous"
+  ],
+  "reviewer_artifact_sha256": "80896091121053f30e57cfb9f0b65885e50642a3fb735111a197bbce0b39d7a6",
+  "role_manifest_sha256": "5391477257750fb5f91e42233c388110a72885170e7b679406c1d444047baa6e",
+  "gold": 300,
+  "supervised": 401,
+  "invalidates": "previous 700-card pack (all esci_ambiguous_color_missing, neutral hint) \u2014 marked INVALID, not for review",
+  "frozen_at": "2026-08-29T12:00:00+00:00"
+}

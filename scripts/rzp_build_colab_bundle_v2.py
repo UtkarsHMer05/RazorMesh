@@ -46,17 +46,18 @@ TRAIN_CONFIG = {
     "batch_size": 16,
     "warmup_ratio": 0.06,
     "fp16": True,
-    "selection": "validation only; macro-F1 + contradiction recall + unsafe C->E count",
+    "selection": "validation only; FROZEN rule: minimize eval_unsafe_c_to_e, then maximize eval_macro_f1, then maximize eval_contradiction_recall (exact implementation in the notebook; candidate reporting includes neutral recall and safe false-block rate)",
     "forbidden_at_training_time": ["test.jsonl", "human gold (review_role=gold)", "fresh_ood_v2.jsonl"],
 }
 
+# Aligned with the API `semantic` uv group (transformers 5.15.1 / torch 2.13.0 /
+# accelerate 1.14.0) so the trained artifact round-trips into the runtime with
+# identical serialization semantics. scikit-learn/datasets are Colab-side only.
 REQUIREMENTS = """\
-transformers==4.55.4
-torch==2.8.0
+transformers==5.15.1
+torch==2.13.0
+accelerate==1.14.0
 datasets==4.0.1
-pandas==2.3.2
-pyarrow==21.0.0
-accelerate==1.10.1
 scikit-learn==1.7.1
 safetensors==0.6.2
 """
@@ -158,11 +159,13 @@ NOTEBOOK = {
                 "def metrics(eval_pred):\n",
                 "    logits, labels = eval_pred\n",
                 "    preds = logits.argmax(-1)\n",
-                "    # unsafe: gold contradiction (0) predicted entailment (1)\n",
-                "    unsafe = int(((labels==0)&(preds==1)).sum())\n",
-                "    c_rec = float((preds[labels==0]==0).mean())\n",
+                "    unsafe = int(((labels==0)&(preds==1)).sum())  # gold C predicted E\n",
+                "    c_rec = float((preds[labels==0]==0).mean()) if (labels==0).any() else 0.0\n",
+                "    n_rec = float((preds[labels==2]==2).mean()) if (labels==2).any() else 0.0\n",
+                "    e_fp_block = int(((labels==1)&(preds==0)).sum())  # safe entailments hard-blocked\n",
                 "    return {'macro_f1': f1_score(labels, preds, average='macro'),\n",
-                "            'contradiction_recall': c_rec, 'unsafe_c_to_e': unsafe}\n",
+                "            'contradiction_recall': c_rec, 'unsafe_c_to_e': unsafe,\n",
+                "            'neutral_recall': n_rec, 'safe_false_block': e_fp_block}\n",
                 "def run(epochs):\n",
                 "    set_seed(42)\n",
                 "    model = AutoModelForSequenceClassification.from_pretrained(manifest['base_model'], revision=REV, num_labels=3)\n",
@@ -176,8 +179,9 @@ NOTEBOOK = {
                 "    return ev\n",
                 "results = {'A_2ep': run(2), 'B_3ep': run(3)}\n",
                 "print(json.dumps(results, indent=1))\n",
-                "best = max(results.items(), key=lambda kv: (kv[1]['eval_macro_f1'], -kv[1]['eval_unsafe_c_to_e']))[0]\n",
-                "print('SELECTED (validation only):', best)\n",
+                "# FROZEN selection rule (train_config.json): min unsafe C->E, then max macro-F1, then max contradiction recall\n",
+                "best = min(results.items(), key=lambda kv: (kv[1]['eval_unsafe_c_to_e'], -kv[1]['eval_macro_f1'], -kv[1]['eval_contradiction_recall']))[0]\n",
+                "print('SELECTED (validation only, frozen rule):', best)\n",
             ],
         },
         {
@@ -199,6 +203,26 @@ NOTEBOOK = {
                 "open('agentpay-ir-v2-finetuned/base_model_revision.txt','w').write(REV)\n",
                 "json.dump({'validation_results': results, 'selected': best, 'seed': 42}, open('agentpay-ir-v2-finetuned/training_metrics.json','w'), indent=1)\n",
                 "json.dump(manifest, open('agentpay-ir-v2-finetuned/dataset_manifest.json','w'), indent=1)\n",
+                "import transformers, accelerate, platform\n",
+                "def _sha(p):\n",
+                "    import hashlib\n",
+                "    return hashlib.sha256(open(p,'rb').read()).hexdigest()\n",
+                "artifact_files = {f: _sha('agentpay-ir-v2-finetuned/'+f) for f in os.listdir('agentpay-ir-v2-finetuned') if os.path.isfile('agentpay-ir-v2-finetuned/'+f)}\n",
+                "model_manifest = {\n",
+                "    'artifact': 'agentpay-ir-v2-finetuned',\n",
+                "    'base_model': manifest['base_model'],\n",
+                "    'base_model_revision': REV,\n",
+                "    'label_map': manifest['label_map'],\n",
+                "    'seed': 42,\n",
+                "    'selected_candidate': best,\n",
+                "    'candidate_results': results,\n",
+                "    'selection_rule': manifest and json.load(open('bundle/train_config.json'))['selection'],\n",
+                "    'dataset_manifest_files': manifest['files'],\n",
+                "    'dependency_versions': {'transformers': transformers.__version__, 'torch': torch.__version__, 'accelerate': accelerate.__version__, 'python': platform.python_version()},\n",
+                "    'artifact_files_sha256': artifact_files,\n",
+                "    'training_data_excluded': ['frozen test', 'human gold', 'untouched OOD'],\n",
+                "}\n",
+                "json.dump(model_manifest, open('agentpay-ir-v2-finetuned/model_manifest.json','w'), indent=1)\n",
                 "import shutil\n",
                 "shutil.make_archive('agentpay-ir-v2-finetuned', 'zip', '.', 'agentpay-ir-v2-finetuned')\n",
                 "files.download('agentpay-ir-v2-finetuned.zip')\n",

@@ -240,6 +240,7 @@ def run_semantic_runtime(
         if pair_count == 0:
             pass
         elif semantic_backend == "deberta":
+            active_model_dir = model_dir
             verifier = get_semantic_verifier(model_dir=model_dir, policy_path=policy_path)
             verdicts = [
                 verifier.verify(premise=pair.premise, hypothesis=pair.hypothesis)
@@ -253,6 +254,7 @@ def run_semantic_runtime(
             v2_dir = resolve_repo_path(MODEL_DIR_V2)
             if not (v2_dir / "config.json").exists():
                 raise FileNotFoundError(f"agentpay-ir-v2 artifact not present at {v2_dir}")
+            active_model_dir = v2_dir
             verifier = get_semantic_verifier(model_dir=v2_dir, policy_path=policy_path)
             verdicts = [
                 verifier.verify(premise=pair.premise, hypothesis=pair.hypothesis)
@@ -304,7 +306,7 @@ def run_semantic_runtime(
             policy_version="unknown",
             fail_closed=True,
             reason=f"{type(exc).__name__}: {exc}",
-            pair_count=0,
+            pair_count=pair_count,
             duration_ms=0.0,
             semantic_backend=semantic_backend,
         )
@@ -327,7 +329,7 @@ def run_semantic_runtime(
             semantic_backend=semantic_backend,
             model_version="unknown",
             model_artifact_hash="",
-            pair_count=0,
+            pair_count=pair_count,
             duration_ms=0.0,
         )
         record_policy_fusion(
@@ -375,10 +377,10 @@ def run_semantic_runtime(
     #    hash mismatch, inference error) propagate to the outcome (§20).
     fail_closed_any = any(v.fail_closed for v in verdicts)
     fail_reason = next((v.reason for v in verdicts if v.fail_closed), None)
-    if semantic_backend == "deberta":
-        model_version = verifier.model_version if verifier is not None else model_dir.name
+    if semantic_backend in ("deberta", "deberta_v2"):
+        model_version = verifier.model_version if verifier is not None else active_model_dir.name
         try:
-            model_hash = artifact_sha256(model_dir)
+            model_hash = artifact_sha256(active_model_dir)
         except Exception:  # noqa: BLE001 - unreadable weights stay fail-closed, never crash
             model_hash = ""
     else:

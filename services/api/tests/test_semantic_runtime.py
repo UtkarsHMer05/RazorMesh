@@ -355,3 +355,54 @@ def test_v2_backend_model_dir_constant_points_to_incoming() -> None:
     """The v2 location is the documented incoming path, not the live artifact."""
     assert str(sr.MODEL_DIR_V2).endswith("artifacts/models/incoming/agentpay-ir-v2-finetuned")
     assert sr.MODEL_DIR_V2 != sr.MODEL_DIR  # the active D-053 artifact is untouched
+
+
+# ---------------------------------------------------------------------------
+# PVB correction #11/#12: v2 backend metadata truth + fail-closed pair_count
+# ---------------------------------------------------------------------------
+
+
+def test_v2_backend_with_valid_artifact_records_real_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+    """When the v2 location holds a valid DeBERTa artifact, the v2 backend must
+    report the REAL model version/hash (never the stub label, never empty)."""
+    if not V2_ARTIFACT.exists():
+        pytest.skip("pre-v2 artifact not present on this machine")
+    monkeypatch.setattr(sr, "MODEL_DIR_V2", V2_ARTIFACT)
+    outcome = _run("deberta_v2", DeterministicDecision.ALLOW)
+    assert outcome.fail_closed is False
+    assert outcome.pair_count > 0
+    assert outcome.model_version and "STUB" not in outcome.model_version.upper()
+    assert len(outcome.model_artifact_hash) == 64  # real sha256 of the weights dir
+
+
+def test_fail_closed_model_error_preserves_pair_count(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A model error after pair construction keeps the ACTUAL pair_count."""
+    sr.clear_semantic_verifier_cache()
+    stub_outcome = sr.run_semantic_runtime(
+        intent=_intent(),
+        envelope=_envelope(),
+        deterministic=DeterministicDecision.ALLOW,
+        intent_id="intent_semrt",
+        attempt_id="attempt_semrt",
+        ledger=_ledger(),
+        policy_path=POLICY_V3,
+        semantic_backend="deterministic_test_stub",
+    )
+    sr.clear_semantic_verifier_cache()
+
+    def _boom(**_kwargs: object) -> None:
+        raise RuntimeError("weights exploded")
+
+    monkeypatch.setattr(sr, "get_semantic_verifier", _boom)
+    outcome = sr.run_semantic_runtime(
+        intent=_intent(),
+        envelope=_envelope(),
+        deterministic=DeterministicDecision.ALLOW,
+        intent_id="intent_semrt",
+        attempt_id="attempt_semrt",
+        ledger=_ledger(),
+        policy_path=POLICY_V3,
+        semantic_backend="deberta",
+    )
+    assert outcome.fail_closed is True
+    assert outcome.pair_count == stub_outcome.pair_count > 0

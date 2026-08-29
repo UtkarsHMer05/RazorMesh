@@ -13,6 +13,16 @@
 > with the real model; backend 755 passed. See
 > docs/PHASE3_DATASET_AND_RUNTIME_FINAL_AUDIT.md §7. Awaiting human
 > acceptance unchanged.
+> **2026-08-29 addendum (AgentPay-IR v2 pre-training handoff correction):** final
+> Phase-4 acceptance is DEFERRED until the real-data AgentPay-IR v2 model is
+> selected, verified against test/gold/OOD, and wired into the runtime
+> (`deberta_v2` backend). The historical `AUTONOMOUS_50_OF_50_PASS /
+> AWAITING_FINAL_HUMAN_ACCEPTANCE` status above is preserved as-is; the
+> authoritative current status is
+> `PRE_V2_CORRECTED_BASELINE_PASS / FINAL_PHASE4_ACCEPTANCE_BLOCKED_UNTIL_AGENTPAY_IR_V2`
+> with the pre-v2 payment smoke BLOCKED_EXTERNAL (sandbox checkout blocks
+> automation; evidence in docs/agentpay_ir_v2/OVERNIGHT_VERIFICATION_LEDGER.md).
+> Current train/val/test and the Colab bundle are PRE-REVIEW artifacts.
 
 | Milestone | Status | Notes |
 |---|---|---|

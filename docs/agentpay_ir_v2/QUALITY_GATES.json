@@ -1,0 +1,430 @@
+{
+ "corpus_dir": "/Users/utkarshkhajuria/Desktop/RazorMesh/data/agentpay_ir_v2/corpus",
+ "gates": {
+  "train": {
+   "rows": 13843,
+   "source_distribution": {
+    "contractnli": 6254,
+    "esci": 6936,
+    "razormesh_frozen_v2": 653
+   },
+   "source_kind_distribution": {
+    "real_human_nli": 6254,
+    "real_commerce": 6936,
+    "deterministic_derived": 653
+   },
+   "difficulty_distribution": {
+    "hard": 5182,
+    "medium": 6394,
+    "easy": 2267
+   },
+   "label_distribution": {
+    "neutral": 3417,
+    "entailment": 6817,
+    "contradiction": 3609
+   }
+  },
+  "val": {
+   "rows": 2312,
+   "source_distribution": {
+    "contractnli": 1080,
+    "esci": 1119,
+    "razormesh_frozen_v2": 113
+   },
+   "source_kind_distribution": {
+    "real_human_nli": 1080,
+    "real_commerce": 1119,
+    "deterministic_derived": 113
+   },
+   "difficulty_distribution": {
+    "hard": 888,
+    "medium": 1075,
+    "easy": 349
+   },
+   "label_distribution": {
+    "neutral": 579,
+    "entailment": 1120,
+    "contradiction": 613
+   }
+  },
+  "test": {
+   "rows": 2261,
+   "source_distribution": {
+    "contractnli": 973,
+    "esci": 1189,
+    "razormesh_frozen_v2": 99
+   },
+   "source_kind_distribution": {
+    "real_human_nli": 973,
+    "real_commerce": 1189,
+    "deterministic_derived": 99
+   },
+   "difficulty_distribution": {
+    "hard": 830,
+    "medium": 1029,
+    "easy": 402
+   },
+   "label_distribution": {
+    "neutral": 545,
+    "entailment": 1149,
+    "contradiction": 567
+   }
+  }
+ },
+ "honest_composition": {
+  "real_or_human_derived_pct": 95.3,
+  "targeted_deterministic_internal_pct": 4.7,
+  "synthetic_pct": 0.0,
+  "claim": "train is 95.3% real/human-derived and 4.7% targeted deterministic internal security/domain data",
+  "synthetic_cap_pct": 10,
+  "synthetic_cap_ok": true
+ },
+ "lexical_shortcuts": {
+  "count_over_12_occurrences": 143,
+  "top": [
+   {
+    "token": "stripes",
+    "label": "entailment",
+    "count": 77
+   },
+   {
+    "token": "lawfully",
+    "label": "entailment",
+    "count": 59
+   },
+   {
+    "token": "rightfully",
+    "label": "entailment",
+    "count": 53
+   },
+   {
+    "token": "ftwr",
+    "label": "entailment",
+    "count": 52
+   },
+   {
+    "token": "scooter",
+    "label": "entailment",
+    "count": 46
+   },
+   {
+    "token": "collegiate",
+    "label": "entailment",
+    "count": 43
+   },
+   {
+    "token": "100ft",
+    "label": "entailment",
+    "count": 42
+   },
+   {
+    "token": "demonstrate",
+    "label": "entailment",
+    "count": 41
+   },
+   {
+    "token": "trefoil",
+    "label": "entailment",
+    "count": 41
+   },
+   {
+    "token": "superstar",
+    "label": "entailment",
+    "count": 40
+   },
+   {
+    "token": "tiro",
+    "label": "entailment",
+    "count": 40
+   },
+   {
+    "token": "fiduciary",
+    "label": "entailment",
+    "count": 38
+   },
+   {
+    "token": "civil",
+    "label": "entailment",
+    "count": 37
+   },
+   {
+    "token": "racer",
+    "label": "entailment",
+    "count": 35
+   },
+   {
+    "token": "100mm",
+    "label": "entailment",
+    "count": 34
+   }
+  ],
+  "note": "tokens appearing >=12 times with a single label; review for memorization shortcuts"
+ },
+ "hypothesis_template_concentration": {
+  "distinct_templates_80char": 325,
+  "top10_share_pct": 41.1,
+  "top10": [
+   {
+    "template": "the authorized product brand must be adidas.",
+    "count": 986
+   },
+   {
+    "template": "the authorized product brand must be apple.",
+    "count": 947
+   },
+   {
+    "template": "the authorized product condition is new (factory-sealed).",
+    "count": 875
+   },
+   {
+    "template": "receiving party shall not reverse engineer any objects which embody disclosing p",
+    "count": 420
+   },
+   {
+    "template": "receiving party shall destroy or return some confidential information upon the t",
+    "count": 420
+   },
+   {
+    "template": "agreement shall not grant receiving party any right to confidential information.",
+    "count": 418
+   },
+   {
+    "template": "some obligations of agreement may survive termination of agreement.",
+    "count": 418
+   },
+   {
+    "template": "receiving party shall not disclose the fact that agreement was agreed or negotia",
+    "count": 412
+   },
+   {
+    "template": "all confidential information shall be expressly identified by the disclosing par",
+    "count": 395
+   },
+   {
+    "template": "receiving party may independently develop information similar to confidential in",
+    "count": 394
+   }
+  ]
+ },
+ "premise_source_concentration": {
+  "distinct_premise_prefixes_100char": 9856,
+  "max_single_premise_count": 15,
+  "top10_share_pct": 1.0
+ },
+ "near_duplicate_check": {
+  "train": {
+   "max_intra_family_jaccard": 0.973,
+   "pairs_ge_085": 187,
+   "comparisons": 4013133,
+   "worst_pair": [
+    "ap2_59a2373a41c9ed274466d7eca5",
+    "ap2_7691150e48b00f42563a80d120"
+   ]
+  },
+  "val": {
+   "max_intra_family_jaccard": 1.0,
+   "pairs_ge_085": 454,
+   "comparisons": 927867,
+   "worst_pair": [
+    "ap2_c8019fb849c05c6a9f46d9ba00",
+    "ap2_705b7d8b2b0141a510ec059f82"
+   ]
+  },
+  "test": {
+   "max_intra_family_jaccard": 1.0,
+   "pairs_ge_085": 528,
+   "comparisons": 890610,
+   "worst_pair": [
+    "ap2_83bace06da7ecb05f934db8aaa",
+    "ap2_e29616c19516f89c35ccb75be9"
+   ]
+  }
+ },
+ "family_coverage": {
+  "families_total": 34,
+  "in_all_splits": [
+   "aliases",
+   "ambiguous_evidence",
+   "contract_obligation",
+   "equivalent_benign_wording",
+   "euphemistic_subscription",
+   "fulfillment_constraint",
+   "merchant_description_manipulation",
+   "merchant_identity",
+   "misleading_negation",
+   "price_constraint",
+   "product_condition",
+   "product_equivalence",
+   "product_identity",
+   "product_title_manipulation",
+   "prompt_injection_like_merchant_text",
+   "quantity_units",
+   "return_condition",
+   "safe_lookalikes",
+   "safe_paraphrases",
+   "variant",
+   "warranty_condition"
+  ],
+  "train_only": [
+   "membership_insertion"
+  ],
+  "coverage_map": {
+   "aliases": [
+    "test",
+    "train",
+    "val"
+   ],
+   "ambiguous_evidence": [
+    "test",
+    "train",
+    "val"
+   ],
+   "automatic_renewal": [
+    "train",
+    "val"
+   ],
+   "brand_identity": [
+    "train",
+    "val"
+   ],
+   "bundles": [
+    "test",
+    "train"
+   ],
+   "contract_obligation": [
+    "test",
+    "train",
+    "val"
+   ],
+   "double_negation": [
+    "test",
+    "train"
+   ],
+   "equivalent_benign_wording": [
+    "test",
+    "train",
+    "val"
+   ],
+   "euphemistic_subscription": [
+    "test",
+    "train",
+    "val"
+   ],
+   "fulfillment_constraint": [
+    "test",
+    "train",
+    "val"
+   ],
+   "irrelevant_hostile_text": [
+    "train",
+    "val"
+   ],
+   "membership_insertion": [
+    "train"
+   ],
+   "merchant_description_manipulation": [
+    "test",
+    "train",
+    "val"
+   ],
+   "merchant_identity": [
+    "test",
+    "train",
+    "val"
+   ],
+   "misleading_negation": [
+    "test",
+    "train",
+    "val"
+   ],
+   "price_constraint": [
+    "test",
+    "train",
+    "val"
+   ],
+   "product_condition": [
+    "test",
+    "train",
+    "val"
+   ],
+   "product_equivalence": [
+    "test",
+    "train",
+    "val"
+   ],
+   "product_identity": [
+    "test",
+    "train",
+    "val"
+   ],
+   "product_title_manipulation": [
+    "test",
+    "train",
+    "val"
+   ],
+   "prompt_injection_like_merchant_text": [
+    "test",
+    "train",
+    "val"
+   ],
+   "quantity": [
+    "train",
+    "val"
+   ],
+   "quantity_units": [
+    "test",
+    "train",
+    "val"
+   ],
+   "recurring_subscription": [
+    "test",
+    "train"
+   ],
+   "return_condition": [
+    "test",
+    "train",
+    "val"
+   ],
+   "safe_lookalikes": [
+    "test",
+    "train",
+    "val"
+   ],
+   "safe_paraphrases": [
+    "test",
+    "train",
+    "val"
+   ],
+   "seller_authorization": [
+    "train",
+    "val"
+   ],
+   "seller_identity": [
+    "test",
+    "train"
+   ],
+   "semantic_fees": [
+    "train",
+    "val"
+   ],
+   "shipping_obligation": [
+    "test",
+    "train"
+   ],
+   "trial_to_paid_renewal": [
+    "train",
+    "val"
+   ],
+   "variant": [
+    "test",
+    "train",
+    "val"
+   ],
+   "warranty_condition": [
+    "test",
+    "train",
+    "val"
+   ]
+  }
+ }
+}

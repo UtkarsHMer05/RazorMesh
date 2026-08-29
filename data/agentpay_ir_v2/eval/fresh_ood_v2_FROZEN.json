@@ -1,6 +1,23 @@
 {
-  "frozen_at": "2026-08-29T02:20:00+00:00",
-  "rows": 400,
-  "sha256": "8f0a511cea2d2b1fcab146dd14dcdcaef067aa611691b51653b773ccc9d97ec5",
-  "rule": "never used for training/validation/selection/calibration; historical 129-row OOD remains comparator-only"
+  "frozen_at": "2026-08-29T13:00:00+00:00",
+  "rows": 401,
+  "sha256": "78b2aee436b0ce4a888dc88eb700d2bb9054d4314afb756d72e134dccde6bfb1",
+  "composition": {
+    "source_kinds": {
+      "deterministic_derived": 51,
+      "real_human_nli": 179,
+      "real_commerce": 171
+    },
+    "labels": {
+      "entailment": 269,
+      "contradiction": 47,
+      "neutral": 85
+    },
+    "internal_withheld_family": 51,
+    "contractnli_withheld_docs": 200,
+    "esci_withheld_products": 150
+  },
+  "provenance": "every row normalized to the agentpay-ir-v2 record contract",
+  "rule": "never used for training/validation/selection/calibration; never tuned from afterward",
+  "replaces": "400-row mixed-provenance OOD (349 CNLI + 51 legacy v0.2 rows)"
 }
