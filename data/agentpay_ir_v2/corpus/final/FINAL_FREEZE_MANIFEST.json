@@ -1,0 +1,28 @@
+{
+  "counts": {
+    "train": 13605,
+    "val": 2261,
+    "test": 2227
+  },
+  "stats": {
+    "label_confirmed": 307,
+    "relabeled": 25,
+    "bad_removed": 2,
+    "gold_rows_kept": 301,
+    "gold_group_excluded": 116
+  },
+  "gold_cards": 301,
+  "gold_human_label_agreement": 278,
+  "files": {
+    "train.jsonl": "781e77b50b37c11a61327ce956bf9154624a09c243b391dbf78ed2d464f9ee3c",
+    "val.jsonl": "cf308d9e1d32bc16501f2061e89f4e7d0860a5966180d42618056022f9e7e067",
+    "test.jsonl": "ceae19519291836e7daeb7773a7a1c1534b2affe6deb185b8ca9f387bdda8166"
+  },
+  "gold_frozen_sha256": "57f9c469341b7d79936a3674b46f63581dcde1b0aa416a646276714100ade58f",
+  "ambiguous_excluded": 2,
+  "augmentation_integrated": {
+    "rows": 96,
+    "sha256": "f897137b1089e436bfc2c6db2d563262c53c086d039b896d75c250ff375e19cb",
+    "train_synthetic_adversarial_fraction": 0.007056
+  }
+}

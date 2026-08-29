@@ -513,3 +513,20 @@ outside the agent).
 - Privacy: internal AI agent-control documents (master prompts, paste-to-agent,
   overnight ledgers, AGENTS/AI_WORKFLOW/CLAUDE files, HUMAN_PREFLIGHT_CHECKLIST)
   untracked + gitignored; local copies retained; commit 3a1df5c.
+
+---
+
+# AgentPay-IR v2 post-review finalization append (2026-08-30)
+
+- REAL finalization executed with `--integrate-prompt-injection-augmentation`;
+  frozen V3 pack/role hashes verified first. 635/635 decisions; 2 ambiguous
+  excluded; gold 301/301 usable; supervised 307 confirmed / 25 relabeled;
+  96 augmentation rows into TRAIN only (0.71% synthetic); 18,394 rows
+  hash-validated; leakage gate PASS; final 13,605/2,261/2,227 + 301 gold.
+- FINAL Colab bundle sha256 809687bb… (train+val only; members hash-equal
+  corpus/final files); notebook EXPECTED_BUNDLE_SHA256 = final bundle sha;
+  no-training preflight + both dry-run phases PASS; agentpay_v2 suite 43/43;
+  backend suite 804/804 (exit 0) after the freeze.
+- Provenance: decisions were AI-assisted, exported and accepted as final by the
+  owner (disclosed in STATUS.md); owner may amend in the UI and re-finalize
+  before training. No training started; nothing pushed.

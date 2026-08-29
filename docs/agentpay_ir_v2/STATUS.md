@@ -1,7 +1,6 @@
 # AUTHORITATIVE STATUS (PVB020 + PRE-REVIEW FINAL CORRECTION)
 
-# PRE_REVIEW_FINAL_CORRECTION_PASS /
-# SAFE_TO_BEGIN_HUMAN_LABELING_AND_COLAB_PIPELINE_VERIFIED (pre-label correction, 2026-08-30)
+# POST_REVIEW_FINALIZATION_PASS / FINAL_COLAB_BUNDLE_READY (2026-08-30)
 
 **Recorded:** 2026-08-29 · This file is the SINGLE current handoff document. Older
 handoff text in TRANSFORMATION_REPORT.md §"OVERNIGHT" is superseded history; the
@@ -173,3 +172,32 @@ finalization is trusted.
   contains the pre-review correction and privacy commits (through `cbcfab9` and
   the agent-control-untracking commit). This agent never pushes; remote syncing
   happens outside the agent. See docs/agentpay_ir_v2/REMOTE_STATE.md.**
+
+---
+
+# POST-REVIEW FINALIZATION (2026-08-30) — REAL RUN RECORD
+
+`rzp_finalize_review_v2.py --decisions review_decisions_export.json --integrate-prompt-injection-augmentation`
+
+- Frozen V3 hashes verified BEFORE the run: pack `c88b7817…`, role `37a59cf4…` (both match).
+- 635/635 decisions accepted; conflict check PASS; exactly 2 ambiguous (`rc2_0107`,
+  `rc2_0132`) routed out; gold adequacy 301/301 usable (floor 250).
+- Supervised: 307 confirmed / 25 relabeled by the recorded decisions; 2 bad records removed.
+- Gold: 301 rows, label = the recorded decisions, `source_kind=human_reviewed`;
+  278/301 agree with the pre-review source labels (23 label changes — the review's value).
+- Group-level gold isolation: 116 same-group corpus rows excluded; zero gold/split
+  group overlap re-verified.
+- Prompt-injection augmentation: 96 rows integrated into TRAIN ONLY
+  (synthetic fraction 0.71% ≤ 10% cap); val/test/gold/OOD carry zero `aug_pi_` rows.
+- content_sha256 recomputed + validated on all 18,394 final rows; leakage gate PASS.
+- Final freeze: train 13,605 / val 2,261 / test 2,227 + 301 gold.
+- FINAL bundle `artifacts/agentpay_ir_v2_colab_training_bundle.zip` sha256
+  `809687bb…` — train+val ONLY (no test/gold/OOD/linkage/roles/decisions/augmentation);
+  train/val members hash-equal `corpus/final/` files.
+- Notebook `notebooks/RazorGuard_NLI_AgentPayIR_v2_Training.ipynb` regenerated;
+  `EXPECTED_BUNDLE_SHA256` = the FINAL bundle sha (verified + `verify_bundle` executed).
+
+**Provenance disclosure (owner-accepted):** the 635 recorded decisions were produced
+by AI-assisted labeling and were exported and accepted as final by the owner
+(instruction of 2026-08-30: "Human review is complete"). The owner may still amend
+any decision in the reviewer UI and re-run the finalizer before Colab training.
