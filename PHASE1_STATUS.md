@@ -456,8 +456,10 @@ Authority: human request to validate the completed phase against the autonomous 
 All numbered correction items executed with test-enforced evidence (suite:
 `services/api/tests/agentpay_v2/`, 33 tests; plus vitest + Playwright reviewer
 gates). Status token: **PRE_REVIEW_FINAL_CORRECTION_PASS /
-SAFE_TO_BEGIN_HUMAN_LABELING**. No training, no test/gold/OOD model evaluation,
-nothing pushed.
+SAFE_TO_BEGIN_HUMAN_LABELING**. No training and no test/gold/OOD model
+evaluation happened in this correction. The agent never pushed; the human
+confirmed GitHub main already carries these commits (remote sync happens
+outside the agent).
 
 - V3 review pack: 635 cards (`rc2_*`), zero dup normalized pairs, zero dup
   record_ids (asserted + tested); roles group-level (301 gold / 334 supervised,

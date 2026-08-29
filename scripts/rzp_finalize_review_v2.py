@@ -15,6 +15,10 @@ Runs ONLY after the human completes the V3 review pack. Pipeline:
      decisions on DIFFERENT records sharing a split_group are NOT conflicts —
      in this corpus one generator group legitimately carries records with
      different labels (same scenario family, different hypothesis constraints);
+  3b. gold-adequacy guard (pre-label correction): STOP if the usable human-gold
+     set falls below min(--min-gold-rows [default 250], 85% of the frozen gold
+     allocation) because too many GOLD cards were marked ambiguous/bad — never
+     silently continue with a tiny gold set; warn below 95%.
   4. route ambiguous/bad rows OUT (excluded entirely);
   5. GOLD isolation at GROUP level (#8): every corpus row whose split_group is
      a gold card's split_group is removed from train/val/test entirely; ONLY
@@ -48,6 +52,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 import subprocess
 import sys
@@ -85,6 +90,9 @@ def main() -> int:
     ap.add_argument("--decisions", required=True)
     ap.add_argument("--root", default=None,
                     help="workspace root (default: repo root; tests/dry-runs redirect this)")
+    ap.add_argument("--min-gold-rows", type=int, default=250,
+                    help="absolute floor for usable human-gold rows (never applied below "
+                         "85%% of the frozen gold allocation, so small test workspaces pass)")
     ap.add_argument("--skip-bundle", action="store_true")
     args = ap.parse_args()
 
@@ -219,6 +227,25 @@ def main() -> int:
                      "metadata": {**r.get("metadata", {}), "human_label_override": True}}
             final[split].append(r)
     print("supervised integration:", dict(stats))
+
+    # ---- gold-adequacy guard: never silently continue with a tiny usable
+    # human-gold set (post-review). usable = gold-role cards the human labeled
+    # non-ambiguous; the floor never exceeds 85% of the frozen gold allocation
+    # so legitimately small test workspaces still pass.
+    intended_gold = sum(1 for v in roles.values() if v == "gold")
+    usable_gold = len(gold_rows)
+    gold_floor = min(args.min_gold_rows, math.ceil(0.85 * intended_gold))
+    if usable_gold < gold_floor:
+        fail(f"human-gold set too small: {usable_gold} usable gold rows (floor "
+             f"{gold_floor} = min(--min-gold-rows {args.min_gold_rows}, 85% of the "
+             f"{intended_gold} frozen gold allocations)). Too many GOLD cards were "
+             f"marked ambiguous/bad; re-review the flagged gold cards or lower "
+             f"--min-gold-rows explicitly before finalizing.")
+    if usable_gold < 0.95 * intended_gold:
+        print(f"WARNING: usable human gold {usable_gold}/{intended_gold} "
+              f"({intended_gold - usable_gold} gold cards marked ambiguous/bad) — "
+              f"gold evaluation power is reduced; continuing.")
+    print(f"gold adequacy: {usable_gold}/{intended_gold} usable (floor {gold_floor})")
 
     # ---- 6. canonical hash validation for EVERY final row (#10) ----
     bad_hash = 0

@@ -202,6 +202,52 @@ def test_no_torch_import_before_install_and_versions_asserted(committed_bundle) 
                     f"actual {pkg} version must be asserted against the frozen requirement"
 
 
+def test_install_cell_extracts_bundle_before_pip_in_clean_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Pre-label correction: a fresh Colab runtime has no bundle/ directory, so the
+    install cell must extract the archive BEFORE the %pip step that reads
+    requirements-frozen.txt — asserted statically AND exercised in a clean temp dir."""
+    cells = notebook_code_cells(COMMITTED_NOTEBOOK)
+    install = next(c for c in cells if "%pip install" in c)
+    assert install.index('zf.extractall("bundle")') < install.index("%pip install"), \
+        "extraction must precede the pip-install dependency path"
+
+    # Exercise it: run verify + install cells in a clean temp dir with the two
+    # environment-specific steps (%pip, CUDA assert) stubbed out.
+    import os
+
+    monkeypatch.chdir(tmp_path)
+    old_env = os.environ.get("BUNDLE_PATH")
+    os.environ["BUNDLE_PATH"] = str(COMMITTED_ZIP)
+    ns: dict = {}
+    try:
+        verify = next(c for c in cells if "def verify_bundle" in c)
+        exec(compile(verify, "verify_cell", "exec"), ns)  # noqa: S102 - test rig
+        stubbed = install.replace(
+            "%pip install -q -r bundle/requirements-frozen.txt",
+            "PIP_STUBBED_IN_PREFLIGHT = True",
+        ).replace(
+            'assert torch.cuda.is_available(), "GPU required (Runtime > Change runtime type)"',
+            "CUDA_STUBBED_IN_PREFLIGHT = True",
+        ).replace(
+            'print("GPU:", torch.cuda.get_device_name(0))',
+            "print('GPU check stubbed in preflight')",
+        )
+        assert "%pip install" not in stubbed and "PIP_STUBBED_IN_PREFLIGHT" in stubbed
+        exec(compile(stubbed, "install_cell", "exec"), ns)  # noqa: S102 - test rig
+    finally:
+        if old_env is None:
+            os.environ.pop("BUNDLE_PATH", None)
+        else:
+            os.environ["BUNDLE_PATH"] = old_env
+    # the extraction landed in the clean cwd and BEFORE the (stubbed) pip step
+    assert (tmp_path / "bundle" / "requirements-frozen.txt").exists()
+    assert (tmp_path / "bundle" / "train.jsonl").exists()
+    assert ns["REQ"]["torch"] == FROZEN_VERSIONS["torch"]
+    assert ns["PIP_STUBBED_IN_PREFLIGHT"] is True
+
+
 # ---------------------------------------------------------------------------
 # #12 builder honors explicit --corpus-dir / --train/--val paths
 # ---------------------------------------------------------------------------
@@ -505,6 +551,30 @@ def test_finalizer_rejects_incomplete_decisions(tmp_path: Path) -> None:
     proc = run_finalizer(tmp_path, export)
     assert proc.returncode == 1
     assert "missing decisions" in proc.stdout
+
+
+def test_finalizer_stops_when_too_many_gold_cards_marked_ambiguous(tmp_path: Path) -> None:
+    """Post-review guard: a materially shrunken usable human-gold set must STOP
+    the finalizer, never silently continue with a tiny gold evaluation set."""
+    ws = build_workspace(tmp_path)
+    gold_cards = sorted(c for c, role in ws["assignments"].items() if role == "gold")
+    ambiguous = set(gold_cards[:3])  # 3 of 9 gold cards -> usable 6 < floor 8
+    export = human_export(ws, ambiguous_card=None)
+    for row in export["rows"]:
+        if row["card_id"] in ambiguous:
+            row["decision"] = "ambiguous_bad_record"
+    proc = run_finalizer(tmp_path, export)
+    assert proc.returncode == 1
+    assert "human-gold set too small" in proc.stdout
+
+
+def test_finalizer_warns_but_proceeds_at_adequate_gold_level(tmp_path: Path) -> None:
+    ws = build_workspace(tmp_path)
+    gold_cards = sorted(c for c, role in ws["assignments"].items() if role == "gold")
+    proc = run_finalizer(tmp_path, human_export(ws, ambiguous_card=gold_cards[0]))
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "gold adequacy: 8/9 usable" in proc.stdout
+    assert "WARNING: usable human gold" in proc.stdout  # 8 < 0.95 * 9
 
 
 def test_finalizer_rejects_conflicting_decisions_same_record(tmp_path: Path) -> None:

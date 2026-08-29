@@ -1,0 +1,34 @@
+{
+  "set": "prompt_injection_aug_v2",
+  "frozen_at": "2026-08-30T00:00:00+00:00",
+  "rows": 96,
+  "sha256": "f897137b1089e436bfc2c6db2d563262c53c086d039b896d75c250ff375e19cb",
+  "labels": {
+    "neutral": 48,
+    "contradiction": 48
+  },
+  "addresses": "PVB008: PRE_V2 PASSes 13/15 on prompt-injection premises (unsafe)",
+  "provenance": {
+    "source_dataset": "razormesh_internal_adversarial",
+    "source_kind": "synthetic_adversarial",
+    "template_family_prefix": "augpi_",
+    "split_group_prefix": "aug_pi_",
+    "entities": "fresh synthetic set, absent from corpus/OOD/PVB008 grid"
+  },
+  "gates_passed": [
+    "hash-disjoint vs corpus/OOD/gold",
+    "group-disjoint vs corpus/OOD",
+    "text-disjoint vs PVB008 grid",
+    "canonical_guard",
+    "v2 record contract"
+  ],
+  "integration": {
+    "status": "NOT integrated",
+    "rule": "requires explicit human decision; if integrated, merge into the supervised train flow via the finalizer with a re-run of all leakage gates",
+    "cap": {
+      "rows_if_fully_integrated": 96,
+      "fraction_of_train": 0.006935,
+      "cap_limit": 0.1
+    }
+  }
+}

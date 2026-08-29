@@ -21,3 +21,18 @@ origin	https://github.com/UtkarsHMer05/RazorMesh.git (push)
 ```
 
 - Policy: no push, no force-push, no history rewrite (AGENTS.md §12; master prompt §1).
+
+---
+
+# Update (2026-08-30, human-confirmed current truth)
+
+- GitHub `main` already contains the pre-review correction and privacy work:
+  `3a1df5c` (privacy: untrack internal AI agent-control documents + superseded V2
+  review linkage) and `cbcfab9` (PRE-REVIEW FINAL CORRECTION) — plus this small
+  pre-label correction commit once synced by the human.
+- The agent did NOT push at any point; the remote presence of local commits comes
+  from syncing done outside the agent. "Nothing pushed / local only" statements
+  written before 2026-08-30 described agent actions, not the remote's state, and
+  are superseded by this note.
+- Policy unchanged: the agent never pushes unless the human explicitly authorizes
+  it in that moment.

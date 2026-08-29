@@ -139,3 +139,7 @@ HUMAN_PREFLIGHT_CHECKLIST.md
 AGENTS.md
 AI_WORKFLOW.md
 CLAUDE.md
+
+# Obsolete V2-era 700-card review artifacts (superseded by REVIEW_PACK_V3.jsonl;
+# roles/labels must never live in the public tree) — local copies retained
+data/agentpay_ir_v2/corpus/review_*

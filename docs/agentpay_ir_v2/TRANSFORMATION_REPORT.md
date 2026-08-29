@@ -10,7 +10,10 @@
 > group-level roles, sha256 `c88b7817…`); fresh OOD expanded + refrozen to
 > **665 rows** (sha256 `8948a8e3…`); PRE-REVIEW bundle sha256 `6292deb6…`
 > (byte-deterministic build); the notebook pins `EXPECTED_BUNDLE_SHA256`
-> externally and installs from `requirements-frozen.txt`. The 700-card V2 pack,
+> externally and installs from `requirements-frozen.txt`. The V3 pack spans 21
+> OBSERVED strata (not 25); the `currency`/`delivery_constraint` families are
+> intentionally held out into the untouched OOD rather than human-review/training.
+> The 700-card V2 pack,
 > the 400/401-row OOD figures, and the older bundle hashes in the sections below
 > are historical.
 

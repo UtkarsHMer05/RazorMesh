@@ -189,14 +189,18 @@ MANIFEST = verify_bundle(BUNDLE, EXPECTED_BUNDLE_SHA256)
 '''
 
 INSTALL_CELL = '''
-# Install EXACTLY the frozen requirement set (#14) — before ANY torch import.
-%pip install -q -r bundle/requirements-frozen.txt
 import zipfile
 
 zf = zipfile.ZipFile(BUNDLE)
+# EXTRACT FIRST (pre-label correction): a fresh Colab runtime has no
+# bundle/ directory yet, so requirements-frozen.txt must exist on disk
+# BEFORE the pip-install step that consumes it.
 zf.extractall("bundle")
 REQ = parse_requirements(open("bundle/requirements-frozen.txt").read())
 print("frozen requirements:", REQ)
+
+# Install EXACTLY the frozen requirement set (#14) — before ANY torch import.
+%pip install -q -r bundle/requirements-frozen.txt
 
 # NOW import the runtime and reconcile actual versions against the frozen file.
 import accelerate
@@ -473,7 +477,8 @@ def main() -> int:
     args = ap.parse_args()
 
     train, val = resolve_train_val(args)
-    out_zip, zip_sha, manifest = build_bundle(train, val, Path(args.out_zip), Path(args.schema_doc))
+    out_zip, zip_sha, _manifest = build_bundle(train, val, Path(args.out_zip),
+                                           Path(args.schema_doc))
     print("bundle:", out_zip, out_zip.stat().st_size, "bytes | sha256:", zip_sha)
     print("train:", sha256_file(train))
     print("val:  ", sha256_file(val))

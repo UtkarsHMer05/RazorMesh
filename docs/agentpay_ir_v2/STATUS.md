@@ -1,6 +1,7 @@
 # AUTHORITATIVE STATUS (PVB020 + PRE-REVIEW FINAL CORRECTION)
 
-# PRE_REVIEW_FINAL_CORRECTION_PASS / SAFE_TO_BEGIN_HUMAN_LABELING
+# PRE_REVIEW_FINAL_CORRECTION_PASS /
+# SAFE_TO_BEGIN_HUMAN_LABELING_AND_COLAB_PIPELINE_VERIFIED (pre-label correction, 2026-08-30)
 
 **Recorded:** 2026-08-29 · This file is the SINGLE current handoff document. Older
 handoff text in TRANSFORMATION_REPORT.md §"OVERNIGHT" is superseded history; the
@@ -9,10 +10,15 @@ workflow below is the only current one.
 ## What changed in the PRE-REVIEW FINAL CORRECTION (all enforced by tests)
 
 - **V3 review pack rebuilt** (`data/agentpay_ir_v2/review/REVIEW_PACK_V3.jsonl`,
-  sha256 `c88b7817…`): **635 cards**, **zero duplicate normalized pairs**, **zero
-  duplicate underlying record_ids**, new card-id namespace `rc2_*`. The V2 pack and
-  its label-bearing linkage/role manifest are REMOVED from tracking (git history
-  retains only the label-free card file).
+  sha256 `c88b7817…`): **635 cards** across **21 observed strata**, **zero duplicate
+  normalized pairs**, **zero duplicate underlying record_ids**, new card-id namespace
+  `rc2_*`. The V2 pack and its label-bearing linkage/role manifest are REMOVED from
+  tracking (git history retains only the label-free card file). The obsolete
+  700-card artifacts (`corpus/review_candidates*.jsonl`, `corpus/review_role_manifest.json`)
+  are likewise untracked. **Design note:** the `currency` and `delivery_constraint`
+  families are intentionally held OUT of human-review/training and are represented
+  only in the untouched OOD's withheld-family component — they were never strata in
+  the V3 pack (21 observed, not 25).
 - **Group-level roles, never card-random** (301 gold / 334 supervised across 319
   split groups): record_id, split_group, generator_parent_id, entity_family_id AND
   internal template families can never span GOLD and SUPERVISED (union-find over
@@ -77,6 +83,16 @@ workflow below is the only current one.
   `RAZORMESH_REVIEWER_ENABLED=1`; a deployed application never exposes the pack.
 - Agent-control documents (master prompts, paste-to-agent files, overnight
   ledgers, AI operating contracts) are untracked and gitignored; local copies kept.
+- **Pre-label correction (2026-08-30):** notebook now extracts the bundle BEFORE
+  the pip-install step (fresh-runtime order fixed; exercised in a clean temp dir
+  by a test); gold-adequacy guard stops the finalizer when the usable human-gold
+  set falls below min(250, 85% of the frozen gold allocation) and warns below
+  95%; obsolete 700-card artifacts (corpus/review_candidates*, review_role_manifest)
+  untracked + ignored; a PREPARED-but-NOT-INTEGRATED prompt-injection augmentation
+  staging set (96 rows, hash/group/text-disjoint from corpus, OOD, gold and the
+  PVB008 grid; 0.69% of train vs the 10% cap) awaits an explicit integration
+  decision — see PROMPT_INJECTION_AUGMENTATION.md. V3 pack SHA, roles, card IDs
+  and allocation are UNCHANGED.
 
 ## THE one current handoff workflow (only these steps, in order)
 
@@ -103,5 +119,9 @@ workflow below is the only current one.
 - OVN047/PVB017 pre-v2 payment completion: BLOCKED_EXTERNAL (Razorpay sandbox
   checkout blocks automation; failure paths + reconciliation proven).
 - Full v2 fine-tuning: NOT started — begins only after human review + Colab run.
-- No training, no evaluation of frozen test/gold/OOD with any model happened in
-  this correction. Nothing has been pushed.
+- No training, and no evaluation of frozen test/gold/OOD with any model, happened
+  in this correction.
+- **Remote state (recorded 2026-08-30, human-confirmed): GitHub `main` already
+  contains the pre-review correction and privacy commits (through `cbcfab9` and
+  the agent-control-untracking commit). This agent never pushes; remote syncing
+  happens outside the agent. See docs/agentpay_ir_v2/REMOTE_STATE.md.**

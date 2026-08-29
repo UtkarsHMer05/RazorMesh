@@ -47,8 +47,10 @@ defect for v2 training); OOD expanded+refrozen 401→665 (264 RazorMesh-security
 ContractNLI fixed-hypothesis exception documented); /reviewer gated by
 RAZORMESH_REVIEWER_ENABLED=1; agent-control docs untracked+gitignored (local copies
 kept, commit 3a1df5c). Status: **PRE_REVIEW_FINAL_CORRECTION_PASS /
-SAFE_TO_BEGIN_HUMAN_LABELING**. No training, no test/gold/OOD evaluation, no push.
-**Last updated:** 2026-08-29.
+SAFE_TO_BEGIN_HUMAN_LABELING**. No training and no test/gold/OOD model evaluation.
+Remote state (2026-08-30, human-confirmed): GitHub main already contains the
+correction/privacy commits; the agent itself never pushes (see REMOTE_STATE.md).
+**Last updated:** 2026-08-30 (pre-label/pre-Colab correction).
 **Gate (Phase 4 final M49, historical):** `services/api` ruff clean / mypy clean / pytest
 718/718 PASS; `apps/web` typecheck 0 errors / lint 0 errors / vitest 76 PASS /
 `next build` 6 static routes. AgentPay-X 191/191 with 100% safe-pass, 100%
@@ -90,7 +92,8 @@ overwritten by Phase-4 completion.
 - User's own non-Docker PostgreSQL occupies 127.0.0.1:5432 — DO NOT TOUCH. Our Docker PG binds 127.0.0.1:15432.
 - Infra live: razormesh-postgres (18.6-alpine @127.0.0.1:15432, vol pgdata, PG18 mounts /var/lib/postgresql) + razormesh-redis (8.8.2-alpine @127.0.0.1:16379, no persistence by design — coordination only).
 - Ports 3000/8000 free. All host bindings loopback-only.
-- Repo: complete Phase-1 modular monolith on `main`; no push authorization.
+- Repo: complete Phase-1 modular monolith on `main` (GitHub main kept in sync by
+  the HUMAN outside the agent; the agent pushes only with explicit authorization.
 
 # Version decisions (M02, full detail in VERSION_MANIFEST.md)
 
