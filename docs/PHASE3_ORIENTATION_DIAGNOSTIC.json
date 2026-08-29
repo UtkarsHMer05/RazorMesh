@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-08-28T09:42:17.254313+00:00",
+  "generated_at_utc": "2026-08-28T17:57:44.834449+00:00",
   "purpose": "Decide whether the frozen checkpoint generalizes to the canonical runtime orientation.",
   "scope_guards": {
     "retrained": false,
@@ -60,7 +60,7 @@
     "torch_version": "2.13.0",
     "max_length": 256,
     "batch_size": 16,
-    "model_cold_load_seconds": 4.47
+    "model_cold_load_seconds": 3.37
   },
   "policy": {
     "path": "data/phase3/policy/semantic_thresholds.json",

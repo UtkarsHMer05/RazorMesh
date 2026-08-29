@@ -1,6 +1,6 @@
 # Phase-3 dataset / model / runtime semantic audit
 
-Generated: `2026-08-28T09:03:40.949328+00:00` by `scripts/rzp_audit_phase3_dataset.py`.
+Generated: `2026-08-28T17:53:59.764566+00:00` by `scripts/rzp_audit_phase3_dataset.py`.
 
 Read-only. Every number below is recomputed from bytes on disk.
 
@@ -114,7 +114,7 @@ Training bundle byte-identical to frozen: `{"train": true, "val": true}`
 ## 7. Fine-tuned artifact
 
 - directory: `artifacts/models/incoming/phase3-finetuned` (exists: True)
-- `model_manifest.json` present: False
+- `model_manifest.json` present: True
 
 | file | bytes | SHA-256 |
 |---|---:|---|
@@ -123,6 +123,7 @@ Training bundle byte-identical to frozen: `{"train": true, "val": true}`
 | `label_map.json` | 65 | `165a8610bee89a75…` |
 | `metrics.json` | 116 | `c812d46792b87069…` |
 | `model.safetensors` | 737722356 | `77538ffdaaad581d…` |
+| `model_manifest.json` | 2894 | `c38da6bf314e3ab4…` |
 | `tokenizer.json` | 8339973 | `561fd1b229749e08…` |
 | `tokenizer_config.json` | 505 | `3dd09fcbf87e99e2…` |
 | `training_args.bin` | 5201 | `2b92b244c4a9b0ed…` |
@@ -181,12 +182,15 @@ Training bundle byte-identical to frozen: `{"train": true, "val": true}`
 {
   "keyword_verifier_instantiations": {
     "services/api/src/razormesh_api/protocol/acceptance.py": [
-      496
+      516
+    ],
+    "services/api/src/razormesh_api/semantic_runtime.py": [
+      244
     ]
   },
   "deberta_instantiated_in_server_source": false,
-  "semantic_backend_setting_declared": false,
-  "semantic_model_path_setting_declared": false
+  "semantic_backend_setting_declared": true,
+  "semantic_model_path_setting_declared": true
 }
 ```
 

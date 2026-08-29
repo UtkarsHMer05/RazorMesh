@@ -1,0 +1,50 @@
+{
+  "purpose": "G011 — Freeze pre-correction (pre-AgentPay-IR-v2-corpus) baseline evidence for the overnight verification run",
+  "recorded_at": "2026-08-28T23:40:00+05:30",
+  "mode": "OVERNIGHT_AUTONOMOUS_PREP",
+  "git": {
+    "head": "788da013f52e28686bd2ed71baa32b5f6414bfaf",
+    "branch": "main",
+    "dirty_before_run": [],
+    "untracked_created_by_agent": ["docs/agentpay_ir_v2/"]
+  },
+  "model_artifacts": {
+    "phase3-finetuned (v1 comparator)": {
+      "model_safetensors_sha256": "77538ffdaaad581d97ed8b04f45df0624777a3c1bee873c093d2070ee4294897",
+      "role": "historical comparator only; never called AgentPay-IR v2"
+    },
+    "phase3-finetuned-v2 (D-053 runtime artifact)": {
+      "model_safetensors_sha256": "163864e04a07fb56e51526f2f05dab3be742a9f1f290a561fc97fedd8f3c6995",
+      "role": "current runtime semantic verifier (SEMANTIC_VERIFIER_BACKEND=deberta default)"
+    },
+    "other_dirs": [
+      "artifacts/models/incoming/phase3-finetuned-v2-abandoned",
+      "artifacts/models/incoming/phase3-finetuned-v2-run1-underfit"
+    ]
+  },
+  "existing_reports": [
+    "docs/PHASE1_COMPLETION_REPORT.md",
+    "docs/PHASE2_COMPLETION_REPORT.md",
+    "docs/PHASE3_COMPLETION_REPORT.md",
+    "docs/PHASE3_DATASET_AND_RUNTIME_FINAL_AUDIT.md",
+    "docs/PHASE3_DATASET_RUNTIME_AUDIT.json",
+    "docs/PHASE3_DATASET_RUNTIME_AUDIT.md",
+    "docs/PHASE3_REAUDIT_2026_08_27.md",
+    "docs/PHASE4_FINAL_COMPLETION_REPORT.md",
+    "docs/PHASE4_PRE_HUMAN_COMPLETION_REPORT.md"
+  ],
+  "frontend_routes": ["/", "/buyer", "/protocols", "/security-lab", "/audit", "/merchant"],
+  "backend_modules_of_interest": [
+    "semantic_verifier.py", "semantic_evidence.py", "semantic_runtime.py",
+    "agentpay_ir.py", "agentpay_ir_v2.py", "protocol/firewall.py",
+    "protocol/envelope.py", "protocol/ir.py", "protocol/consistency.py",
+    "protocol/mcp_server.py", "protocol/ucp_adapter.py", "protocol/ap2_verifier.py",
+    "protocol/acp_adapter.py", "protocol/a2a_adapter.py", "protocol/acceptance.py"
+  ],
+  "runtime_versions": {
+    "uv": "0.12.5",
+    "python_service_venv": "3.13.15",
+    "node_lts": "22.x (see VERSION_MANIFEST.md)"
+  },
+  "notes": "Baseline frozen before any AgentPay-IR v2 corpus work. All numbers cited by master prompt §2 must be recomputed from disk by gates G012-G023; they are NOT trusted from §2."
+}

@@ -360,7 +360,7 @@ export default function BuyerPage() {
             Authorized contract <code>{intentId}</code>
           </p>
         ) : (
-          <button onClick={createAuthorization} disabled={busy}>
+          <button className="btn btn-secondary btn-sm" onClick={createAuthorization} disabled={busy}>
             Create fixture authorization
           </button>
         )}
@@ -426,7 +426,7 @@ export default function BuyerPage() {
             </p>
           </>
         ) : (
-          <button onClick={propose} disabled={!selected || busy}>
+          <button className="btn btn-secondary btn-sm" onClick={propose} disabled={!selected || busy}>
             Propose checkout
           </button>
         )}
@@ -496,7 +496,7 @@ export default function BuyerPage() {
             )}
           </>
         ) : decision?.decision === "ALLOW" ? (
-          <button onClick={execute} disabled={busy} data-testid="pay-action">
+          <button className="btn btn-primary btn-sm" onClick={execute} disabled={busy} data-testid="pay-action">
             Pay securely via Razorpay (Test Mode)
           </button>
         ) : (

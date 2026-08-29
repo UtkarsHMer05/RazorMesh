@@ -130,6 +130,7 @@ export function IntentDraftPanel({ onDraftConfirmed }: { onDraftConfirmed?: (dra
       <textarea
         id="nl-auth"
         data-testid="nl-input"
+        className="text-area"
         value={text}
         onChange={(e) => setText(e.target.value)}
         rows={3}
@@ -137,6 +138,7 @@ export function IntentDraftPanel({ onDraftConfirmed }: { onDraftConfirmed?: (dra
       />
       <button
         data-testid="compile-btn"
+        className="btn btn-primary btn-sm"
         onClick={compile}
         disabled={busy || text.trim().length < 3}
       >

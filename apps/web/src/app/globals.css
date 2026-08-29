@@ -756,6 +756,57 @@ img, video { max-width: 100%; display: block; }
 .pill--challenge { background: var(--rm-yellow); color: var(--rm-fg); }
 .pill--block    { background: var(--rm-red);    color: var(--rm-white); }
 
+/* ===== Form controls (Bauhaus tokens) ================================== */
+.field-label {
+  display: block;
+  font-family: var(--rm-font-display);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+.text-area,
+.text-input {
+  font-family: var(--rm-font-body);
+  font-size: 15px;
+  color: var(--rm-fg);
+  background: var(--rm-white);
+  border: 3px solid var(--rm-line);
+  border-radius: 0;
+  padding: 12px 14px;
+  box-sizing: border-box;
+}
+.text-area {
+  display: block;
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  margin: 0 0 14px;
+}
+.text-input { max-width: 24rem; }
+.text-area:focus-visible,
+.text-input:focus-visible {
+  outline: 3px solid var(--rm-focus);
+  outline-offset: 1px;
+}
+.text-area::placeholder,
+.text-input::placeholder { color: var(--rm-muted-fg); }
+.btn:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-sm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--rm-shadow-2);
+}
+.btn:disabled:hover { transform: none; box-shadow: var(--rm-shadow-2); }
+[data-testid="audit-timeline"] li { overflow-wrap: anywhere; }
+
+/* Local data-table scroll: keeps wide catalog tables inside the page on mobile */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
 /* ===== Animations ====================================================== */
 @keyframes rm-rise {
   from { opacity: 0; transform: translateY(18px); }
@@ -859,6 +910,11 @@ img, video { max-width: 100%; display: block; }
   font-size: 14px;
   letter-spacing: 0;
   text-transform: none;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+@media (max-width: 720px) {
+  .gateway-field { grid-template-columns: 1fr; gap: 4px; }
 }
 .gateway-field__value code {
   font-family: var(--rm-font-body);
@@ -1105,6 +1161,14 @@ img, video { max-width: 100%; display: block; }
 }
 @media (min-width: 1024px) { .seclab-grid { grid-template-columns: 1fr 1fr; gap: 56px; } }
 .seclab-preview { max-width: 640px; }
+.seclab-preview,
+.seclab-features,
+.feature-card { min-width: 0; }
+@media (max-width: 480px) {
+  .seclab-card__row { grid-template-columns: 1fr; gap: 4px; padding: 14px 16px; }
+}
+.seclab-card__value,
+.seclab-card__label { overflow-wrap: anywhere; min-width: 0; }
 .seclab-features {
   display: grid;
   grid-template-columns: 1fr;

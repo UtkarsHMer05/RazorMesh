@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-08-28T09:03:40.949328+00:00",
+  "generated_at_utc": "2026-08-28T17:53:59.764566+00:00",
   "repository": "/Users/utkarshkhajuria/Desktop/RazorMesh",
   "datasets": {
     "training_train": {
@@ -516,6 +516,10 @@
         "bytes": 737722356,
         "sha256": "77538ffdaaad581d97ed8b04f45df0624777a3c1bee873c093d2070ee4294897"
       },
+      "model_manifest.json": {
+        "bytes": 2894,
+        "sha256": "c38da6bf314e3ab4a80b3300733196d5ec02a47479de683a737f111cc4550145"
+      },
       "tokenizer.json": {
         "bytes": 8339973,
         "sha256": "561fd1b229749e08cc8b9b0a77e467b07ac5549418682e603925753429a8cd3e"
@@ -554,7 +558,7 @@
       "eval_accuracy": 0.9824561403508771,
       "eval_macro_f1": 0.9825612252634771
     },
-    "model_manifest_present": false
+    "model_manifest_present": true
   },
   "policy": {
     "path": "data/phase3/policy/semantic_thresholds.json",
@@ -589,11 +593,14 @@
   "runtime_wiring": {
     "keyword_verifier_instantiations": {
       "services/api/src/razormesh_api/protocol/acceptance.py": [
-        496
+        516
+      ],
+      "services/api/src/razormesh_api/semantic_runtime.py": [
+        244
       ]
     },
     "deberta_instantiated_in_server_source": false,
-    "semantic_backend_setting_declared": false,
-    "semantic_model_path_setting_declared": false
+    "semantic_backend_setting_declared": true,
+    "semantic_model_path_setting_declared": true
   }
 }

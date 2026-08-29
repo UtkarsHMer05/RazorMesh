@@ -129,9 +129,9 @@ export default function AuditPage() {
       )}
 
       <div className="card" data-testid="audit-controls">
-        <button onClick={loadTimeline}>Refresh timeline</button>{" "}
-        <button onClick={verifyChain}>Verify hash chain</button>{" "}
-        <button onClick={runTamperTest}>Run non-mutating tamper simulation</button>
+        <button className="btn btn-secondary btn-sm" onClick={loadTimeline}>Refresh timeline</button>{" "}
+        <button className="btn btn-secondary btn-sm" onClick={verifyChain}>Verify hash chain</button>{" "}
+        <button className="btn btn-secondary btn-sm" onClick={runTamperTest}>Run non-mutating tamper simulation</button>
         {verify && (
           <p data-testid="verify-result">
             Chain {verify.valid ? "VALID" : "BROKEN"} over {verify.events_checked} events
@@ -149,16 +149,17 @@ export default function AuditPage() {
 
       <div className="card" data-testid="intent-inspector">
         <h3>Authorization / execution state</h3>
-        <label>
+        <label className="field-label" htmlFor="intent-inspector-input">
           Intent ID{" "}
           <input
+            id="intent-inspector-input"
+            className="text-input"
             value={intentId}
             onChange={(e) => setIntentId(e.target.value)}
             placeholder="intent_…"
-            style={{ width: "22rem" }}
           />
         </label>{" "}
-        <button onClick={loadState} disabled={!intentId}>
+        <button className="btn btn-secondary btn-sm" onClick={loadState} disabled={!intentId}>
           Inspect
         </button>
         {state && (

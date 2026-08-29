@@ -73,24 +73,26 @@ export default function MerchantPage() {
         <p>{merchants.length} merchants · {products.length} products · no real offers or money</p>
       </div>
       <div className="card" data-testid="merchant-catalog" style={{ marginTop: 16 }}>
-        <table>
-          <caption className="sr-only">Synthetic merchant products</caption>
-          <thead>
-            <tr><th>Merchant</th><th>Product</th><th>Category</th><th>Condition</th><th>Terms</th><th>Price</th></tr>
-          </thead>
-          <tbody>
-            {products.map((product) => (
-              <tr key={product.id}>
-                <td>{merchantNames.get(product.merchant_id) ?? product.merchant_id}</td>
-                <td>{product.title}</td>
-                <td>{product.category}</td>
-                <td>{product.condition}</td>
-                <td>{product.recurring ? "Monthly recurring" : "One-time"}</td>
-                <td>{product.currency === "INR" ? fmtINR(product.price_minor) : `${product.price_minor} ${product.currency}`}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table>
+            <caption className="sr-only">Synthetic merchant products</caption>
+            <thead>
+              <tr><th>Merchant</th><th>Product</th><th>Category</th><th>Condition</th><th>Terms</th><th>Price</th></tr>
+            </thead>
+            <tbody>
+              {products.map((product) => (
+                <tr key={product.id}>
+                  <td>{merchantNames.get(product.merchant_id) ?? product.merchant_id}</td>
+                  <td>{product.title}</td>
+                  <td>{product.category}</td>
+                  <td>{product.condition}</td>
+                  <td>{product.recurring ? "Monthly recurring" : "One-time"}</td>
+                  <td>{product.currency === "INR" ? fmtINR(product.price_minor) : `${product.price_minor} ${product.currency}`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       </div>
     </section>

@@ -1,6 +1,6 @@
 # Phase-3 paired orientation diagnostic
 
-Generated: `2026-08-28T09:42:17.254313+00:00` by `scripts/rzp_orientation_diagnostic.py`.
+Generated: `2026-08-28T17:57:44.834449+00:00` by `scripts/rzp_orientation_diagnostic.py`.
 
 **Question:** does the existing frozen checkpoint generalize to the canonical runtime NLI
 orientation? Read-only. No retraining, no runtime wiring, no threshold or dataset change.
@@ -28,7 +28,7 @@ orientation? Read-only. No retraining, no runtime wiring, no threshold or datase
 - by label: `{"contradiction": 96, "entailment": 102, "neutral": 95}`
 - families covered: 18
 - evidence-determinable: 162 / not determinable: 131
-- device `cpu`, torch `2.13.0`, cold load `4.47s`
+- device `cpu`, torch `2.13.0`, cold load `3.37s`
 
 The hypothesis string is byte-identical across the two representations; only the premise
 orientation changes. Ground-truth labels are carried over unchanged.

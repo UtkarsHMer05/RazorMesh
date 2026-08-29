@@ -1,0 +1,520 @@
+{
+  "generated_at": "2026-08-28T19:06:45.753Z",
+  "base": "http://localhost:3000",
+  "checks": [
+    {
+      "route": "/",
+      "viewport": "390x844",
+      "horizontal_scroll": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 6,
+      "overlaps": [],
+      "clipped_text_elements": 2,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/",
+      "viewport": "430x932",
+      "horizontal_scroll": {
+        "scrollWidth": 430,
+        "clientWidth": 430
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 6,
+      "overlaps": [],
+      "clipped_text_elements": 2,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/",
+      "viewport": "768x1024",
+      "horizontal_scroll": {
+        "scrollWidth": 768,
+        "clientWidth": 768
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 6,
+      "overlaps": [],
+      "clipped_text_elements": 2,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/",
+      "viewport": "1280x800",
+      "horizontal_scroll": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 10,
+      "overlaps": [],
+      "clipped_text_elements": 2,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/",
+      "viewport": "1440x900",
+      "horizontal_scroll": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 10,
+      "overlaps": [],
+      "clipped_text_elements": 2,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/",
+      "viewport": "1920x1080",
+      "horizontal_scroll": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 10,
+      "overlaps": [],
+      "clipped_text_elements": 2,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/buyer",
+      "viewport": "390x844",
+      "horizontal_scroll": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 23,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/buyer",
+      "viewport": "430x932",
+      "horizontal_scroll": {
+        "scrollWidth": 430,
+        "clientWidth": 430
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 23,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/buyer",
+      "viewport": "768x1024",
+      "horizontal_scroll": {
+        "scrollWidth": 768,
+        "clientWidth": 768
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 23,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/buyer",
+      "viewport": "1280x800",
+      "horizontal_scroll": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 27,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/buyer",
+      "viewport": "1440x900",
+      "horizontal_scroll": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 27,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/buyer",
+      "viewport": "1920x1080",
+      "horizontal_scroll": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 27,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/protocols",
+      "viewport": "390x844",
+      "horizontal_scroll": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 1,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/protocols",
+      "viewport": "430x932",
+      "horizontal_scroll": {
+        "scrollWidth": 430,
+        "clientWidth": 430
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 1,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/protocols",
+      "viewport": "768x1024",
+      "horizontal_scroll": {
+        "scrollWidth": 768,
+        "clientWidth": 768
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 1,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/protocols",
+      "viewport": "1280x800",
+      "horizontal_scroll": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 5,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/protocols",
+      "viewport": "1440x900",
+      "horizontal_scroll": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 5,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/protocols",
+      "viewport": "1920x1080",
+      "horizontal_scroll": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 5,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/security-lab",
+      "viewport": "390x844",
+      "horizontal_scroll": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 1,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/security-lab",
+      "viewport": "430x932",
+      "horizontal_scroll": {
+        "scrollWidth": 430,
+        "clientWidth": 430
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 1,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/security-lab",
+      "viewport": "768x1024",
+      "horizontal_scroll": {
+        "scrollWidth": 768,
+        "clientWidth": 768
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 1,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/security-lab",
+      "viewport": "1280x800",
+      "horizontal_scroll": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 5,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/security-lab",
+      "viewport": "1440x900",
+      "horizontal_scroll": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 5,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/security-lab",
+      "viewport": "1920x1080",
+      "horizontal_scroll": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 5,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/audit",
+      "viewport": "390x844",
+      "horizontal_scroll": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 4,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/audit",
+      "viewport": "430x932",
+      "horizontal_scroll": {
+        "scrollWidth": 430,
+        "clientWidth": 430
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 4,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/audit",
+      "viewport": "768x1024",
+      "horizontal_scroll": {
+        "scrollWidth": 768,
+        "clientWidth": 768
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 4,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/audit",
+      "viewport": "1280x800",
+      "horizontal_scroll": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 8,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/audit",
+      "viewport": "1440x900",
+      "horizontal_scroll": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 8,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/audit",
+      "viewport": "1920x1080",
+      "horizontal_scroll": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 8,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/merchant",
+      "viewport": "390x844",
+      "horizontal_scroll": {
+        "scrollWidth": 390,
+        "clientWidth": 390
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 0,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/merchant",
+      "viewport": "430x932",
+      "horizontal_scroll": {
+        "scrollWidth": 430,
+        "clientWidth": 430
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 0,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/merchant",
+      "viewport": "768x1024",
+      "horizontal_scroll": {
+        "scrollWidth": 768,
+        "clientWidth": 768
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 0,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/merchant",
+      "viewport": "1280x800",
+      "horizontal_scroll": {
+        "scrollWidth": 1280,
+        "clientWidth": 1280
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 4,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/merchant",
+      "viewport": "1440x900",
+      "horizontal_scroll": {
+        "scrollWidth": 1440,
+        "clientWidth": 1440
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 4,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    },
+    {
+      "route": "/merchant",
+      "viewport": "1920x1080",
+      "horizontal_scroll": {
+        "scrollWidth": 1920,
+        "clientWidth": 1920
+      },
+      "horizontal_scroll_ok": true,
+      "interactive_elements": 4,
+      "overlaps": [],
+      "clipped_text_elements": 0,
+      "console_errors": [],
+      "failed_requests": []
+    }
+  ],
+  "keyboard_buyer_tab_order": [
+    "A:RazorMesh home",
+    "A:Story",
+    "A:Architecture",
+    "A:Protocols",
+    "A:Security",
+    "A:Log in"
+  ],
+  "keyboard_textarea_input_works": true,
+  "reduced_motion_renders": true
+}
