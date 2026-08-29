@@ -111,6 +111,18 @@ workflow below is the only current one.
   decision — see INJECTION_DEFENSE_AUGMENTATION.md. V3 pack SHA, roles, card IDs
   and allocation are UNCHANGED.
 
+- **Colab runtime-correctness fix (2026-08-30):** the generated FINAL packaging
+  cell no longer contains doubled braces (it is inserted verbatim, so `{{...}}`
+  would have executed as set-literals-of-dicts and crashed with
+  `TypeError: unhashable type: 'dict'`). A new execution test runs the actual
+  generated final cell against fake cand_2ep/cand_3ep checkpoints with mocked
+  `colab_files.download` and proves: agentpay-ir-v2-finetuned/ is the EXACT
+  selected candidate's files, valid training_metrics.json/model_manifest.json
+  with correct provenance, valid artifact hashes, and the final ZIP — with no
+  training. Package-version verification now gates on
+  `importlib.metadata.version()` for every pinned distribution, while
+  `torch.__version__` and the CUDA build are recorded as evidence.
+
 ## Fresh-clone reproduction (run BEFORE trusting the dry-run finalizer)
 
 The private linkage/role files are gitignored; a fresh clone reproduces them

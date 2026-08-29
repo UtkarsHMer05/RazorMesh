@@ -204,14 +204,20 @@ print("frozen requirements:", REQ)
 
 # NOW import the runtime and reconcile actual versions against the frozen file.
 import accelerate
+import importlib.metadata as importlib_metadata
 import torch
 import transformers
 
-assert transformers.__version__ == REQ["transformers"], (
-    f"transformers {{transformers.__version__}} != frozen {{REQ['transformers']}}")
-assert torch.__version__ == REQ["torch"], f"torch {{torch.__version__}} != frozen {{REQ['torch']}}"
-assert accelerate.__version__ == REQ["accelerate"], (
-    f"accelerate {{accelerate.__version__}} != frozen {{REQ['accelerate']}}")
+# PRIMARY gate: pinned DISTRIBUTION versions via importlib.metadata (robust to
+# runtime-report quirks); every package in requirements-frozen.txt is checked.
+for _pkg in REQ:
+    _installed = importlib_metadata.version(_pkg)
+    assert _installed == REQ[_pkg], f"{_pkg} {_installed} != frozen {REQ[_pkg]}"
+
+# EVIDENCE (recorded, not equality-gated): runtime-reported torch version and
+# the CUDA build the runtime was compiled against.
+print("torch.__version__ (runtime report):", torch.__version__)
+print("torch.version.cuda (runtime build):", getattr(torch.version, "cuda", "unavailable"))
 assert torch.cuda.is_available(), "GPU required (Runtime > Change runtime type)"
 print("GPU:", torch.cuda.get_device_name(0))
 print("runtime versions OK:", transformers.__version__, torch.__version__, accelerate.__version__)
@@ -308,6 +314,7 @@ print("SELECTED (validation only, FROZEN rule: {selection_rule}):", best)
 FINAL_CELL = '''
 # Package the EXACT selected checkpoint — never retrain from base. The winning
 # validation metrics were produced by cand_*ep, so those weights are the artifact.
+# NOTE: this cell is inserted verbatim (no str.format), so braces are literal.
 import shutil
 
 cand_dir = "cand_2ep" if best == "A_2ep" else "cand_3ep"
@@ -318,8 +325,8 @@ shutil.copytree(cand_dir, "agentpay-ir-v2-finetuned")
 copied_metrics = json.load(open("agentpay-ir-v2-finetuned/validation_metrics.json"))
 assert copied_metrics == results[best], "packaged checkpoint metrics != selected metrics"
 open("agentpay-ir-v2-finetuned/base_model.txt", "w").write(MANIFEST["base_model"])
-json.dump({{"validation_results": results, "selected": best, "seed": 42,
-           "selected_checkpoint_source_dir": cand_dir}},
+json.dump({"validation_results": results, "selected": best, "seed": 42,
+           "selected_checkpoint_source_dir": cand_dir},
           open("agentpay-ir-v2-finetuned/training_metrics.json", "w"), indent=1)
 json.dump(MANIFEST, open("agentpay-ir-v2-finetuned/dataset_manifest.json", "w"), indent=1)
 
@@ -330,10 +337,10 @@ def _sha(p):
     return hashlib.sha256(open(p, "rb").read()).hexdigest()
 
 
-artifact_files = {{f: _sha("agentpay-ir-v2-finetuned/" + f)
+artifact_files = {f: _sha("agentpay-ir-v2-finetuned/" + f)
                   for f in os.listdir("agentpay-ir-v2-finetuned")
-                  if os.path.isfile("agentpay-ir-v2-finetuned/" + f)}}
-model_manifest = {{
+                  if os.path.isfile("agentpay-ir-v2-finetuned/" + f)}
+model_manifest = {
     "artifact": "agentpay-ir-v2-finetuned",
     "base_model": MANIFEST["base_model"],
     "base_model_revision": REV,
@@ -347,12 +354,12 @@ model_manifest = {{
     "selection_rule": json.load(open("bundle/train_config.json"))["selection"],
     "dataset_manifest_files": MANIFEST["files"],
     "expected_bundle_sha256": EXPECTED_BUNDLE_SHA256,
-    "dependency_versions": {{"transformers": transformers.__version__, "torch": torch.__version__,
+    "dependency_versions": {"transformers": transformers.__version__, "torch": torch.__version__,
                             "accelerate": accelerate.__version__,
-                            "python": __import__("platform").python_version()}},
+                            "python": __import__("platform").python_version()},
     "artifact_files_sha256": artifact_files,
     "training_data_excluded": ["frozen test", "human gold", "untouched OOD"],
-}}
+}
 json.dump(model_manifest, open("agentpay-ir-v2-finetuned/model_manifest.json", "w"), indent=1)
 
 shutil.make_archive("agentpay-ir-v2-finetuned", "zip", ".", "agentpay-ir-v2-finetuned")

@@ -197,9 +197,13 @@ def test_no_torch_import_before_install_and_versions_asserted(committed_bundle) 
         elif i == install_idx:
             assert cell.index("%pip install") < cell.index("import torch"), \
                 "torch must be imported only AFTER the frozen install"
-            for pkg in FROZEN_VERSIONS:
-                assert f'assert {pkg}.__version__ == REQ["{pkg}"]' in cell, \
-                    f"actual {pkg} version must be asserted against the frozen requirement"
+            # primary gate: pinned DISTRIBUTION versions via importlib.metadata
+            assert "import importlib.metadata as importlib_metadata" in cell
+            assert "for _pkg in REQ:" in cell
+            assert 'assert _installed == REQ[_pkg]' in cell
+            # evidence: runtime-reported torch/CUDA versions recorded, not gated
+            assert 'print("torch.__version__ (runtime report):", torch.__version__)' in cell
+            assert "torch.version.cuda" in cell
 
 
 def test_install_cell_extracts_bundle_before_pip_in_dependency_free_env(
@@ -727,3 +731,117 @@ def test_finalizer_without_flag_never_integrates_augmentation(finalized: dict) -
     root = finalized["root"]
     train = (root / "data" / "agentpay_ir_v2" / "corpus" / "final" / "train.jsonl").read_text()
     assert "aug_pi_" not in train
+
+
+# ---------------------------------------------------------------------------
+# runtime-correctness fix: the generated FINAL cell must EXECUTE and package
+# the exact selected candidate (fake checkpoints, mocked download, no training)
+# ---------------------------------------------------------------------------
+
+
+def test_final_cell_executes_and_packages_exact_selected_candidate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import hashlib as _hashlib
+    import json as _json
+    import os as _os
+    import types as _types
+    import zipfile as _zipfile
+
+    cells = notebook_code_cells(COMMITTED_NOTEBOOK)
+    final_src = next(c for c in cells if "selected_checkpoint_source_dir" in c)
+    # FINAL_CELL is inserted verbatim (no .format): doubled braces would become
+    # set-literals-of-dicts and crash at runtime — none may remain.
+    assert "{{" not in final_src and "}}" not in final_src
+    for verbatim_cell_name, marker in (("install", "%pip install"), ("train setup", "NLIDataset")):
+        verbatim = next(c for c in cells if marker in c)
+        assert "{{" not in verbatim, f"{verbatim_cell_name} cell must not use format escapes"
+
+    monkeypatch.chdir(tmp_path)
+    old_env = _os.environ.get("BUNDLE_PATH")
+    _os.environ["BUNDLE_PATH"] = str(COMMITTED_ZIP)
+    ns: dict = {}
+    try:
+        exec(compile(next(c for c in cells if "def verify_bundle" in c),
+                      "verify_cell", "exec"), ns)  # noqa: S102 - test rig
+        install = next(c for c in cells if "%pip install" in c)
+        python_only = install[: install.index("# NOW import the runtime")].replace(
+            "%pip install -q -r bundle/requirements-frozen.txt",
+            "PIP_STUBBED_IN_PREFLIGHT = True")
+        exec(compile(python_only, "install_cell", "exec"), ns)  # noqa: S102 - test rig
+    finally:
+        if old_env is None:
+            _os.environ.pop("BUNDLE_PATH", None)
+        else:
+            _os.environ["BUNDLE_PATH"] = old_env
+
+    # fake candidate checkpoints with DISTINCT weights and their exact metrics
+    results = {
+        "A_2ep": {"eval_unsafe_c_to_e": 0, "eval_macro_f1": 0.91,
+                  "eval_contradiction_recall": 0.82, "eval_neutral_recall": 0.70,
+                  "eval_safe_false_block": 1},
+        "B_3ep": {"eval_unsafe_c_to_e": 0, "eval_macro_f1": 0.88,
+                  "eval_contradiction_recall": 0.79, "eval_neutral_recall": 0.66,
+                  "eval_safe_false_block": 0},
+    }
+    for cand, metrics in (("cand_2ep", results["A_2ep"]), ("cand_3ep", results["B_3ep"])):
+        d = tmp_path / cand
+        d.mkdir()
+        (d / "model.safetensors").write_bytes(cand.encode() * 256)  # distinct per candidate
+        (d / "config.json").write_text('{"model_type": "fake"}')
+        (d / "tokenizer.json").write_text('{"fake": true}')
+        (_json.dumps(metrics, indent=1) + "\n").encode()
+        (d / "validation_metrics.json").write_text(_json.dumps(metrics, indent=1))
+        (d / "base_model_revision.txt").write_text("6c749ce3425cd33b46d187e45b92bbf96ee12ec7")
+
+    downloads: list[str] = []
+    ns.update(
+        best="A_2ep",  # frozen rule: unsafe tie -> higher macro-F1 -> A wins
+        results=results,
+        REV="6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        transformers=_types.SimpleNamespace(__version__="5.15.1"),
+        torch=_types.SimpleNamespace(__version__="2.13.0",
+                                     version=_types.SimpleNamespace(cuda="12.4")),
+        accelerate=_types.SimpleNamespace(__version__="1.14.0"),
+        colab_files=_types.SimpleNamespace(download=downloads.append),
+    )
+    exec(compile(final_src, "final_cell", "exec"), ns)  # noqa: S102 - test rig
+
+    # download mocked, no training happened (pure file operations above)
+    assert downloads == ["agentpay-ir-v2-finetuned.zip"]
+    art = tmp_path / "agentpay-ir-v2-finetuned"
+    assert art.is_dir()
+
+    tm = _json.loads((art / "training_metrics.json").read_text())
+    assert tm["selected"] == "A_2ep"
+    assert tm["selected_checkpoint_source_dir"] == "cand_2ep"
+    assert tm["validation_results"] == results
+
+    mm = _json.loads((art / "model_manifest.json").read_text())
+    assert mm["selected_candidate"] == "A_2ep"
+    assert mm["selected_checkpoint_source_dir"] == "cand_2ep"
+    assert mm["selected_candidate_metrics"] == results["A_2ep"]
+    assert "never retrained from base" in mm["packaging"]
+    import platform as _platform
+
+    assert mm["dependency_versions"] == {"transformers": "5.15.1", "torch": "2.13.0",
+                                         "accelerate": "1.14.0",
+                                         "python": _platform.python_version()}
+
+    # the packaged weights are the SELECTED candidate's exact files (not B's)
+    assert (art / "model.safetensors").read_bytes() == \
+        (tmp_path / "cand_2ep" / "model.safetensors").read_bytes()
+    assert (art / "model.safetensors").read_bytes() != \
+        (tmp_path / "cand_3ep" / "model.safetensors").read_bytes()
+    assert _json.loads((art / "validation_metrics.json").read_text()) == results["A_2ep"]
+
+    # recorded artifact hashes are valid for the packaged files
+    for fname, want in mm["artifact_files_sha256"].items():
+        assert _hashlib.sha256((art / fname).read_bytes()).hexdigest() == want
+
+    # the final ZIP exists and carries the artifact directory
+    zip_path = tmp_path / "agentpay-ir-v2-finetuned.zip"
+    assert zip_path.exists()
+    with _zipfile.ZipFile(zip_path) as z:
+        assert any(n.startswith("agentpay-ir-v2-finetuned/") for n in z.namelist())
+        assert "agentpay-ir-v2-finetuned/model_manifest.json" in z.namelist()
