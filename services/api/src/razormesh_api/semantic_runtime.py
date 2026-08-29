@@ -42,6 +42,14 @@ from razormesh_api.semantic_verifier import (
 POLICY_PATH = Path("data/phase3/policy/semantic_thresholds_v3.json")
 MODEL_DIR = Path("artifacts/models/incoming/phase3-finetuned-v2")
 
+# AgentPay-IR v2 candidate artifact location (post-Colab). INACTIVE backend
+# option: `deberta_v2` resolves to this directory ONLY when the artifact exists
+# there; otherwise the option fails CLOSED exactly like a missing deberta model
+# (never a keyword substitution, never a silent downgrade to the v2 artifact
+# that is not there). Activation requires the human-returned artifact plus a
+# recorded manifest-hash verification (see docs/agentpay_ir_v2/).
+MODEL_DIR_V2 = Path("artifacts/models/incoming/agentpay-ir-v2-finetuned")
+
 # Repo root, derived from this file's source location so RELATIVE model/policy
 # paths resolve identically no matter which CWD the backend process was started
 # from (repo-root `make dev-api`, `services/api` pytest, etc.). Correction
@@ -233,6 +241,19 @@ def run_semantic_runtime(
             pass
         elif semantic_backend == "deberta":
             verifier = get_semantic_verifier(model_dir=model_dir, policy_path=policy_path)
+            verdicts = [
+                verifier.verify(premise=pair.premise, hypothesis=pair.hypothesis)
+                for pair in all_pairs
+            ]
+        elif semantic_backend == "deberta_v2":
+            # AgentPay-IR v2 candidate backend — INACTIVE until the artifact
+            # exists at MODEL_DIR_V2. A missing/corrupt artifact fails CLOSED
+            # (CHALLENGE), exactly like the deberta backend's missing-model
+            # path; it is never substituted with the keyword stub.
+            v2_dir = resolve_repo_path(MODEL_DIR_V2)
+            if not (v2_dir / "config.json").exists():
+                raise FileNotFoundError(f"agentpay-ir-v2 artifact not present at {v2_dir}")
+            verifier = get_semantic_verifier(model_dir=v2_dir, policy_path=policy_path)
             verdicts = [
                 verifier.verify(premise=pair.premise, hypothesis=pair.hypothesis)
                 for pair in all_pairs

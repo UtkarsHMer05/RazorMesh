@@ -1,0 +1,11 @@
+{
+  "schema_version": "agentpay-ir-v2",
+  "built_from": "data/agentpay_ir_v2/RAW_DATA_MANIFEST.json",
+  "orientation": "premise=evidence, hypothesis=authorization (canonical)",
+  "counts": {
+    "train": 13843,
+    "val": 2312,
+    "test": 2261
+  },
+  "seed": 42
+}

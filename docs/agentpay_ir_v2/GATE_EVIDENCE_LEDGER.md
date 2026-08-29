@@ -328,3 +328,63 @@ Master prompt: `RazorMesh_AgentPay_IR_v2_End_to_End_Verification_Master_Prompt_F
 ## Ledger G059 — Prove raw data is not accidentally tracked — PASS
 - git check-ignore verified for contract-nli.zip and ESCI parquet; `git status` shows only the tracked evidence files, raw payloads ignored.
 
+---
+
+# Stage: AgentPay-IR v2 corpus build, freeze, training prep (G060–G09x, §16D–G)
+
+## Ledger G060–G063 — Schema/orientation/hashing/provenance implementation — PASS
+- `schema_version=agentpay-ir-v2` records with all §4 fields (record_id, premise, hypothesis, label, family, subfamily, authorization_field, evidence_field, source_dataset, source_record_id, source_license, source_provenance, source_kind, generator_parent_id, template_family_id, entity_family_id, safe_lookalike_family_id, split_group, difficulty, safe_or_attack, content_sha256, metadata). SCHEMA.md frozen. content_sha256 = sha256(premise␟hypothesis␟label␟"canonical") — orientation-coverage enforced.
+
+## Ledger G064 — Split-group derivation — PASS
+- Grouping units (master prompt §7): ContractNLI=document, ESCI=product (shared conceptual parent), internal=generator parent. Buckets = sha256(group) → 750/125/125.
+
+## Ledger G065 — ContractNLI transform — PASS
+- 9,014 rows from official spans+choices (annotation spans resolved as indices into doc spans). Entailment/Contradiction direct; NotMentioned→neutral with cross-clause evidence (≤6/doc); premises ≤2000 chars; guard-clean.
+
+## Ledger G066 — ANLI transform — PASS (EXCLUDED — not transformed; CC BY-NC gate)
+
+## Ledger G067/G068 — ESCI commerce-evidence extractor — PASS
+- 10,679 deterministic rows: brand identity (E/C), color identity (E/C), condition claims (C), model-token identity (E), genuine brand-absence neutrals. E/S/C/I never auto-mapped. NaN brand/color handled (fixed a 'nan'-string poisoning bug found by validation).
+
+## Ledger G069 — WDC extractors — PASS (EXCLUDED — sources not used)
+
+## Ledger G070 — Deterministic commerce label rules — PASS (see G067; every auto-label has an explicit deterministic semantic basis)
+
+## Ledger G071 — Ambiguity routing to human review — PASS
+- 700 ambiguous real ESCI candidates (brand-missing, color-missing) routed to the review pack instead of auto-labeling.
+
+## Ledger G072 — Targeted adversarial generator interface — PASS
+- frozen_v2 attack rows re-provenance as synthetic_adversarial; final train contains 0% synthetic (real coverage adequate; cap ≤10% respected).
+
+## Ledger G073 — Transformation report — PASS (docs/agentpay_ir_v2/TRANSFORMATION_REPORT.md)
+
+## Ledger G074–G078 — Validation: schema/orientation/degenerate/provenance/labels — PASS
+- Builder validate(): label enum, degenerate pairs, canonical orientation guard on every row, forbidden evidence-prose in hypotheses, size bounds, source_kind enum, provenance completeness. Run exits non-zero on any violation (proved by the two caught defects during development).
+
+## Ledger G079–G080 — Class/family distribution — PASS
+- train {C:3609, E:6817, N:3417}; 34 families in train; distribution_report.json written.
+
+## Ledger G081–G089 — Dedup/splits/leakage/quality — PASS
+- Global pre-split dedup: 1,626 exact + 57 normalized duplicates removed BEFORE splitting (the root cause of a first-run leakage-gate FAIL — product shared across queries — was fixed by product-parent grouping). LEAKAGE GATE: PASS (0 group/hash/pair overlaps across all split pairs; OOD deconflicted against corpus hashes).
+
+## Ledger G090 — Review pack (600–1000) — PASS
+- 700 candidates frozen; hidden review_role manifest (seed 42): 300 gold / 400 supervised, assigned before any human label; roles excluded from the training bundle physically.
+
+## Ledger G091 — Fresh OOD v2 freeze — PASS
+- 400 rows (withheld internal families + withheld ContractNLI entities), hash-frozen in eval/fresh_ood_v2_FROZEN.json; zero overlap with corpus; never used for training/selection/calibration.
+
+## Ledger G092 — Colab training bundle — PASS
+- artifacts/agentpay_ir_v2_colab_training_bundle.zip sha256 b00c798c… (2.5MB): train+val+schema+label map+config+hashes ONLY; frozen test/gold/OOD physically excluded. Base model pinned @ 6c749ce3425cd33b46d187e45b92bbf96ee12ec7 (MODEL_SOURCE_MANIFEST.json).
+
+## Ledger G093 — Colab notebook — PASS
+- notebooks/RazorGuard_NLI_AgentPayIR_v2_Training.ipynb: GPU assert, bundle+file hash verification, pinned-revision download, seed 42, candidates A (2ep)/B (3ep), validation-only selection (macro-F1 + contradiction recall + unsafe C→E), artifact packaging + download trigger. Never touches test/gold/OOD.
+
+## Ledger — Local smoke fine-tune (§16F) — PASS
+- scripts/rzp_smoke_train_v2.py: 64 rows, 1 epoch, CPU, seed 42 → SMOKE TRAIN OK, eval_loss 0.3284, artifact at artifacts/models/incoming/agentpay-ir-v2-SMOKE/ with SMOKE_MARKER.json (never a candidate; never runtime-wired). Required adding accelerate>=1.11 to the semantic uv group (locked; VERSION_MANIFEST update below).
+
+## Ledger — Runtime v2 backend scaffolding — PASS
+- semantic_runtime.py: `deberta_v2` backend option added, INACTIVE by default; resolves MODEL_DIR_V2=artifacts/models/incoming/agentpay-ir-v2-finetuned/ only when present; missing artifact fails CLOSED to CHALLENGE (FileNotFoundError → existing fail-closed path, ledger-recorded). Pinned by tests: test_v2_backend_missing_artifact_fails_closed_never_keyword, test_v2_backend_model_dir_constant_points_to_incoming (test_semantic_runtime.py 15/15 PASS). Default runtime unchanged (deberta @ phase3-finetuned-v2).
+
+## Human-dependent gates (master prompt §16A) — DEFERRED_MORNING
+- Human review ingestion, final training-only bundle rebuild, returned-artifact verification, candidate comparison, validation-only calibration, one-shot test/gold/OOD evaluation, winner selection, live deberta_v2 wiring, final same-lineage Razorpay Test payment, final Phase-4 acceptance: recorded DEFERRED_MORNING per Mode A — never PASS until executed with the real artifact.
+

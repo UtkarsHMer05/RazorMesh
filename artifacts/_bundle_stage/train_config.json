@@ -1,0 +1,30 @@
+{
+  "base_model": "cross-encoder/nli-deberta-v3-base",
+  "base_model_revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+  "label_map": {
+    "0": "contradiction",
+    "1": "entailment",
+    "2": "neutral"
+  },
+  "seed": 42,
+  "max_length": 256,
+  "candidates": {
+    "A": {
+      "epochs": 2,
+      "lr": 2e-05
+    },
+    "B": {
+      "epochs": 3,
+      "lr": 2e-05
+    }
+  },
+  "batch_size": 16,
+  "warmup_ratio": 0.06,
+  "fp16": true,
+  "selection": "validation only; macro-F1 + contradiction recall + unsafe C->E count",
+  "forbidden_at_training_time": [
+    "test.jsonl",
+    "human gold (review_role=gold)",
+    "fresh_ood_v2.jsonl"
+  ]
+}

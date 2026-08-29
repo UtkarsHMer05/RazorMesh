@@ -1,0 +1,13 @@
+{
+  "base_model": "cross-encoder/nli-deberta-v3-base",
+  "revision": "6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+  "license": "Apache-2.0",
+  "resolved_at": "2026-08-29",
+  "source": "https://huggingface.co/api/models/cross-encoder/nli-deberta-v3-base",
+  "label_map": {
+    "0": "contradiction",
+    "1": "entailment",
+    "2": "neutral"
+  },
+  "pin_rule": "train from this exact revision; never float to main/latest"
+}

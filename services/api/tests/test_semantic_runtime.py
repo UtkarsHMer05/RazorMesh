@@ -331,3 +331,27 @@ def test_phase4_builder_uses_settings_declared_semantic_runtime() -> None:
     assert orchestrator._semantic_model_dir == Path(settings.semantic_model_path)
     assert orchestrator._semantic_policy_path == Path(settings.semantic_policy_path)
     assert "phase3-finetuned-v2" in str(orchestrator._semantic_model_dir)
+
+
+# ---------------------------------------------------------------------------
+# AgentPay-IR v2 inactive backend option (master prompt §16A/§10)
+# ---------------------------------------------------------------------------
+
+
+def test_v2_backend_missing_artifact_fails_closed_never_keyword() -> None:
+    """`deberta_v2` with no returned artifact fails CLOSED to CHALLENGE — it
+    must never fall back to the keyword stub and never run silently."""
+    outcome = _run("deberta_v2", DeterministicDecision.ALLOW)
+    assert outcome.fail_closed is True
+    assert outcome.semantic_action is SemanticAction.CHALLENGE
+    assert outcome.final_decision is DeterministicDecision.CHALLENGE
+    assert "not present" in (outcome.reason or "")
+    assert outcome.semantic_backend == "deberta_v2"
+    assert "stub" not in outcome.model_id.lower()
+    assert outcome.model_id == "unknown"  # no model ran
+
+
+def test_v2_backend_model_dir_constant_points_to_incoming() -> None:
+    """The v2 location is the documented incoming path, not the live artifact."""
+    assert str(sr.MODEL_DIR_V2).endswith("artifacts/models/incoming/agentpay-ir-v2-finetuned")
+    assert sr.MODEL_DIR_V2 != sr.MODEL_DIR  # the active D-053 artifact is untouched

@@ -38,6 +38,9 @@ dev = [
 semantic = [
     "torch==2.13.0",
     "transformers==5.15.1",
+    # HuggingFace Trainer dependency — local AgentPay-IR v2 smoke fine-tune
+    # proof (master prompt §16F); notebook pins its own Colab versions.
+    "accelerate>=1.11.0,<2",
 ]
 
 [build-system]

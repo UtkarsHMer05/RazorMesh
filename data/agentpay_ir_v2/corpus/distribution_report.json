@@ -1,0 +1,47 @@
+{
+  "train": {
+    "rows": 13843,
+    "labels": {
+      "neutral": 3417,
+      "entailment": 6817,
+      "contradiction": 3609
+    },
+    "source_kinds": {
+      "real_human_nli": 6254,
+      "real_commerce": 6936,
+      "deterministic_derived": 653
+    },
+    "families": 34,
+    "split_groups": 6819
+  },
+  "val": {
+    "rows": 2312,
+    "labels": {
+      "neutral": 579,
+      "entailment": 1120,
+      "contradiction": 613
+    },
+    "source_kinds": {
+      "real_human_nli": 1080,
+      "real_commerce": 1119,
+      "deterministic_derived": 113
+    },
+    "families": 28,
+    "split_groups": 1116
+  },
+  "test": {
+    "rows": 2261,
+    "labels": {
+      "neutral": 545,
+      "entailment": 1149,
+      "contradiction": 567
+    },
+    "source_kinds": {
+      "real_human_nli": 973,
+      "real_commerce": 1189,
+      "deterministic_derived": 99
+    },
+    "families": 26,
+    "split_groups": 1150
+  }
+}

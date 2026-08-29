@@ -422,3 +422,29 @@ Authority: human request to validate the completed phase against the autonomous 
 - [x] dependency/security findings classified
 - [x] clean-room setup succeeds
 - [x] `docs/PHASE1_COMPLETION_REPORT.md` exists
+
+---
+
+# AgentPay-IR v2 overnight append (2026-08-29)
+
+- Mode A (`OVERNIGHT_AUTONOMOUS_PREP`) executed gates G001–G059 + G060–G09x and
+  milestones OVN001–OVN052 strictly in order; per-gate evidence in
+  `docs/agentpay_ir_v2/GATE_EVIDENCE_LEDGER.md` and
+  `docs/agentpay_ir_v2/OVERNIGHT_VERIFICATION_LEDGER.md`.
+- Pre-v2 system verification: backend 755/755 (exit 0), ruff/mypy clean,
+  frontend typecheck/lint/vitest/build green, clean-room acceptance 10/10 on
+  isolated DB/Redis, browser suite 22/22, responsive sweep 36/36 after four
+  CSS-only overflow/overlap repairs (Bauhaus identity preserved).
+- OVN047 (pre-v2 Razorpay Test payment completion) = BLOCKED_EXTERNAL: the
+  sandbox checkout iframe fails every automated instrument; failure paths,
+  truthful EXECUTING UI state, and the reconciliation recovery pass were all
+  verified. Never recorded as PASS.
+- AgentPay-IR v2 corpus frozen: train 13,843 / val 2,312 / test 2,261
+  (100% real/human-derived: ContractNLI CC BY 4.0 + ESCI Apache-2.0 +
+  provenance-normalized internal seed); ANLI/WDC excluded with recorded license
+  reasoning; leakage gate PASS; 700-card review pack (300 hidden gold);
+  400-row fresh OOD hash-frozen; Colab bundle (sha b00c798c…) + notebook +
+  pinned base revision 6c749ce3…; local smoke fine-tune OK (64 rows/1 epoch).
+- Runtime `deberta_v2` backend scaffolded INACTIVE (missing artifact fails
+  closed to CHALLENGE; pinned by new tests). Human-dependent gates are
+  DEFERRED_MORNING — no final v2 model or Phase-4 acceptance claim is made.

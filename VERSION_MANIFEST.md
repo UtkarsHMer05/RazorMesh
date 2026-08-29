@@ -50,6 +50,7 @@ Newest numeric version is not automatically the correct version.
 | mypy | 2.3.1 | 2026-08-23 | PyPI | Static type checking; strict-enough config for financial modules |
 | pip-audit | 2.10.1 | 2026-08-24 | PyPI JSON API (`https://pypi.org/pypi/pip-audit/json`) | PyPA official dependency auditor; requires-python >=3.10 OK; audits the locked uv venv against the PyPI Advisory database (M48 gate) |
 | httpx2 | 2.12.0 | 2026-08-24 | PyPI JSON API (`https://pypi.org/pypi/httpx2/json`) | Stable Starlette 1.6 TestClient dependency; replaces its deprecated legacy-httpx fallback while `httpx` remains for the acceptance client |
+| accelerate | 1.14.0 (semantic optional group) | 2026-08-29 | PyPI via `uv sync --group semantic` | HF Trainer dependency for the AgentPay-IR v2 local smoke fine-tune proof (master prompt §16F); Colab notebook pins its own 1.10.1 | 
 | uv | 0.12.5 | 2026-08-23 | astral.sh official installer | Python env/lock management |
 
 # Frontend manifest

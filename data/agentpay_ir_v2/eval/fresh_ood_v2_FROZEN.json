@@ -1,0 +1,6 @@
+{
+  "frozen_at": "2026-08-29T02:20:00+00:00",
+  "rows": 400,
+  "sha256": "8f0a511cea2d2b1fcab146dd14dcdcaef067aa611691b51653b773ccc9d97ec5",
+  "rule": "never used for training/validation/selection/calibration; historical 129-row OOD remains comparator-only"
+}

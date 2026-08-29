@@ -30,10 +30,15 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust
 **Active phase:** Phase 4 ACTIVE (M01–M50 AUTONOMOUS PASS, awaiting human acceptance)
-**Current milestone:** Phase-3 dataset + semantic-runtime correction COMPLETE (2026-08-28).
-**Last updated:** 2026-08-28 (Phase-3 correction: frozen_v2 dataset, v2 checkpoint,
-DeBERTa wired as the live runtime semantic verifier; backend 755 passed incl.
-13/13 live-ingress E2E with the real model; ruff/mypy clean; frontend gates green).
+**Current milestone:** AgentPay-IR v2 OVERNIGHT_PREP COMPLETE (2026-08-29): gates
+G001-G09x + OVN001-052 executed in order; real-data-dominant v2 corpus frozen
+(18,416 rows, 100% real/human-derived, leakage gate PASS), 700-card review pack
+(300 hidden gold), 400-row fresh OOD frozen, Colab bundle+notebook ready
+(bundle sha b00c798c…), smoke fine-tune proven, runtime `deberta_v2` backend
+scaffolded INACTIVE (fail-closed). OVN047 payment smoke BLOCKED_EXTERNAL
+(sandbox checkout blocks automation; failure paths proven; reconciliation OK).
+AWAITING_HUMAN_REVIEW_AND_COLAB — see docs/agentpay_ir_v2/TRANSFORMATION_REPORT.md.
+**Last updated:** 2026-08-29.
 **Gate (Phase 4 final M49, historical):** `services/api` ruff clean / mypy clean / pytest
 718/718 PASS; `apps/web` typecheck 0 errors / lint 0 errors / vitest 76 PASS /
 `next build` 6 static routes. AgentPay-X 191/191 with 100% safe-pass, 100%
@@ -219,12 +224,17 @@ by title as well as ID until the governance collision is separately reconciled.
 
 # Next action
 
-Phase-3 correction is COMPLETE and fully gated (2026-08-28). Wait for human
-acceptance of Phase 4; the acceptance run will execute the real DeBERTa
-semantic stage and record `semantic_backend`/model hash/probabilities. After
-acceptance, the next lawful action is to push the existing local milestone
-commit(s) (weights stay git-ignored; docs/PHASE3_MODEL_SETUP.md documents the
-artifact).
+AgentPay-IR v2 OVERNIGHT_AUTONOMOUS_PREP is COMPLETE (2026-08-29). Morning
+handoff: (1) human reviews data/agentpay_ir_v2/corpus/review_candidates.jsonl
+(700 cards; role manifest stays hidden); (2) upload
+artifacts/agentpay_ir_v2_colab_training_bundle.zip to
+notebooks/RazorGuard_NLI_AgentPayIR_v2_Training.ipynb, run on T4/L4;
+(3) place returned agentpay-ir-v2-finetuned.zip in artifacts/models/incoming/;
+(4) tell the agent "v2 artifact uploaded" → POST_COLAB_RESUME (ingest review,
+calibrate on val only, one-shot test/gold/OOD eval, wire deberta_v2, full
+regression, final same-lineage Razorpay Test payment; complete OVN047 manually
+or after account/checkout fix). Phase-4 human acceptance still pending; no push
+authorization.
 
 Historical Phase-3 re-audit queue remains preserved above as
 prior-state evidence; it is not the current active queue.
