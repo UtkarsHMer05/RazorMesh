@@ -37,10 +37,12 @@ Outputs
 """
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import random
 import re
+import tempfile
 from collections import defaultdict
 from pathlib import Path
 
@@ -81,7 +83,17 @@ def norm(t: str) -> str:
 
 
 def main() -> int:
-    REVIEW.mkdir(parents=True, exist_ok=True)
+    ap = argparse.ArgumentParser()
+    ap.add_argument(
+        "--verify-only", action="store_true",
+        help="fresh-clone reproduction check: regenerate everything into a temp dir "
+             "and verify the pack bytes, role-assignment hash and freeze manifest "
+             "match the tracked frozen artifacts; writes NOTHING")
+    args = ap.parse_args()
+    review = REVIEW
+    if args.verify_only:
+        review = Path(tempfile.mkdtemp(prefix="rzp_pack_verify_"))
+    review.mkdir(parents=True, exist_ok=True)
     rng = random.Random(SEED)
 
     by_family: dict[str, list[dict]] = defaultdict(list)
@@ -216,7 +228,7 @@ def main() -> int:
         assert set(c.keys()) == {"card_id", "premise", "hypothesis"}
         for forbidden in ("stratum", "source_class", "label", "role", "hint", "metadata"):
             assert forbidden not in c
-    pack_path = REVIEW / "REVIEW_PACK_V3.jsonl"
+    pack_path = review / "REVIEW_PACK_V3.jsonl"
     pack_path.write_text("".join(json.dumps(c, ensure_ascii=False) + "\n" for c in reviewer))
     pack_sha = hashlib.sha256(pack_path.read_bytes()).hexdigest()
 
@@ -225,7 +237,7 @@ def main() -> int:
                               "template_family_id": c["_template_family"],
                               "source_label": c["_label"], "stratum": c["stratum"],
                               "source_class": c["source_class"]} for c in cards}
-    (REVIEW / "REVIEW_LINKAGE_V3.json").write_text(json.dumps(linkage, indent=1, sort_keys=True))
+    (review / "REVIEW_LINKAGE_V3.json").write_text(json.dumps(linkage, indent=1, sort_keys=True))
     role_manifest = {
         "pack": "REVIEW_PACK_V3",
         "frozen_at": "2026-08-29T15:00:00+00:00",
@@ -235,7 +247,7 @@ def main() -> int:
         "group_level": True,
         "assignments": assignments,
     }
-    (REVIEW / "REVIEW_ROLE_MANIFEST_V3.json").write_text(json.dumps(role_manifest, indent=1))
+    (review / "REVIEW_ROLE_MANIFEST_V3.json").write_text(json.dumps(role_manifest, indent=1))
 
     # ---- committed freeze manifest: counts + hashes + provenance ONLY ----
     gold_groups = sorted({linkage[cid]["split_group"] for cid, r in roles.items() if r == "gold"})
@@ -281,7 +293,25 @@ def main() -> int:
                                      "decisions_working.json", "GOLD_FROZEN_V3.jsonl"],
         "frozen_at": role_manifest["frozen_at"],
     }
-    (REVIEW / "REVIEW_PACK_FREEZE_V3.json").write_text(json.dumps(freeze, indent=1))
+    (review / "REVIEW_PACK_FREEZE_V3.json").write_text(json.dumps(freeze, indent=1))
+    if args.verify_only:
+        tracked_pack = (REVIEW / "REVIEW_PACK_V3.jsonl").read_bytes()
+        tracked_freeze = json.loads((REVIEW / "REVIEW_PACK_FREEZE_V3.json").read_text())
+        checks = {
+            "pack_bytes_match_tracked": pack_path.read_bytes() == tracked_pack,
+            "pack_sha_matches_freeze": freeze["reviewer_pack_sha256"]
+                                       == tracked_freeze["reviewer_pack_sha256"],
+            "role_sha_matches_freeze": freeze["role_manifest_sha256"]
+                                       == tracked_freeze["role_manifest_sha256"],
+            "freeze_manifest_byte_identical": (review / "REVIEW_PACK_FREEZE_V3.json").read_bytes()
+                                              == (REVIEW / "REVIEW_PACK_FREEZE_V3.json").read_bytes(),
+        }
+        print(json.dumps(checks, indent=1))
+        if not all(checks.values()):
+            print("VERIFY-ONLY FAIL: tracked frozen pack does not reproduce from the tracked corpus")
+            return 1
+        print("VERIFY-ONLY PASS: fresh-clone reproduction matches the frozen artifacts")
+        return 0
     print(json.dumps({k: freeze[k] for k in ("cards", "unique_record_ids", "gold_cards",
                                              "supervised_cards", "gold_groups", "supervised_groups",
                                              "reviewer_pack_sha256", "role_manifest_sha256")}, indent=1))

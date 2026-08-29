@@ -41,12 +41,17 @@ def test_augmentation_matches_manifest_and_is_not_integrated(aug: list[dict]) ->
     assert manifest["rows"] == len(aug) == 96
     assert hashlib.sha256(AUG_JSONL.read_bytes()).hexdigest() == manifest["sha256"]
     assert manifest["labels"] == {"neutral": 48, "contradiction": 48}
-    assert manifest["integration"]["status"] == "NOT integrated"
+    assert manifest["integration"]["status"].startswith("NOT integrated into any frozen artifact")
     assert manifest["integration"]["cap"]["fraction_of_train"] <= 0.10
-    # nothing in the finalizer/builder pipeline consumes the augmentation file
-    for consumer in (FINALIZER,
-                     (REPO_ROOT / "scripts" / "rzp_build_colab_bundle_v2.py").read_text()):
-        assert "prompt_injection_aug" not in consumer
+    # integration is reachable ONLY behind the explicit opt-in flag (default off):
+    # the finalizer may reference the staging set, but the bundle builder/notebook
+    # must never reference it at all.
+    assert "--integrate-prompt-injection-augmentation" in FINALIZER
+    squashed = " ".join(FINALIZER.split())
+    assert ('add_argument("--integrate-prompt-injection-augmentation",'
+            ' action="store_true"' in squashed)
+    builder_src = (REPO_ROOT / "scripts" / "rzp_build_colab_bundle_v2.py").read_text()
+    assert "prompt_injection_aug" not in builder_src
 
 
 def test_augmentation_rows_carry_v2_contract_and_aug_namespace(aug: list[dict]) -> None:

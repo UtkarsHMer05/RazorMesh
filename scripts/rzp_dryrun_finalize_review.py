@@ -58,6 +58,18 @@ def build_workspace(root: Path) -> None:
     for name in ("REVIEW_PACK_V3.jsonl", "REVIEW_PACK_FREEZE_V3.json",
                  "REVIEW_LINKAGE_V3.json", "REVIEW_ROLE_MANIFEST_V3.json"):
         shutil.copy2(REPO / "data/agentpay_ir_v2/review" / name, av2 / "review" / name)
+    aug_src = REPO / "data/agentpay_ir_v2/augmentation"
+    if aug_src.exists():
+        (av2 / "augmentation").mkdir()
+        for f in aug_src.iterdir():
+            shutil.copy2(f, av2 / "augmentation" / f.name)
+
+
+def run_finalizer(root: Path, dec: Path, extra: list[str] | None = None):
+    return subprocess.run(
+        [sys.executable, str(REPO / "scripts/rzp_finalize_review_v2.py"),
+         "--decisions", str(dec), "--root", str(root), *(extra or [])],
+        capture_output=True, text=True, timeout=600)
 
 
 def synthetic_export(root: Path) -> dict:
@@ -91,10 +103,7 @@ def main() -> int:
     dec = root / "review_decisions_export.json"
     dec.write_text(json.dumps(export, indent=1))
 
-    proc = subprocess.run(
-        [sys.executable, str(REPO / "scripts/rzp_finalize_review_v2.py"),
-         "--decisions", str(dec), "--root", str(root)],
-        capture_output=True, text=True, timeout=600)
+    proc = run_finalizer(root, dec)
     print(proc.stdout)
     if proc.returncode != 0:
         print(proc.stderr)
@@ -173,6 +182,49 @@ def main() -> int:
     print("DRY RUN PASS — final train/val/test + human gold + final bundle + notebook "
           "verification all green; NO training executed; real repo untouched.")
     shutil.rmtree(root, ignore_errors=True)
+
+    # ---- second phase: the OPT-IN prompt-injection augmentation path ----
+    root2 = Path(tempfile.mkdtemp(prefix="rzp_dryrun_aug_"))
+    print("augmentation dry-run workspace:", root2)
+    build_workspace(root2)
+    export2 = synthetic_export(root2)
+    dec2 = root2 / "review_decisions_export.json"
+    dec2.write_text(json.dumps(export2, indent=1))
+    proc2 = run_finalizer(root2, dec2, ["--integrate-prompt-injection-augmentation"])
+    print(proc2.stdout[-1500:])
+    if proc2.returncode != 0:
+        print(proc2.stderr)
+        print("DRY RUN FAIL: integrated finalizer exited", proc2.returncode)
+        return 1
+    av2b = root2 / "data" / "agentpay_ir_v2"
+    final2 = av2b / "corpus" / "final"
+    aug_checks: dict[str, object] = {}
+    manifest2 = json.loads((final2 / "FINAL_FREEZE_MANIFEST.json").read_text())
+    aug_info = manifest2["augmentation_integrated"]
+    aug_checks["augmentation_integrated"] = aug_info is not None and aug_info["rows"] == 96
+    aug_checks["train_grew_by_96"] = manifest2["counts"]["train"] == checks["final_counts"]["train"] + 96
+    aug_checks["val_test_unchanged"] = (manifest2["counts"]["val"] == checks["final_counts"]["val"]
+                                        and manifest2["counts"]["test"] == checks["final_counts"]["test"])
+    aug_checks["synthetic_fraction_within_cap"] = (
+        aug_info["train_synthetic_adversarial_fraction"] <= 0.10)
+    train2 = [json.loads(l) for l in (final2 / "train.jsonl").read_text().splitlines()]
+    val2 = [json.loads(l) for l in (final2 / "val.jsonl").read_text().splitlines()]
+    test2 = [json.loads(l) for l in (final2 / "test.jsonl").read_text().splitlines()]
+    aug_checks["aug_groups_train_only"] = (
+        any(r["split_group"].startswith("aug_pi_") for r in train2)
+        and not any(r["split_group"].startswith("aug_pi_") for r in [*val2, *test2]))
+    gold2 = [json.loads(l) for l in (av2b / "review" / "GOLD_FROZEN_V3.jsonl").read_text().splitlines()]
+    aug_checks["gold_untouched_by_augmentation"] = not any(
+        r["split_group"].startswith("aug_pi_") for r in gold2)
+    bad2 = [r["record_id"] for rs in [train2, val2, test2, gold2] for r in rs
+            if content_sha256(r["premise"], r["hypothesis"], r["label"]) != r["content_sha256"]]
+    aug_checks["hashes_valid_after_integration"] = not bad2
+    print("AUGMENTATION DRY-RUN ACCEPTANCE:", json.dumps(aug_checks, indent=1))
+    if not all(aug_checks.values()):
+        print("DRY RUN FAIL: integrated path did not satisfy all gates")
+        return 1
+    print("DRY RUN PASS — opt-in augmentation path also green (train-only, gates re-run).")
+    shutil.rmtree(root2, ignore_errors=True)
     return 0
 
 

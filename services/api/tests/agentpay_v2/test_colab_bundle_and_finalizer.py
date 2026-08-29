@@ -202,19 +202,35 @@ def test_no_torch_import_before_install_and_versions_asserted(committed_bundle) 
                     f"actual {pkg} version must be asserted against the frozen requirement"
 
 
-def test_install_cell_extracts_bundle_before_pip_in_clean_dir(
+def test_install_cell_extracts_bundle_before_pip_in_dependency_free_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Pre-label correction: a fresh Colab runtime has no bundle/ directory, so the
-    install cell must extract the archive BEFORE the %pip step that reads
-    requirements-frozen.txt — asserted statically AND exercised in a clean temp dir."""
+    """Fresh Colab runtimes have no bundle/ directory, so the install cell must
+    extract the archive BEFORE the %pip step that consumes requirements-frozen.txt.
+    Asserted statically AND exercised for real in a clean temp dir where the
+    executed code is PURE STDLIB: the post-install import/version block is cut
+    entirely (stubbed separately), so the exercise does not depend on
+    accelerate/torch/transformers being importable."""
     cells = notebook_code_cells(COMMITTED_NOTEBOOK)
     install = next(c for c in cells if "%pip install" in c)
-    assert install.index('zf.extractall("bundle")') < install.index("%pip install"), \
-        "extraction must precede the pip-install dependency path"
+    # static ordering: extract -> pip -> post-install imports
+    assert install.index('zf.extractall("bundle")') < install.index("%pip install")
+    assert install.index("%pip install") < install.index("import accelerate")
+    assert install.index("%pip install") < install.index("import torch")
 
-    # Exercise it: run verify + install cells in a clean temp dir with the two
-    # environment-specific steps (%pip, CUDA assert) stubbed out.
+    # dependency-free exercise: cut everything from the post-install import block
+    marker = "# NOW import the runtime"
+    python_only = install[: install.index(marker)]
+    for pkg in ("accelerate", "torch", "transformers"):
+        assert f"import {pkg}" not in python_only, f"exercise must stay free of {pkg}"
+    # %pip is an IPython magic, not Python: replace it IN PLACE so its position
+    # (after extraction, before imports) is preserved while the exec stays stdlib.
+    python_only = python_only.replace(
+        "%pip install -q -r bundle/requirements-frozen.txt",
+        "PIP_STUBBED_AT_SAME_POSITION = True",
+    )
+    assert "PIP_STUBBED_AT_SAME_POSITION" in python_only
+
     import os
 
     monkeypatch.chdir(tmp_path)
@@ -224,28 +240,42 @@ def test_install_cell_extracts_bundle_before_pip_in_clean_dir(
     try:
         verify = next(c for c in cells if "def verify_bundle" in c)
         exec(compile(verify, "verify_cell", "exec"), ns)  # noqa: S102 - test rig
-        stubbed = install.replace(
-            "%pip install -q -r bundle/requirements-frozen.txt",
-            "PIP_STUBBED_IN_PREFLIGHT = True",
-        ).replace(
-            'assert torch.cuda.is_available(), "GPU required (Runtime > Change runtime type)"',
-            "CUDA_STUBBED_IN_PREFLIGHT = True",
-        ).replace(
-            'print("GPU:", torch.cuda.get_device_name(0))',
-            "print('GPU check stubbed in preflight')",
-        )
-        assert "%pip install" not in stubbed and "PIP_STUBBED_IN_PREFLIGHT" in stubbed
-        exec(compile(stubbed, "install_cell", "exec"), ns)  # noqa: S102 - test rig
+        exec(compile(python_only, "install_cell", "exec"), ns)  # noqa: S102 - test rig
     finally:
         if old_env is None:
             os.environ.pop("BUNDLE_PATH", None)
         else:
             os.environ["BUNDLE_PATH"] = old_env
-    # the extraction landed in the clean cwd and BEFORE the (stubbed) pip step
+    # extraction landed in the clean cwd and BEFORE the pip dependency path
     assert (tmp_path / "bundle" / "requirements-frozen.txt").exists()
     assert (tmp_path / "bundle" / "train.jsonl").exists()
     assert ns["REQ"]["torch"] == FROZEN_VERSIONS["torch"]
-    assert ns["PIP_STUBBED_IN_PREFLIGHT"] is True
+    assert ns["PIP_STUBBED_AT_SAME_POSITION"] is True
+
+
+def test_notebook_packages_the_exact_selected_candidate() -> None:
+    """The artifact must be the checkpoint that produced the winning validation
+    metrics: both candidates are saved, the frozen rule selects one, and the
+    selected checkpoint is COPIED — never a third, unevaluated retrain from base."""
+    cells = notebook_code_cells(COMMITTED_NOTEBOOK)
+    cand = next(c for c in cells if "def run(epochs)" in c)
+    final = next(c for c in cells if "agentpay-ir-v2-finetuned" in c and "model_manifest" in c)
+    # both candidates saved with their exact validation metrics bound to them
+    assert 'tr.save_model(f"cand_{epochs}ep")' in cand
+    assert "validation_metrics.json" in cand
+    assert cand.count("TrainingArguments(") == 1  # one training run per candidate
+    # packaging copies the selected checkpoint; it never trains or reloads from base
+    assert 'shutil.copytree(cand_dir, "agentpay-ir-v2-finetuned")' in final
+    assert "Trainer(" not in final and "from_pretrained(" not in final
+    assert 'cand_dir = "cand_2ep" if best == "A_2ep" else "cand_3ep"' in final
+    # model_manifest binds the selected metrics to the packaged files
+    assert '"selected_candidate_metrics": results[best]' in final
+    copied_assert = 'copied_metrics = json.load(open("agentpay-ir-v2-finetuned/'
+    assert copied_assert + 'validation_metrics.json"))' in final
+    assert "copied_metrics == results[best]" in final
+    assert '"artifact_files_sha256": artifact_files' in final
+    assert ('"packaging": "exact selected candidate checkpoint copied; '
+            'never retrained from base"' in final)
 
 
 # ---------------------------------------------------------------------------
@@ -623,3 +653,77 @@ def test_finalizer_rejects_ood_hash_collision(tmp_path: Path) -> None:
     proc = run_finalizer(tmp_path, human_export(ws))
     assert proc.returncode == 1
     assert "ood hash" in proc.stdout
+
+
+# ---------------------------------------------------------------------------
+# pre-label correction: opt-in prompt-injection augmentation (train-only)
+# ---------------------------------------------------------------------------
+
+
+def _stage_augmentation(root: Path) -> None:
+    aug_src = REPO_ROOT / "data" / "agentpay_ir_v2" / "augmentation"
+    aug_dst = root / "data" / "agentpay_ir_v2" / "augmentation"
+    aug_dst.mkdir(parents=True, exist_ok=True)
+    for f in aug_src.iterdir():
+        (aug_dst / f.name).write_bytes(f.read_bytes())
+
+
+def run_finalizer_args(root: Path, export: dict, extra: list[str]) -> subprocess.CompletedProcess:
+    dec = root / "decisions_export.json"
+    dec.write_text(json.dumps(export, indent=1))
+    return subprocess.run(  # noqa: S603 - fixed argv, test constants
+        [PYTHON, str(FINALIZER_SCRIPT), "--decisions", str(dec), "--root", str(root), *extra],
+        capture_output=True, text=True, timeout=300)
+
+
+def test_finalizer_augmentation_train_only_and_gates_rerun(tmp_path: Path) -> None:
+    ws = build_workspace(tmp_path)
+    _stage_augmentation(tmp_path)
+    export = human_export(ws)
+
+    base = tmp_path / "baseline"
+    base.mkdir()
+    ws_base = build_workspace(base)
+    base_proc = run_finalizer_args(base, human_export(ws_base), [])
+    assert base_proc.returncode == 0, base_proc.stdout + base_proc.stderr
+
+    proc = run_finalizer_args(tmp_path, export, [
+        "--integrate-prompt-injection-augmentation",
+        # tiny synthetic workspace: the absolute 96-row set dominates the split,
+        # so raise the cap for THIS test only (real runs keep the 0.10 default)
+        "--max-synthetic-fraction", "0.9"])
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "INTEGRATED into train only: 96 rows" in proc.stdout
+
+    final = tmp_path / "data" / "agentpay_ir_v2" / "corpus" / "final"
+    base_final = base / "data" / "agentpay_ir_v2" / "corpus" / "final"
+    manifest = json.loads((final / "FINAL_FREEZE_MANIFEST.json").read_text())
+    base_manifest = json.loads((base_final / "FINAL_FREEZE_MANIFEST.json").read_text())
+    assert manifest["counts"]["train"] == base_manifest["counts"]["train"] + 96
+    assert manifest["counts"]["val"] == base_manifest["counts"]["val"]
+    assert manifest["counts"]["test"] == base_manifest["counts"]["test"]
+    assert manifest["augmentation_integrated"]["rows"] == 96
+    # this run raised the cap (tiny workspace); real runs keep the 0.10 default
+    assert manifest["augmentation_integrated"]["train_synthetic_adversarial_fraction"] <= 0.9
+
+    train = [json.loads(line) for line in (final / "train.jsonl").read_text().splitlines()]
+    val = [json.loads(line) for line in (final / "val.jsonl").read_text().splitlines()]
+    test_rows = [json.loads(line) for line in (final / "test.jsonl").read_text().splitlines()]
+    gold_file = tmp_path / "data/agentpay_ir_v2/review/GOLD_FROZEN_V3.jsonl"
+    gold = [json.loads(line) for line in gold_file.read_text().splitlines()]
+    aug_rows = [r for r in train if r["split_group"].startswith("aug_pi_")]
+    assert len(aug_rows) == 96
+    assert not any(r["split_group"].startswith("aug_pi_") for r in [*val, *test_rows, *gold])
+    # every merged row kept its content hash and carries the integration stamp
+    for r in aug_rows:
+        assert content_sha256(r["premise"], r["hypothesis"], r["label"]) == r["content_sha256"]
+        assert "integrated into TRAIN" in r["metadata"]["integration"]
+    # gold file byte-identical to the baseline run (augmentation never touches gold)
+    base_gold = base / "data/agentpay_ir_v2/review/GOLD_FROZEN_V3.jsonl"
+    assert gold_file.read_bytes() == base_gold.read_bytes()
+
+
+def test_finalizer_without_flag_never_integrates_augmentation(finalized: dict) -> None:
+    root = finalized["root"]
+    train = (root / "data" / "agentpay_ir_v2" / "corpus" / "final" / "train.jsonl").read_text()
+    assert "aug_pi_" not in train

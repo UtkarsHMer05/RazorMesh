@@ -22,7 +22,7 @@ What this is NOT:
 
 Output: data/agentpay_ir_v2/augmentation/prompt_injection_aug_v2.jsonl
         data/agentpay_ir_v2/augmentation/PROMPT_INJECTION_AUG_V2_MANIFEST.json
-Doc:    docs/agentpay_ir_v2/PROMPT_INJECTION_AUGMENTATION.md
+Doc:    docs/agentpay_ir_v2/INJECTION_DEFENSE_AUGMENTATION.md
 """
 from __future__ import annotations
 
@@ -259,7 +259,7 @@ def main() -> int:
                        "entities": "fresh synthetic set, absent from corpus/OOD/PVB008 grid"},
         "gates_passed": ["hash-disjoint vs corpus/OOD/gold", "group-disjoint vs corpus/OOD",
                          "text-disjoint vs PVB008 grid", "canonical_guard", "v2 record contract"],
-        "integration": {"status": "NOT integrated",
+        "integration": {"status": "NOT integrated into any frozen artifact; integration happens only via the finalizer flag --integrate-prompt-injection-augmentation (training-only, after human review)",
                         "rule": "requires explicit human decision; if integrated, merge into the "
                                 "supervised train flow via the finalizer with a re-run of all "
                                 "leakage gates",

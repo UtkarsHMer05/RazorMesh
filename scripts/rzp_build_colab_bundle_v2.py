@@ -277,7 +277,7 @@ def run(epochs):
     set_seed(42)
     model = AutoModelForSequenceClassification.from_pretrained(
         MANIFEST["base_model"], revision=REV, num_labels=3)
-    args = TrainingArguments(f"out_{{epochs}}", num_train_epochs=epochs, learning_rate=2e-5,
+    args = TrainingArguments(f"cand_{{epochs}}ep", num_train_epochs=epochs, learning_rate=2e-5,
                              per_device_train_batch_size=16, per_device_eval_batch_size=32,
                              warmup_ratio=0.06, fp16=True, logging_steps=200,
                              eval_strategy="epoch", save_strategy="no", report_to=[])
@@ -285,6 +285,14 @@ def run(epochs):
                  compute_metrics=metrics)
     tr.train()
     ev = tr.evaluate()
+    # SAVE THE EXACT WEIGHTS THAT PRODUCED ev. No training happens after
+    # evaluate, so the checkpoint and its validation_metrics.json are the same
+    # model — packaging later copies THESE files, never a fresh retrain.
+    tr.save_model(f"cand_{{epochs}}ep")
+    tok.save_pretrained(f"cand_{{epochs}}ep")
+    json.dump(MANIFEST["label_map"], open(f"cand_{{epochs}}ep/label_map.json", "w"))
+    open(f"cand_{{epochs}}ep/base_model_revision.txt", "w").write(REV)
+    json.dump(ev, open(f"cand_{{epochs}}ep/validation_metrics.json", "w"), indent=1)
     del tr, model
     torch.cuda.empty_cache()
     return ev
@@ -298,20 +306,20 @@ print("SELECTED (validation only, FROZEN rule: {selection_rule}):", best)
 '''
 
 FINAL_CELL = '''
-set_seed(42)
-epochs = 2 if best == "A_2ep" else 3
-model = AutoModelForSequenceClassification.from_pretrained(
-    MANIFEST["base_model"], revision=REV, num_labels=3)
-args = TrainingArguments("final", num_train_epochs=epochs, learning_rate=2e-5,
-                         per_device_train_batch_size=16, warmup_ratio=0.06, fp16=True,
-                         logging_steps=200, report_to=[])
-Trainer(model=model, args=args, train_dataset=train_ds).train()
-model.save_pretrained("agentpay-ir-v2-finetuned", safe_serialization=True)
-tok.save_pretrained("agentpay-ir-v2-finetuned")
-json.dump(MANIFEST["label_map"], open("agentpay-ir-v2-finetuned/label_map.json", "w"))
+# Package the EXACT selected checkpoint — never retrain from base. The winning
+# validation metrics were produced by cand_*ep, so those weights are the artifact.
+import shutil
+
+cand_dir = "cand_2ep" if best == "A_2ep" else "cand_3ep"
+if os.path.exists("agentpay-ir-v2-finetuned"):
+    shutil.rmtree("agentpay-ir-v2-finetuned")
+shutil.copytree(cand_dir, "agentpay-ir-v2-finetuned")
+# Bind proof: the copied checkpoint carries the exact winning validation metrics.
+copied_metrics = json.load(open("agentpay-ir-v2-finetuned/validation_metrics.json"))
+assert copied_metrics == results[best], "packaged checkpoint metrics != selected metrics"
 open("agentpay-ir-v2-finetuned/base_model.txt", "w").write(MANIFEST["base_model"])
-open("agentpay-ir-v2-finetuned/base_model_revision.txt", "w").write(REV)
-json.dump({"validation_results": results, "selected": best, "seed": 42},
+json.dump({{"validation_results": results, "selected": best, "seed": 42,
+           "selected_checkpoint_source_dir": cand_dir}},
           open("agentpay-ir-v2-finetuned/training_metrics.json", "w"), indent=1)
 json.dump(MANIFEST, open("agentpay-ir-v2-finetuned/dataset_manifest.json", "w"), indent=1)
 
@@ -322,28 +330,30 @@ def _sha(p):
     return hashlib.sha256(open(p, "rb").read()).hexdigest()
 
 
-artifact_files = {f: _sha("agentpay-ir-v2-finetuned/" + f)
+artifact_files = {{f: _sha("agentpay-ir-v2-finetuned/" + f)
                   for f in os.listdir("agentpay-ir-v2-finetuned")
-                  if os.path.isfile("agentpay-ir-v2-finetuned/" + f)}
-model_manifest = {
+                  if os.path.isfile("agentpay-ir-v2-finetuned/" + f)}}
+model_manifest = {{
     "artifact": "agentpay-ir-v2-finetuned",
     "base_model": MANIFEST["base_model"],
     "base_model_revision": REV,
     "label_map": MANIFEST["label_map"],
     "seed": 42,
     "selected_candidate": best,
+    "selected_checkpoint_source_dir": cand_dir,
+    "selected_candidate_metrics": results[best],
+    "packaging": "exact selected candidate checkpoint copied; never retrained from base",
     "candidate_results": results,
     "selection_rule": json.load(open("bundle/train_config.json"))["selection"],
     "dataset_manifest_files": MANIFEST["files"],
     "expected_bundle_sha256": EXPECTED_BUNDLE_SHA256,
-    "dependency_versions": {"transformers": transformers.__version__, "torch": torch.__version__,
+    "dependency_versions": {{"transformers": transformers.__version__, "torch": torch.__version__,
                             "accelerate": accelerate.__version__,
-                            "python": __import__("platform").python_version()},
+                            "python": __import__("platform").python_version()}},
     "artifact_files_sha256": artifact_files,
     "training_data_excluded": ["frozen test", "human gold", "untouched OOD"],
-}
+}}
 json.dump(model_manifest, open("agentpay-ir-v2-finetuned/model_manifest.json", "w"), indent=1)
-import shutil
 
 shutil.make_archive("agentpay-ir-v2-finetuned", "zip", ".", "agentpay-ir-v2-finetuned")
 colab_files.download("agentpay-ir-v2-finetuned.zip")

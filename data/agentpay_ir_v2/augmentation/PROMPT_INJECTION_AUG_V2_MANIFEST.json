@@ -23,7 +23,7 @@
     "v2 record contract"
   ],
   "integration": {
-    "status": "NOT integrated",
+    "status": "NOT integrated into any frozen artifact; integration happens only via the finalizer flag --integrate-prompt-injection-augmentation (training-only, after human review)",
     "rule": "requires explicit human decision; if integrated, merge into the supervised train flow via the finalizer with a re-run of all leakage gates",
     "cap": {
       "rows_if_fully_integrated": 96,

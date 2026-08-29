@@ -83,6 +83,23 @@ workflow below is the only current one.
   `RAZORMESH_REVIEWER_ENABLED=1`; a deployed application never exposes the pack.
 - Agent-control documents (master prompts, paste-to-agent files, overnight
   ledgers, AI operating contracts) are untracked and gitignored; local copies kept.
+- **Pre-label Colab-methodology corrections (2026-08-30):**
+  (a) the notebook SAVES both candidate checkpoints with their exact validation
+  metrics bound to them (`cand_2ep/`, `cand_3ep/` + validation_metrics.json), and
+  packaging COPIES the frozen-rule-selected checkpoint to
+  `agentpay-ir-v2-finetuned/` — never a third unevaluated retrain from base;
+  model_manifest.json records `selected_checkpoint_source_dir`,
+  `selected_candidate_metrics` (== the packaged checkpoint's own
+  validation_metrics.json, asserted at run time) and `artifact_files_sha256` of
+  those exact files;
+  (b) the clean-environment install-order test executes the verify+install cells
+  with the post-install import/version block cut entirely — pure stdlib, no
+  dependency on accelerate/torch/transformers;
+  (c) the 96-row injection-defense augmentation is integration-READY: the
+  finalizer flag `--integrate-prompt-injection-augmentation` merges it into the
+  FINAL TRAIN split only (never val/test/gold/OOD) and re-runs hash, leakage,
+  provenance and synthetic-ratio gates (cap 10%, real share ~0.7%); the dry run
+  exercises both the default (no integration) and flag-gated paths.
 - **Pre-label correction (2026-08-30):** notebook now extracts the bundle BEFORE
   the pip-install step (fresh-runtime order fixed; exercised in a clean temp dir
   by a test); gold-adequacy guard stops the finalizer when the usable human-gold
@@ -91,8 +108,27 @@ workflow below is the only current one.
   untracked + ignored; a PREPARED-but-NOT-INTEGRATED prompt-injection augmentation
   staging set (96 rows, hash/group/text-disjoint from corpus, OOD, gold and the
   PVB008 grid; 0.69% of train vs the 10% cap) awaits an explicit integration
-  decision — see PROMPT_INJECTION_AUGMENTATION.md. V3 pack SHA, roles, card IDs
+  decision — see INJECTION_DEFENSE_AUGMENTATION.md. V3 pack SHA, roles, card IDs
   and allocation are UNCHANGED.
+
+## Fresh-clone reproduction (run BEFORE trusting the dry-run finalizer)
+
+The private linkage/role files are gitignored; a fresh clone reproduces them
+deterministically from the tracked corpus and verifies the frozen hashes:
+
+```bash
+# 1. regenerate in a temp dir and verify against the tracked frozen artifacts
+#    (pack bytes, role-assignment sha, freeze manifest; writes NOTHING)
+services/api/.venv/bin/python scripts/rzp_build_review_pack_v3.py --verify-only
+# 2. write the private linkage/roles locally (pack/freeze bytes identical)
+services/api/.venv/bin/python scripts/rzp_build_review_pack_v3.py
+# 3. run the committed integrity gates (pack, roles, finalizer, bundle, notebook)
+cd services/api && .venv/bin/python -m pytest tests/agentpay_v2/
+# 4. full dry-run finalization (default AND opt-in augmentation paths)
+cd .. && services/api/.venv/bin/python scripts/rzp_dryrun_finalize_review.py
+```
+`--verify-only` must print `VERIFY-ONLY PASS` (all four checks true) before any
+finalization is trusted.
 
 ## THE one current handoff workflow (only these steps, in order)
 

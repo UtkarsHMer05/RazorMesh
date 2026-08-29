@@ -23,7 +23,11 @@ Runs ONLY after the human completes the V3 review pack. Pipeline:
   5. GOLD isolation at GROUP level (#8): every corpus row whose split_group is
      a gold card's split_group is removed from train/val/test entirely; ONLY
      the independently human-labeled review card's own record becomes a gold
-     evaluation row;
+     evaluation row; gold-adequacy guard stops the run when the usable gold
+     set is materially smaller than intended;
+  5b. OPTIONAL (explicit --integrate-prompt-injection-augmentation): merge the
+     PREPARED 96-row prompt-injection staging set into the FINAL TRAIN split
+     only — never val/test/gold/OOD — and re-run all gates over the merged set;
   6. gold rows use the HUMAN decision as label (#9), provenance
      source_kind=human_reviewed, and never preserve the original source label
      as gold truth (only a boolean agreement flag);
@@ -93,6 +97,13 @@ def main() -> int:
     ap.add_argument("--min-gold-rows", type=int, default=250,
                     help="absolute floor for usable human-gold rows (never applied below "
                          "85%% of the frozen gold allocation, so small test workspaces pass)")
+    ap.add_argument("--integrate-prompt-injection-augmentation", action="store_true",
+                    help="training-only integration of the PREPARED 96-row prompt-injection "
+                         "staging set into the FINAL TRAIN split (never val/test/gold/OOD); "
+                         "all gates re-run over the merged set")
+    ap.add_argument("--max-synthetic-fraction", type=float, default=0.10,
+                    help="synthetic_adversarial share cap for the final train split "
+                         "(the real corpus sits at <1%%; tiny test workspaces may raise it)")
     ap.add_argument("--skip-bundle", action="store_true")
     args = ap.parse_args()
 
@@ -247,6 +258,58 @@ def main() -> int:
               f"gold evaluation power is reduced; continuing.")
     print(f"gold adequacy: {usable_gold}/{intended_gold} usable (floor {gold_floor})")
 
+    # ---- 5b. OPTIONAL prompt-injection augmentation (training-only, pre-label
+    # correction #7): merges the PREPARED staging set into the FINAL TRAIN split
+    # ONLY — never val/test/gold/OOD — and re-runs all gates over the merged set
+    # (hash validation below + leakage section). Requires the explicit flag; the
+    # default run is byte-identical to no integration.
+    augmentation_info = None
+    if args.integrate_prompt_injection_augmentation:
+        aug_dir = repo / "data" / "agentpay_ir_v2" / "augmentation"
+        aug_path = aug_dir / "prompt_injection_aug_v2.jsonl"
+        manifest_path = aug_dir / "PROMPT_INJECTION_AUG_V2_MANIFEST.json"
+        if not aug_path.exists() or not manifest_path.exists():
+            fail("augmentation requested but staging files missing under " + str(aug_dir))
+        aug_manifest = json.loads(manifest_path.read_text())
+        aug_sha = sha256_file(aug_path)
+        if aug_manifest.get("sha256") != aug_sha or aug_manifest.get("rows") != sum(
+            1 for _ in aug_path.open()
+        ):
+            fail("augmentation staging manifest does not match its data (sha/rows)")
+        aug_rows = [json.loads(line) for line in aug_path.read_text().splitlines() if line.strip()]
+        existing_hashes = {r["content_sha256"] for rs in [*final.values(), gold_rows] for r in rs}
+        existing_groups = {r["split_group"] for rs in [*final.values(), gold_rows] for r in rs}
+        for r in aug_rows:
+            for field in ("record_id", "schema_version", "source_dataset", "source_kind",
+                          "source_license", "split_group", "generator_parent_id",
+                          "template_family_id", "entity_family_id", "content_sha256"):
+                if not r.get(field):
+                    fail(f"augmentation row {r.get('record_id')} missing {field}")
+            if r["schema_version"] != "agentpay-ir-v2":
+                fail(f"augmentation row {r['record_id']} not v2-normalized")
+            if r["content_sha256"] in existing_hashes or r["split_group"] in existing_groups:
+                fail(f"augmentation row {r['record_id']} collides with final data")
+            if content_sha256(r["premise"], r["hypothesis"], r["label"]) != r["content_sha256"]:
+                fail(f"augmentation row {r['record_id']} fails the canonical hash contract")
+        train_synth = sum(1 for r in [*final["train"], *aug_rows]
+                          if r["source_kind"] == "synthetic_adversarial")
+        train_total = len(final["train"]) + len(aug_rows)
+        synth_fraction = train_synth / train_total
+        if synth_fraction > args.max_synthetic_fraction:
+            fail(f"prompt-injection augmentation would breach the synthetic-security "
+                 f"cap: {synth_fraction:.4f} > {args.max_synthetic_fraction}")
+        # provenance note stamped per merged row (metadata only; hash untouched)
+        merged = []
+        for r in aug_rows:
+            merged.append({**r, "metadata": {**r.get("metadata", {}),
+                             "integration": "integrated into TRAIN by finalizer "
+                                            "(explicit human decision)"}})
+        final["train"].extend(merged)
+        augmentation_info = {"rows": len(merged), "sha256": aug_sha,
+                             "train_synthetic_adversarial_fraction": round(synth_fraction, 6)}
+        print(f"prompt-injection augmentation INTEGRATED into train only: {len(merged)} rows "
+              f"| train synthetic fraction {synth_fraction:.4f}")
+
     # ---- 6. canonical hash validation for EVERY final row (#10) ----
     bad_hash = 0
     for rows_ in [*final.values(), gold_rows]:
@@ -310,6 +373,7 @@ def main() -> int:
         "files": {f: sha256_file(out_dir / f) for f in ("train.jsonl", "val.jsonl", "test.jsonl")},
         "gold_frozen_sha256": sha256_file(gold_path),
         "ambiguous_excluded": len(ambiguous),
+        "augmentation_integrated": augmentation_info,
     }
     (out_dir / "FINAL_FREEZE_MANIFEST.json").write_text(json.dumps(frozen, indent=2))
     print("final freeze:", json.dumps(counts), "| gold rows:", len(gold_rows))
