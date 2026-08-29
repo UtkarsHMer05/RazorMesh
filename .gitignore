@@ -115,3 +115,27 @@ data/agentpay_ir_v2/raw/
 
 # AgentPay-IR v2 build staging (derived corpus copies; bundle zip + FREEZE_MANIFEST hashes are tracked)
 artifacts/_bundle_stage/
+
+# AgentPay-IR v2 review PRIVATE state (label-bearing linkage, roles, human decisions/gold)
+data/agentpay_ir_v2/review/REVIEW_LINKAGE_V*.json
+data/agentpay_ir_v2/review/REVIEW_ROLE_MANIFEST_V*.json
+data/agentpay_ir_v2/review/decisions_working.json
+data/agentpay_ir_v2/review/GOLD_FROZEN_V*.jsonl
+data/agentpay_ir_v2/review/review_decisions_export*.json
+
+# --- Internal AI agent-control documents: NEVER public (owner directive 2026-08-29) ---
+# Master prompts / paste-to-agent files / overnight + reconciliation prompts /
+# scratch prompts and similar agent-operating documents stay LOCAL only.
+*Master_Prompt*.md
+*MASTER_PROMPT*.md
+*PASTE_THIS_TO_AGENT*.md
+*prompt*.md
+*PROMPT*.md
+*overnight*.md
+*OVERNIGHT*.md
+*reconciled*.md
+*RECONCILED*.md
+HUMAN_PREFLIGHT_CHECKLIST.md
+AGENTS.md
+AI_WORKFLOW.md
+CLAUDE.md
