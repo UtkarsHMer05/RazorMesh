@@ -388,3 +388,14 @@ Master prompt: `RazorMesh_AgentPay_IR_v2_End_to_End_Verification_Master_Prompt_F
 ## Human-dependent gates (master prompt §16A) — DEFERRED_MORNING
 - Human review ingestion, final training-only bundle rebuild, returned-artifact verification, candidate comparison, validation-only calibration, one-shot test/gold/OOD evaluation, winner selection, live deberta_v2 wiring, final same-lineage Razorpay Test payment, final Phase-4 acceptance: recorded DEFERRED_MORNING per Mode A — never PASS until executed with the real artifact.
 
+
+---
+
+# Stage: PRE-TRAINING HANDOFF CORRECTION (PVB001–PVB020 + 20-item correction list)
+
+All evidence in docs/agentpay_ir_v2/PVB_RECONCILIATION_REPORT.md, PRE_V2_CORRECTED_BASELINE.md,
+STATUS.md, QUALITY_GATES.{json,md}, REMOTE_STATE.md, PRE_V2_LEGACY_CORRECTED_BASELINE.json, and
+the review-pack freeze files. Commit ba3f9d0. Key test evidence: reviewer Playwright 3/3; full
+E2E green after PVB013 isolation; semantic_runtime 17/17 with new pins; vitest 15/15; tsc/eslint
+clean. Human-dependent: review (701 cards), Colab run, returned-artifact verification, final
+freeze, v2 training/eval, wiring, final payment — NOT started, per instruction.

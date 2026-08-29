@@ -37,7 +37,7 @@ G001-G09x + OVN001-052 executed in order; real-data-dominant v2 corpus frozen
 (bundle sha b00c798c…), smoke fine-tune proven, runtime `deberta_v2` backend
 scaffolded INACTIVE (fail-closed). OVN047 payment smoke BLOCKED_EXTERNAL
 (sandbox checkout blocks automation; failure paths proven; reconciliation OK).
-AWAITING_HUMAN_REVIEW_AND_COLAB — see docs/agentpay_ir_v2/TRANSFORMATION_REPORT.md.
+PRE-TRAINING-READY (2026-08-29 correction): PVB001-020 reconciled; review pack V2 (701 stratified cards, 300 hidden gold) + /reviewer UI live; finalization pipeline, corrected notebook, OOD refreeze (401 v2-normalized), quality gates (95.3%/4.7% honest composition) all green. Authoritative status: PRE_V2_CORRECTED_BASELINE_PASS / FINAL_PHASE4_ACCEPTANCE_BLOCKED_UNTIL_AGENTPAY_IR_V2. No training started.
 **Last updated:** 2026-08-29.
 **Gate (Phase 4 final M49, historical):** `services/api` ruff clean / mypy clean / pytest
 718/718 PASS; `apps/web` typecheck 0 errors / lint 0 errors / vitest 76 PASS /
