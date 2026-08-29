@@ -112,3 +112,6 @@ PHASE3_OVERNIGHT_REPORT.md
 
 # AgentPay-IR v2 raw source data (never tracked; manifests/hashes only)
 data/agentpay_ir_v2/raw/
+
+# AgentPay-IR v2 build staging (derived corpus copies; bundle zip + FREEZE_MANIFEST hashes are tracked)
+artifacts/_bundle_stage/
