@@ -508,6 +508,7 @@ class Phase4AcceptanceOrchestrator:
         semantic_verifier: SemanticVerifier | None = None,
         semantic_verifier_id: str | None = None,
         semantic_model_dir: Path | None = None,
+        semantic_model_dir_v2: Path | None = None,
         semantic_policy_path: Path | None = None,
         semantic_backend: str = "deberta",
     ) -> None:
@@ -517,6 +518,7 @@ class Phase4AcceptanceOrchestrator:
         )
         self._verifier_id = semantic_verifier_id or type(self._verifier).__name__
         self._semantic_model_dir = semantic_model_dir
+        self._semantic_model_dir_v2 = semantic_model_dir_v2
         self._semantic_policy_path = semantic_policy_path
         self._semantic_backend = semantic_backend
 
@@ -755,6 +757,7 @@ class Phase4AcceptanceOrchestrator:
             attempt_id=f"run:{run_id}",
             ledger=self._checkout.ledger,
             model_dir=self._semantic_model_dir,
+            model_dir_v2=self._semantic_model_dir_v2,
             policy_path=self._semantic_policy_path,
             semantic_backend=self._semantic_backend,
         )

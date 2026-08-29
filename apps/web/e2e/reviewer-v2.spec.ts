@@ -9,22 +9,29 @@ import { expect, test } from "@playwright/test";
 
 const DECISIONS = ["contradiction", "entailment", "neutral", "ambiguous_bad_record"] as const;
 
-test.describe("AgentPay-IR v2 reviewer", () => {
+test.describe("AgentPay-IR v2 reviewer (V3 pack)", () => {
   // each test starts from an empty working store (isolation against shared-file state)
   test.beforeEach(async ({ request }) => {
     await request.post("/api/reviewer/decisions", { data: { decisions: {} } });
   });
 
-  test("pack loads; no suggestion/hint/role text is rendered anywhere", async ({ page }) => {
+  test("pack loads; no suggestion/hint/role/stratum/source metadata is rendered anywhere", async ({ page }) => {
     await page.goto("/reviewer");
     await expect(page.getByTestId("reviewer-root")).toBeVisible();
     const position = await page.getByTestId("reviewer-position").textContent();
     expect(Number(position)).toBeGreaterThanOrEqual(1);
-    // forbidden strings anywhere in the app shell
     const body = (await page.content()).toLowerCase();
-    for (const forbidden of ["label_hint", "review_role", "suggested label", "expected label"]) {
+    for (const forbidden of [
+      "label_hint", "review_role", "suggested label", "expected label",
+      "stratum", "source_class", "source label",
+      "_contradiction", "_entailment", "_neutral", // label-bearing metadata keys
+      "gold", "supervised",
+    ]) {
       expect(body, forbidden).not.toContain(forbidden);
     }
+    // only card_id + premise + hypothesis are exposed per card
+    const cardId = await page.locator("[data-testid=reviewer-card] p").first().textContent();
+    expect(cardId?.trim()).toMatch(/^rc2_\d{4}$/);
   });
 
   test("keyboard 1/2/3/4 labels, toggle, prev/next, progress", async ({ page }) => {

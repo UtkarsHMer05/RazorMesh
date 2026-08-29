@@ -1537,3 +1537,54 @@ model still cannot create tickets, confirm authorization, call providers, or
 mutate checkout facts. Full regression: backend 755 passed with the live
 DeBERTa runtime, ruff/mypy clean, frontend gates green
 (docs/PHASE3_DATASET_AND_RUNTIME_FINAL_AUDIT.md).
+
+## D-054 — AgentPay-IR v2 PRE-REVIEW FINAL CORRECTION (2026-08-29)
+
+Accepted decisions made while executing the numbered pre-review correction list
+(evidence: `services/api/tests/agentpay_v2/`, `docs/agentpay_ir_v2/STATUS.md`,
+`PHASE1_STATUS.md` correction append):
+
+1. **V3 review pack supersedes V2 entirely** — fresh card-id namespace `rc2_*`,
+   zero duplicate normalized pairs / record_ids (test-enforced); V2 pack files and
+   the label-bearing V2 linkage/role manifest are untracked (git history keeps the
+   label-free card file only).
+2. **Role isolation is GROUP-LEVEL and covers all required grouping units** —
+   split_group, generator_parent_id, entity_family_id (1:1 with split_group in this
+   corpus, verified not assumed) and INTERNAL template families (union-find) can
+   never span GOLD and SUPERVISED; the ContractNLI/ESCI fixed-hypothesis template
+   exception is disclosed in the freeze manifest; group isolation outranks the
+   exact 300-gold target (accepted 301).
+3. **One canonical role-manifest hash** — sha256 over the assignments object only
+   (sorted keys, comma separators), stored exclusively in the separate freeze
+   manifest; a role manifest containing a self-referential hash field is rejected.
+4. **Label-bearing review state is private by default** — linkage, role manifest,
+   decisions_working.json, human gold and decision exports are gitignored; only
+   hashes/counts/provenance are committed. Reviewer-facing surfaces expose only
+   card_id/premise/hypothesis; tests reject `*_contradiction`/`*_entailment`/
+   `*_neutral`-style metadata keys.
+5. **Group-level gold isolation + human-labeled gold** — every corpus row sharing a
+   gold card's split_group is excluded from train/val/test; only the reviewed
+   card's record becomes a gold evaluation row, labeled by the HUMAN decision
+   (source_kind=human_reviewed, boolean agreement flag; the source label is never
+   preserved as gold truth). Every relabeled row gets content_sha256 recomputed per
+   the canonical contract and every final row is re-validated.
+6. **Conflict semantics** — conflicting human decisions = the same record_id or the
+   same normalized pair decided two different ways (release-blocking reject).
+   Different decisions on DIFFERENT records sharing a split_group are NOT conflicts
+   (the corpus legitimately mixes labels within a generator group — verified from
+   data: 159/319 pack groups carry mixed source labels).
+7. **External archive-hash notebook design** — the ZIP is built (byte-deterministic:
+   fixed member order + fixed timestamps), hashed, and only then is the notebook
+   generated outside the archive with EXPECTED_BUNDLE_SHA256; dependencies install
+   from the bundle's requirements-frozen.txt (single version source) and torch is
+   never imported before install; actual runtime versions are asserted before
+   training.
+8. **deberta_v2 honors the configured path** — semantic_model_path_v2 flows
+   Settings → Phase-4 orchestrator → run_semantic_runtime(model_dir_v2=…); the
+   MODEL_DIR_V2 constant is only a default.
+9. **OOD refrozen before training** — 401 → 665 rows with a 264-row untouched
+   RazorMesh-security expansion (contradiction-heavy, entity-held-out, v2-normalized,
+   idempotent refreeze); the real ContractNLI/ESCI component is preserved untouched.
+10. **/reviewer is local/dev-only** — all reviewer routes 403 unless
+   RAZORMESH_REVIEWER_ENABLED=1; a normal deployed application never serves the
+   review pack.

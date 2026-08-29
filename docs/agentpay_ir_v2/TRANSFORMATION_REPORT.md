@@ -2,6 +2,18 @@
 
 **Generated:** 2026-08-29 · Mode: `OVERNIGHT_AUTONOMOUS_PREP` · Builder: `scripts/rzp_build_agentpay_ir_v2_corpus.py` (seed 42) · Freezer: `scripts/rzp_freeze_agentpay_ir_v2.py`
 
+> **SUPERSEDED IN PART (2026-08-29, PRE-REVIEW FINAL CORRECTION).** §1–§2 remain
+> the accurate corpus/leakage provenance record. The review-pack, OOD, bundle and
+> handoff facts below were corrected afterward — the SINGLE current handoff is
+> `docs/agentpay_ir_v2/STATUS.md`. Current facts: review pack **V3**
+> (`REVIEW_PACK_V3.jsonl`, 635 cards, `rc2_*` ids, 301 gold / 334 supervised,
+> group-level roles, sha256 `c88b7817…`); fresh OOD expanded + refrozen to
+> **665 rows** (sha256 `8948a8e3…`); PRE-REVIEW bundle sha256 `6292deb6…`
+> (byte-deterministic build); the notebook pins `EXPECTED_BUNDLE_SHA256`
+> externally and installs from `requirements-frozen.txt`. The 700-card V2 pack,
+> the 400/401-row OOD figures, and the older bundle hashes in the sections below
+> are historical.
+
 ## 1. Corpus
 
 | split | rows | contradiction | entailment | neutral | families | split_groups |
@@ -41,6 +53,9 @@
 ---
 
 # OVERNIGHT_AUTONOMOUS_PREP_COMPLETE / AWAITING_HUMAN_REVIEW_AND_COLAB
+> **SUPERSEDED (2026-08-29): the current workflow lives in STATUS.md** (V3 pack at
+> http://localhost:3000/reviewer, 635 cards; export → rzp_finalize_review_v2.py →
+> final bundle → Colab). Kept verbatim as history:
 
 1. Open the review pack: `data/agentpay_ir_v2/corpus/review_candidates.jsonl` (700 cards; reviewer UI task for the morning — the role manifest must stay hidden).
 2. Review the frozen cards (contradiction / entailment / neutral / ambiguous).

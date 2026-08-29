@@ -20,6 +20,7 @@ export default defineConfig({
     ? undefined
     : {
         command: "pnpm dev",
+        env: { RAZORMESH_REVIEWER_ENABLED: "1" },
         url: "http://localhost:3000",
         reuseExistingServer: true,
         timeout: 120_000,

@@ -201,7 +201,8 @@ def test_evidence_builder_never_lets_merchant_text_authorize() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _run(backend: str, deterministic: DeterministicDecision, model_dir: Path | None = None):  # type: ignore[no-untyped-def]
+def _run(backend: str, deterministic: DeterministicDecision, model_dir: Path | None = None,
+         model_dir_v2: Path | None = None):  # type: ignore[no-untyped-def]
     sr.clear_semantic_verifier_cache()
     try:
         return sr.run_semantic_runtime(
@@ -212,6 +213,7 @@ def _run(backend: str, deterministic: DeterministicDecision, model_dir: Path | N
             attempt_id="attempt_semrt",
             ledger=_ledger(),
             model_dir=model_dir,
+            model_dir_v2=model_dir_v2,
             policy_path=POLICY_V3,
             semantic_backend=backend,
         )
@@ -357,12 +359,45 @@ def test_v2_backend_model_dir_constant_points_to_incoming() -> None:
     assert sr.MODEL_DIR_V2 != sr.MODEL_DIR  # the active D-053 artifact is untouched
 
 
+def test_v2_backend_loads_the_configured_model_dir_v2_temp_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PRE-REVIEW FINAL CORRECTION #17: the configured ``semantic_model_path_v2``
+    (flowed in as ``model_dir_v2``) governs which artifact the deberta_v2
+    backend loads — proven at a temporary path."""
+    if not V2_ARTIFACT.exists():
+        pytest.skip("pre-v2 artifact not present on this machine")
+    configured = tmp_path / "configured-v2-artifact"
+    configured.symlink_to(V2_ARTIFACT, target_is_directory=True)
+    outcome = _run("deberta_v2", DeterministicDecision.ALLOW, model_dir_v2=configured)
+    assert outcome.fail_closed is False
+    assert outcome.pair_count > 0
+    # the ARTIFACT AT THE CONFIGURED PATH is what ran: its real hash is reported
+    assert outcome.model_artifact_hash == sr.artifact_sha256(configured)
+    assert len(outcome.model_artifact_hash) == 64
+
+
+def test_v2_backend_missing_configured_path_fails_closed_not_constant_fallback(
+    tmp_path: Path,
+) -> None:
+    """An absent CONFIGURED v2 path must fail closed while naming THAT path —
+    the runtime must never silently fall back to the MODEL_DIR_V2 constant."""
+    absent = tmp_path / "configured-but-absent"
+    outcome = _run("deberta_v2", DeterministicDecision.ALLOW, model_dir_v2=absent)
+    assert outcome.fail_closed is True
+    assert outcome.semantic_action is SemanticAction.CHALLENGE
+    assert str(absent) in (outcome.reason or "")
+    assert "stub" not in outcome.model_id.lower()
+
+
 # ---------------------------------------------------------------------------
 # PVB correction #11/#12: v2 backend metadata truth + fail-closed pair_count
 # ---------------------------------------------------------------------------
 
 
-def test_v2_backend_with_valid_artifact_records_real_metadata(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_v2_backend_with_valid_artifact_records_real_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """When the v2 location holds a valid DeBERTa artifact, the v2 backend must
     report the REAL model version/hash (never the stub label, never empty)."""
     if not V2_ARTIFACT.exists():

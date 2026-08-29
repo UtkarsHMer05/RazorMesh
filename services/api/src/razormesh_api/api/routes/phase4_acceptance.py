@@ -62,6 +62,7 @@ def build_orchestrator() -> Phase4AcceptanceOrchestrator:
     return Phase4AcceptanceOrchestrator(
         checkout_service=_service(repos=repos_obj, keys=keys_obj),
         semantic_model_dir=FilePath(settings.semantic_model_path),
+        semantic_model_dir_v2=FilePath(settings.semantic_model_path_v2),
         semantic_policy_path=FilePath(settings.semantic_policy_path),
         semantic_backend=settings.semantic_verifier_backend,
     )

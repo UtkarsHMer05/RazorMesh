@@ -170,6 +170,7 @@ def run_semantic_runtime(
     attempt_id: str,
     ledger: EvidenceLedger,
     model_dir: Path | None = None,
+    model_dir_v2: Path | None = None,
     policy_path: Path | None = None,
     semantic_backend: str = "deberta",
 ) -> SemanticRuntimeOutcome:
@@ -248,10 +249,13 @@ def run_semantic_runtime(
             ]
         elif semantic_backend == "deberta_v2":
             # AgentPay-IR v2 candidate backend — INACTIVE until the artifact
-            # exists at MODEL_DIR_V2. A missing/corrupt artifact fails CLOSED
-            # (CHALLENGE), exactly like the deberta backend's missing-model
-            # path; it is never substituted with the keyword stub.
-            v2_dir = resolve_repo_path(MODEL_DIR_V2)
+            # exists at the CONFIGURED v2 path (settings.semantic_model_path_v2
+            # flows in via model_dir_v2; MODEL_DIR_V2 is only the default).
+            # A missing/corrupt artifact fails CLOSED (CHALLENGE), exactly like
+            # the deberta backend's missing-model path; it is never substituted
+            # with the keyword stub.
+            v2_dir = (resolve_repo_path(model_dir_v2) if model_dir_v2
+                      else resolve_repo_path(MODEL_DIR_V2))
             if not (v2_dir / "config.json").exists():
                 raise FileNotFoundError(f"agentpay-ir-v2 artifact not present at {v2_dir}")
             active_model_dir = v2_dir

@@ -1,15 +1,20 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+/**
+ * Reviewer-facing card: ONLY the three fields a human labeler may see
+ * (PRE-REVIEW FINAL CORRECTION #3). Stratum/source-class/label metadata lives
+ * exclusively in the gitignored private linkage file.
+ */
 export type Card = {
   card_id: string;
-  stratum: string;
-  source_class: string;
   premise: string;
   hypothesis: string;
 };
 
-/** Resolve the frozen V2 review-pack directory (repo root `data/agentpay_ir_v2/review`). */
+export const REVIEWER_PACK_FILE = "REVIEW_PACK_V3.jsonl";
+
+/** Resolve the frozen V3 review-pack directory (repo root `data/agentpay_ir_v2/review`). */
 export function reviewDir(): string {
   const candidates = [
     process.env.RAZORMESH_REVIEW_DIR,
@@ -27,7 +32,7 @@ export function packPath(name: string): string {
 }
 
 export function loadCards(): Card[] {
-  const raw = readFileSync(packPath("REVIEW_PACK_V2.jsonl"), "utf-8");
+  const raw = readFileSync(packPath(REVIEWER_PACK_FILE), "utf-8");
   return raw
     .split("\n")
     .filter((l) => l.trim().length > 0)

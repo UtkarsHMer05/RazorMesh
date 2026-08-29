@@ -1,23 +1,61 @@
 {
-  "frozen_at": "2026-08-29T13:00:00+00:00",
-  "rows": 401,
-  "sha256": "78b2aee436b0ce4a888dc88eb700d2bb9054d4314afb756d72e134dccde6bfb1",
+  "frozen_at": "2026-08-29T20:00:00+00:00",
+  "rows": 665,
+  "sha256": "8948a8e3750410a51ab0e3e8ce5b61a662b5d28daa1311a711558db2f2888ade",
   "composition": {
     "source_kinds": {
       "deterministic_derived": 51,
       "real_human_nli": 179,
-      "real_commerce": 171
+      "real_commerce": 171,
+      "synthetic_adversarial": 264
     },
     "labels": {
-      "entailment": 269,
-      "contradiction": 47,
-      "neutral": 85
+      "entailment": 357,
+      "contradiction": 183,
+      "neutral": 125
     },
-    "internal_withheld_family": 51,
-    "contractnli_withheld_docs": 200,
-    "esci_withheld_products": 150
+    "families_top": {
+      "contract_obligation": 179,
+      "product_identity": 171,
+      "recurring_subscription": 32,
+      "membership_insertion": 32,
+      "quantity": 32,
+      "currency": 26,
+      "delivery_constraint": 25,
+      "trial_to_paid_renewal": 24,
+      "semantic_fees": 24,
+      "seller_authorization": 24,
+      "product_condition": 24,
+      "prompt_injection_like_merchant_text": 24,
+      "safe_lookalikes": 24,
+      "misleading_negation": 24
+    }
+  },
+  "expansion": {
+    "added_rows": 264,
+    "generated_rows": 264,
+    "invalid_rows_dropped": 0,
+    "added_labels": {
+      "contradiction": 136,
+      "entailment": 88,
+      "neutral": 40
+    },
+    "added_families": {
+      "recurring_subscription": 32,
+      "trial_to_paid_renewal": 24,
+      "membership_insertion": 32,
+      "semantic_fees": 24,
+      "seller_authorization": 24,
+      "quantity": 32,
+      "product_condition": 24,
+      "prompt_injection_like_merchant_text": 24,
+      "safe_lookalikes": 24,
+      "misleading_negation": 24
+    },
+    "method": "hand-authored deterministic security templates; fresh synthetic entities verified absent from corpus; contradiction-heavy",
+    "entity_held_out": true
   },
   "provenance": "every row normalized to the agentpay-ir-v2 record contract",
-  "rule": "never used for training/validation/selection/calibration; never tuned from afterward",
-  "replaces": "400-row mixed-provenance OOD (349 CNLI + 51 legacy v0.2 rows)"
+  "rule": "never used for training/validation/selection/calibration; frozen BEFORE training; never tuned from afterward",
+  "supersedes": "2026-08-29T20:00:00+00:00"
 }

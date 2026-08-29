@@ -7,6 +7,12 @@ import { packPath } from "../data";
  * no timestamps — identical inputs produce byte-identical output.
  */
 export async function GET() {
+  if (process.env.RAZORMESH_REVIEWER_ENABLED !== "1") {
+    return NextResponse.json(
+      { error: "reviewer disabled; set RAZORMESH_REVIEWER_ENABLED=1" },
+      { status: 403 }
+    );
+  }
   try {
     const p = packPath("decisions_working.json");
     if (!existsSync(p)) {

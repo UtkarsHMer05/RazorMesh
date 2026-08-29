@@ -30,14 +30,24 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Project:** RazorMesh Trust
 **Active phase:** Phase 4 ACTIVE (M01–M50 AUTONOMOUS PASS, awaiting human acceptance)
-**Current milestone:** AgentPay-IR v2 OVERNIGHT_PREP COMPLETE (2026-08-29): gates
-G001-G09x + OVN001-052 executed in order; real-data-dominant v2 corpus frozen
-(18,416 rows, 100% real/human-derived, leakage gate PASS), 700-card review pack
-(300 hidden gold), 400-row fresh OOD frozen, Colab bundle+notebook ready
-(bundle sha b00c798c…), smoke fine-tune proven, runtime `deberta_v2` backend
-scaffolded INACTIVE (fail-closed). OVN047 payment smoke BLOCKED_EXTERNAL
-(sandbox checkout blocks automation; failure paths proven; reconciliation OK).
-PRE-TRAINING-READY (2026-08-29 correction): PVB001-020 reconciled; review pack V2 (701 stratified cards, 300 hidden gold) + /reviewer UI live; finalization pipeline, corrected notebook, OOD refreeze (401 v2-normalized), quality gates (95.3%/4.7% honest composition) all green. Authoritative status: PRE_V2_CORRECTED_BASELINE_PASS / FINAL_PHASE4_ACCEPTANCE_BLOCKED_UNTIL_AGENTPAY_IR_V2. No training started.
+**Current milestone:** AgentPay-IR v2 PRE-REVIEW FINAL CORRECTION PASS (2026-08-29):
+review pack **V3** rebuilt (635 cards `rc2_*`, 301 gold / 334 supervised, ZERO dup
+pairs/record_ids, group-level roles incl. internal template families, canonical
+assignments-only role sha in the freeze manifest only); reviewer JSON/UI show only
+card_id/premise/hypothesis (vitest+Playwright leak tests); linkage/roles/decisions/gold
+gitignored; finalizer rewritten (group-level gold isolation, HUMAN gold labels,
+content_sha256 recompute+validate, conflict rejection, --root dry-run mode) with a full
+e2e test suite; Colab builder takes --corpus-dir/--train/--val, zip byte-deterministic
+(6292deb6…), notebook uses external EXPECTED_BUNDLE_SHA256 + requirements-frozen.txt
+(5.15.1/2.13.0/1.14.0) with version asserts, no pre-install torch import; deberta_v2
+honors semantic_model_path_v2 (temp-path tests); PVB008 re-executed with real PRE_V2
+inference (PRE_V2_TEMPLATE_ROBUSTNESS.md — prompt-injection PASSES 13/15 = recorded
+defect for v2 training); OOD expanded+refrozen 401→665 (264 RazorMesh-security rows,
+136 contradictions, entity-held-out); cross-split near-dup report (exact overlap 0;
+ContractNLI fixed-hypothesis exception documented); /reviewer gated by
+RAZORMESH_REVIEWER_ENABLED=1; agent-control docs untracked+gitignored (local copies
+kept, commit 3a1df5c). Status: **PRE_REVIEW_FINAL_CORRECTION_PASS /
+SAFE_TO_BEGIN_HUMAN_LABELING**. No training, no test/gold/OOD evaluation, no push.
 **Last updated:** 2026-08-29.
 **Gate (Phase 4 final M49, historical):** `services/api` ruff clean / mypy clean / pytest
 718/718 PASS; `apps/web` typecheck 0 errors / lint 0 errors / vitest 76 PASS /
@@ -224,16 +234,24 @@ by title as well as ID until the governance collision is separately reconciled.
 
 # Next action
 
-AgentPay-IR v2 OVERNIGHT_AUTONOMOUS_PREP is COMPLETE (2026-08-29). Morning
-handoff: (1) human reviews data/agentpay_ir_v2/corpus/review_candidates.jsonl
-(700 cards; role manifest stays hidden); (2) upload
-artifacts/agentpay_ir_v2_colab_training_bundle.zip to
-notebooks/RazorGuard_NLI_AgentPayIR_v2_Training.ipynb, run on T4/L4;
-(3) place returned agentpay-ir-v2-finetuned.zip in artifacts/models/incoming/;
-(4) tell the agent "v2 artifact uploaded" → POST_COLAB_RESUME (ingest review,
-calibrate on val only, one-shot test/gold/OOD eval, wire deberta_v2, full
-regression, final same-lineage Razorpay Test payment; complete OVN047 manually
-or after account/checkout fix). Phase-4 human acceptance still pending; no push
+PRE-REVIEW FINAL CORRECTION PASS complete (2026-08-29). The ONE current handoff
+workflow (docs/agentpay_ir_v2/STATUS.md is authoritative):
+
+1. Human opens http://localhost:3000/reviewer (dev server with
+   RAZORMESH_REVIEWER_ENABLED=1, already in .env) and labels ALL 635 cards of
+   data/agentpay_ir_v2/review/REVIEW_PACK_V3.jsonl.
+2. Human clicks "Export decisions JSON".
+3. Run `services/api/.venv/bin/python scripts/rzp_finalize_review_v2.py --decisions
+   <exported.json>` → validates/conflict-checks, group-level gold isolation,
+   human-gold freeze (GOLD_FROZEN_V3.jsonl), corpus/final train/val/test, leakage
+   gates, FINAL bundle + notebook rebuild.
+4. Upload the FINAL artifacts/agentpay_ir_v2_colab_training_bundle.zip to
+   notebooks/RazorGuard_NLI_AgentPayIR_v2_Training.ipynb (T4/L4), run top-to-bottom.
+5. Place returned agentpay-ir-v2-finetuned.zip in artifacts/models/incoming/ and
+   tell the agent "v2 artifact uploaded" → POST_COLAB_RESUME (validation-only
+   calibration, one-shot test/gold/OOD eval, deberta_v2 wiring, full regression).
+
+OVN047 payment completion remains BLOCKED_EXTERNAL (sandbox checkout). No push
 authorization.
 
 Historical Phase-3 re-audit queue remains preserved above as

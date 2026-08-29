@@ -1,0 +1,202 @@
+{
+ "analysis": "cross-split near-duplicate + template-family overlap (PRE-REVIEW FINAL CORRECTION #20)",
+ "jaccard_threshold": 0.85,
+ "splits": {
+  "train": 13843,
+  "val": 2312,
+  "test": 2261
+ },
+ "directions": {
+  "train<->val": {
+   "rows_train": 13843,
+   "rows_val": 2312,
+   "exact_pair_overlap": 0,
+   "same_premise_only": 8,
+   "same_hypothesis_only": 144,
+   "shared_split_groups": 0,
+   "shared_entity_families": 0,
+   "shared_template_families": 30,
+   "rows_in_shared_template_families": {
+    "train": 13218,
+    "val": 2208
+   },
+   "near_duplicate_pairs_ge_threshold": 389,
+   "near_duplicate_top_families": {
+    "brand_rule": 174,
+    "condition_rule": 71,
+    "model_rule": 37,
+    "color_rule": 33,
+    "nda-8": 15,
+    "nda-17": 8,
+    "nda-1": 6,
+    "nda-20": 6,
+    "nda-4": 5,
+    "nda-11": 4
+   },
+   "max_jaccard_in_shared_families": 1.0,
+   "near_dup_examples": [
+    {
+     "template_family": "brand_rule",
+     "train_record": "ap2_94668994c9b69ac474d471809f",
+     "val_record": "ap2_a699802c222f2b9583a85dfab6",
+     "jaccard": 1.0
+    },
+    {
+     "template_family": "brand_rule",
+     "train_record": "ap2_6883ec67bc9e0e338f978e8f5e",
+     "val_record": "ap2_ab616e5d60e9eb6219c44827a1",
+     "jaccard": 1.0
+    },
+    {
+     "template_family": "condition_rule",
+     "train_record": "ap2_574f8a5ba19a484211e51d4cd1",
+     "val_record": "ap2_ed3a51b7e3ca785281bcbb0673",
+     "jaccard": 1.0
+    },
+    {
+     "template_family": "model_rule",
+     "train_record": "ap2_2cd94c39987a29e9331bfee255",
+     "val_record": "ap2_d5a7e7727d9271076608b0be12",
+     "jaccard": 1.0
+    },
+    {
+     "template_family": "nda-4",
+     "train_record": "ap2_d3bbda7dfc9a86fae97c0af7fe",
+     "val_record": "ap2_b7ac25b9a644c7f8dbc10f3b57",
+     "jaccard": 1.0
+    }
+   ]
+  },
+  "train<->test": {
+   "rows_train": 13843,
+   "rows_test": 2261,
+   "exact_pair_overlap": 0,
+   "same_premise_only": 1,
+   "same_hypothesis_only": 134,
+   "shared_split_groups": 0,
+   "shared_entity_families": 0,
+   "shared_template_families": 26,
+   "rows_in_shared_template_families": {
+    "train": 13198,
+    "test": 2167
+   },
+   "near_duplicate_pairs_ge_threshold": 414,
+   "near_duplicate_top_families": {
+    "brand_rule": 203,
+    "condition_rule": 64,
+    "color_rule": 31,
+    "model_rule": 21,
+    "nda-17": 11,
+    "nda-19": 8,
+    "nda-11": 7,
+    "nda-16": 7,
+    "nda-5": 7,
+    "nda-10": 6
+   },
+   "max_jaccard_in_shared_families": 1.0,
+   "near_dup_examples": [
+    {
+     "template_family": "color_rule",
+     "train_record": "ap2_aa907df8ab3a1269a6cd6b604d",
+     "test_record": "ap2_908cdfa7638fcb4ad1fe76876a",
+     "jaccard": 1.0
+    },
+    {
+     "template_family": "nda-1",
+     "train_record": "ap2_f3e8454b66452cbbb566aa5137",
+     "test_record": "ap2_701b847a3a5d6fc8829786b6cb",
+     "jaccard": 1.0
+    },
+    {
+     "template_family": "nda-11",
+     "train_record": "ap2_3b5c4e81d72ec0132300e9829f",
+     "test_record": "ap2_66bc63920b6de3163c1e946f8c",
+     "jaccard": 1.0
+    },
+    {
+     "template_family": "nda-15",
+     "train_record": "ap2_72d78a0cb704cd682c8d9d6919",
+     "test_record": "ap2_3ead85e56659260809862e20f5",
+     "jaccard": 1.0
+    },
+    {
+     "template_family": "nda-16",
+     "train_record": "ap2_516640e789fff1245785f4a9b1",
+     "test_record": "ap2_23987b82d15a891534183e79b2",
+     "jaccard": 1.0
+    }
+   ]
+  },
+  "val<->test": {
+   "rows_val": 2312,
+   "rows_test": 2261,
+   "exact_pair_overlap": 0,
+   "same_premise_only": 2,
+   "same_hypothesis_only": 112,
+   "shared_split_groups": 0,
+   "shared_entity_families": 0,
+   "shared_template_families": 22,
+   "rows_in_shared_template_families": {
+    "val": 2200,
+    "test": 2163
+   },
+   "near_duplicate_pairs_ge_threshold": 44,
+   "near_duplicate_top_families": {
+    "brand_rule": 21,
+    "color_rule": 8,
+    "model_rule": 6,
+    "condition_rule": 5,
+    "nda-10": 1,
+    "nda-17": 1,
+    "nda-4": 1,
+    "nda-8": 1
+   },
+   "max_jaccard_in_shared_families": 0.9524,
+   "near_dup_examples": [
+    {
+     "template_family": "model_rule",
+     "val_record": "ap2_e2a8b3e8f04a40bdd0514b7987",
+     "test_record": "ap2_80ac105aa5820ec003940aebc7",
+     "jaccard": 0.9524
+    },
+    {
+     "template_family": "color_rule",
+     "val_record": "ap2_fdf21304e9add1363d4946cac8",
+     "test_record": "ap2_0252b83551fb9552046ddb74d0",
+     "jaccard": 0.9474
+    },
+    {
+     "template_family": "nda-4",
+     "val_record": "ap2_80f646f4f41b74f75db7a39ddf",
+     "test_record": "ap2_2cd31c964482b960423b6711bd",
+     "jaccard": 0.9474
+    },
+    {
+     "template_family": "nda-17",
+     "val_record": "ap2_19804ab3f6f39e7b4c46e1e99c",
+     "test_record": "ap2_3dec0f02d218ad03f2d7aa6d47",
+     "jaccard": 0.9459
+    },
+    {
+     "template_family": "brand_rule",
+     "val_record": "ap2_c7227d328a57f8a0e2dfd997c1",
+     "test_record": "ap2_be9d34f41f9c209ac42d2b6cdf",
+     "jaccard": 0.9412
+    }
+   ]
+  }
+ },
+ "contractnli_exception": {
+  "documented": true,
+  "distinct_contractnli_hypotheses": 17,
+  "hypotheses_appearing_in_multiple_splits": 17,
+  "note": "ContractNLI premises share a small set of FIXED clause hypotheses; these cannot be template-held-out across splits without destroying the real-human-NLI component. Cross-split hypothesis overlap is therefore dominated by this source and is reported, not hidden. Human-gold review cards and untouched OOD are the stronger generalization benchmarks for these families.",
+  "template_families_per_fixed_hypothesis_top5": {
+   "receiving party shall not reverse engineer any objects which embody disclosing party s confidential information": 1,
+   "receiving party shall destroy or return some confidential information upon the termination of agreement": 1,
+   "agreement shall not grant receiving party any right to confidential information": 1,
+   "receiving party shall not disclose the fact that agreement was agreed or negotiated": 1,
+   "confidential information shall only include technical information": 1
+  }
+ }
+}

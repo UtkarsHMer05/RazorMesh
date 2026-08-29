@@ -448,3 +448,66 @@ Authority: human request to validate the completed phase against the autonomous 
 - Runtime `deberta_v2` backend scaffolded INACTIVE (missing artifact fails
   closed to CHALLENGE; pinned by new tests). Human-dependent gates are
   DEFERRED_MORNING — no final v2 model or Phase-4 acceptance claim is made.
+
+---
+
+# AgentPay-IR v2 PRE-REVIEW FINAL CORRECTION append (2026-08-29)
+
+All numbered correction items executed with test-enforced evidence (suite:
+`services/api/tests/agentpay_v2/`, 33 tests; plus vitest + Playwright reviewer
+gates). Status token: **PRE_REVIEW_FINAL_CORRECTION_PASS /
+SAFE_TO_BEGIN_HUMAN_LABELING**. No training, no test/gold/OOD model evaluation,
+nothing pushed.
+
+- V3 review pack: 635 cards (`rc2_*`), zero dup normalized pairs, zero dup
+  record_ids (asserted + tested); roles group-level (301 gold / 334 supervised,
+  319 groups; record/split_group/generator_parent/entity_family/internal-template
+  isolation asserted); reviewer fields = card_id/premise/hypothesis only;
+  linkage/roles/decisions gitignored; canonical assignments-only role sha
+  (37a59cf4…) stored solely in REVIEW_PACK_FREEZE_V3.json (round-trip, tamper and
+  self-hash rejection tested). V2 pack/linkage/roles removed from tracking.
+- Finalizer (`scripts/rzp_finalize_review_v2.py`): V3 namespace, canonical hash
+  verify, conflict rejection, group-level gold isolation (only the reviewed card's
+  record survives as gold, HUMAN label, source_kind=human_reviewed, boolean
+  agreement flag — source label never preserved as truth), content_sha256
+  recompute + whole-freeze validation, leakage gates incl. OOD, --root workspace
+  redirection; executed end-to-end on a synthetic workspace with a complete fake
+  export (plus incomplete/conflict/tamper/self-hash/OOD-collision rejection tests).
+- Colab chain: builder honors --corpus-dir/--train/--val/--out-zip; deterministic
+  zip (fixed timestamps); notebook generated OUTSIDE the zip with
+  EXPECTED_BUNDLE_SHA256=<final zip sha>, verifies internal files from
+  bundle_manifest.json, installs requirements-frozen.txt
+  (transformers 5.15.1 / torch 2.13.0 / accelerate 1.14.0), asserts actual
+  versions before training, imports torch only after install; no-training local
+  preflight test executes the verification cell against the real ZIP; frozen
+  selection rule unit-tested (module + notebook copy) incl. proof that neutral
+  recall / safe false-block cannot flip a decision; final-zip train/val hashes
+  proven equal to corpus/final files in the dry-run workspace.
+- Runtime: deberta_v2 honors configured semantic_model_path_v2 (Settings →
+  orchestrator → run_semantic_runtime(model_dir_v2=…)); temp-path symlink test
+  proves the configured artifact loads; absent configured path fails closed
+  naming that path (no constant fallback).
+- PVB008 executed as specified: 10 families x 5 premise x 3 hypothesis
+  hand-authored paraphrases, 150 REAL PRE_V2 inferences
+  (docs/agentpay_ir_v2/PRE_V2_TEMPLATE_ROBUSTNESS.{md,json}); findings disclosed:
+  prompt-injection premises PASS 13/15 (unsafe), semantic_fees 0.87 /
+  seller_authorization 0.80 stability; remaining 7 families ≥0.93 with full
+  expected-action agreement.
+- OOD expanded + refrozen BEFORE training: 401 → 665 rows
+  (eval/fresh_ood_v2.jsonl sha 8948a8e3…); +264 untouched RazorMesh-security rows
+  across the ten required families (136 contradictions = 53% of the expansion);
+  fresh synthetic entities proven corpus-absent; every row v2-normalized;
+  hash/group-disjoint; idempotent self-healing refreeze.
+- Cross-split near-duplicate analysis: docs/agentpay_ir_v2/
+  NEAR_DUP_CROSS_SPLIT_REPORT.{md,json} — exact pair overlap 0 in all directions;
+  near-dup (Jaccard≥0.85, shared template families) 389/414/44 disclosed;
+  ContractNLI fixed-hypothesis exception documented; human gold + OOD declared
+  the stronger generalization benchmarks.
+- /reviewer gated: RAZORMESH_REVIEWER_ENABLED=1 required on all reviewer routes
+  (403 otherwise); Playwright config sets it for the dev server only.
+- Docs reconciled: STATUS.md = single authoritative handoff
+  (SAFE_TO_BEGIN_HUMAN_LABELING); TRANSFORMATION_REPORT.md carries a superseding
+  addendum; MEMORY.md snapshot/next-action updated.
+- Privacy: internal AI agent-control documents (master prompts, paste-to-agent,
+  overnight ledgers, AGENTS/AI_WORKFLOW/CLAUDE files, HUMAN_PREFLIGHT_CHECKLIST)
+  untracked + gitignored; local copies retained; commit 3a1df5c.

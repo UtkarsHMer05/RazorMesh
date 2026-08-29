@@ -1,0 +1,32 @@
+{
+ "pack": "REVIEW_PACK_V3",
+ "generation_note": "fresh generation; supersedes V2; new card-id namespace rc2_*",
+ "cards": 635,
+ "unique_record_ids": 635,
+ "unique_normalized_pairs": 635,
+ "unique_split_groups": 319,
+ "gold_cards": 301,
+ "supervised_cards": 334,
+ "gold_groups": 163,
+ "supervised_groups": 156,
+ "group_isolation": "no split_group / record_id / generator_parent_id / entity_family_id spans gold and supervised (asserted); internal template families unioned into group components (asserted)",
+ "template_family_exception": {
+  "contractnli_esci_families_spanning_roles": 5,
+  "note": "ContractNLI/ESCI fixed hypotheses span document groups by construction and cannot be template-held-out; human gold + untouched OOD are the stronger generalization benchmarks for those families"
+ },
+ "reviewer_fields": [
+  "card_id",
+  "premise",
+  "hypothesis"
+ ],
+ "reviewer_pack_sha256": "c88b78175876290996cc34e038dc737eb96435f59ee04062bde04d62f1bf618a",
+ "role_manifest_sha256": "37a59cf475c1b65e78c1ae58379a8f6cc48fee0e31585d5781a2cd45163d133b",
+ "role_sha_definition": "sha256(json.dumps(assignments, sort_keys=True, separators=(',',':'))) over {card_id: role} only; stored HERE, never inside the role manifest",
+ "private_files_gitignored": [
+  "REVIEW_LINKAGE_V3.json",
+  "REVIEW_ROLE_MANIFEST_V3.json",
+  "decisions_working.json",
+  "GOLD_FROZEN_V3.jsonl"
+ ],
+ "frozen_at": "2026-08-29T15:00:00+00:00"
+}

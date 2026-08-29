@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./reviewer.module.css";
 
-type Card = { card_id: string; stratum: string; source_class: string; premise: string; hypothesis: string };
+type Card = { card_id: string; premise: string; hypothesis: string };
 type DecisionValue = "contradiction" | "entailment" | "neutral" | "ambiguous_bad_record";
 type Decisions = Record<string, { decision: DecisionValue; note?: string }>;
 
@@ -136,7 +136,7 @@ export default function ReviewerPage() {
 
       <section className="card" data-testid="reviewer-card">
         <p className={styles.meta}>
-          {card.card_id} · {card.stratum} · {card.source_class}
+          {card.card_id}
         </p>
         <h2 className={styles.side}>Evidence (premise)</h2>
         <blockquote className={styles.premise} data-testid="reviewer-premise">
