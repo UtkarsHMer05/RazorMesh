@@ -1588,3 +1588,77 @@ Accepted decisions made while executing the numbered pre-review correction list
 10. **/reviewer is local/dev-only** — all reviewer routes 403 unless
    RAZORMESH_REVIEWER_ENABLED=1; a normal deployed application never serves the
    review pack.
+
+## D-055 — AgentPay-IR v2 candidate evaluated once on frozen data and NOT activated (2026-08-30)
+Date: 2026-08-30
+Milestone: POST-COLAB FINAL ACCEPTANCE (M1–M3)
+Status: Accepted
+Supersedes: none (extends D-053's activation contract)
+
+Context: The Colab-trained AgentPay-IR v2 artifact (ZIP sha256 4c933eec…, candidate
+A_2ep) was integrity-verified and promoted to artifacts/models/incoming/
+agentpay-ir-v2-finetuned/. A v4 runtime policy (tau_block=0.40, tau_entail=0.90)
+was calibrated on the FINAL corpus VALIDATION split ONLY, BEFORE any frozen
+contact (same objective/constraints family as the v3 calibration). The one-shot
+frozen evaluation then ran exactly once per model on the hash-pinned frozen sets
+(final test 2,227 / human gold 301 / fresh OOD 665).
+
+Decision: The frozen activation rule was applied as written and the v2 candidate
+FAILED the safety gate: unsafe contradiction→entailment WORSENED on both
+security-critical sets (human gold 2→7; fresh OOD 5→6) and human-gold macro-F1
+regressed 0.8930→0.7757 (test macro-F1 improved 0.7367→0.9752). Therefore:
+M2_FROZEN_EVALUATION_FAIL / V2_NOT_ACTIVATED. The ACTIVE runtime remains the
+PRE_V2 verifier (backend deberta, phase3-finetuned-v2, semantic-thresholds-v3).
+The v4 policy file exists on disk (val-only provenance) but is NOT wired into
+production. No rerun, threshold change, or recalibration was derived from the
+frozen results.
+
+Rationale: Safety takes priority over headline accuracy (master-prompt frozen
+activation condition, §M2); a model that lets more gold contradictions reach a
+provider-call PASS must not ship, whatever its macro-F1.
+
+Consequences: The promoted artifact + frozen predictions + reports
+(docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION.{md,json}, frozen_eval/*) are kept
+as reproducible evidence of the gate working; UI text states the candidate was
+"evaluated, not activated"; a disclosed limitation is recorded — a recurring
+term hidden ONLY in untrusted listing text is invisible to the structured
+evidence builder (the exact gap the v2 corpus targeted, and the honest reason a
+future candidate must pass this gate before activation).
+
+Evidence: docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION.{md,json};
+docs/agentpay_ir_v2/frozen_eval/{pre_v2_baseline,agentpay_ir_v2}/metrics.json;
+data/phase3/policy/semantic_thresholds_v4.json (calibration order note).
+
+## D-056 — Full-evidence acceptance rejections + Security Lab demo scenarios (2026-08-30)
+Date: 2026-08-30
+Milestone: POST-COLAB FINAL ACCEPTANCE (M5)
+Status: Accepted
+Supersedes: none
+
+Context: Acceptance rejections previously returned empty evidence (the UI could
+only show a thrown error string), blocked flows left no "ticket NOT issued"
+marker, and no scenario exercised the protocol firewall + semantic verifier in
+one judge-visible run.
+
+Decision: (1) A deterministic RazorGuard rejection now CONTINUES the remaining
+pure-validation stages READ-ONLY (protocol firewall; semantic verifier when the
+envelope is protocol-valid) and returns per-stage verdicts on the 409
+(firewall/razorguard/semantic + probabilities + final); the FINAL decision
+stays the strictest, no ticket is minted, no provider is contacted, and the
+idempotency key stays unconsumed. (2) PHASE4_ACCEPTANCE_REJECTED and (on any
+non-ALLOW authorize) TICKET_WITHHELD ledger events record the verdicts
+(identifiers/numbers only — never raw premise/hypothesis text). (3) Demo routes
+POST /phase4/acceptance/demo/scenario-b-semantic-violation and
+.../scenario-c-protocol-valid-intent-invalid provision their own synthetic
+fixtures and drive the REAL pipeline; the Security Lab renders the per-stage
+result cards; the audit timeline maps every event to a human step name and
+surfaces per-event details.
+
+Rationale: "Protocol validity is not transaction authority" must be provable in
+ONE visible run; judges must see negative decisions as first-class evidence,
+not as errors.
+
+Consequences: The semantic model is never shown as financial authority; the
+stricten-only fusion and fail-closed invariants are unchanged (pinned by
+tests/phase4/test_demo_scenarios.py: BLOCK never loosens, no provider call, no
+raw text in payloads).
