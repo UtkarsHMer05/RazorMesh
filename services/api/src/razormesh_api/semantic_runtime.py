@@ -70,12 +70,14 @@ def resolve_repo_path(path: Path | str) -> Path:
 # throwaway fixture artifacts without colliding with the production cache.
 _VERIFIER_CACHE: dict[tuple[str, str], DebertaNLISemanticVerifier] = {}
 _ARTIFACT_HASH_CACHE: dict[str, str] = {}
+_CANDIDATE_CACHE: dict[str, str] = {}
 
 
 def clear_semantic_verifier_cache() -> None:
     """Test/diagnostic hook: drop cached verifiers and artifact hashes."""
     _VERIFIER_CACHE.clear()
     _ARTIFACT_HASH_CACHE.clear()
+    _CANDIDATE_CACHE.clear()
 
 
 def get_semantic_verifier(*, model_dir: Path, policy_path: Path) -> DebertaNLISemanticVerifier:
@@ -99,6 +101,29 @@ def artifact_sha256(model_dir: Path) -> str:
         digest = hashlib.sha256(weights.read_bytes()).hexdigest()
         _ARTIFACT_HASH_CACHE[key] = digest
     return digest
+
+
+def artifact_selected_candidate(model_dir: Path) -> str:
+    """Selected-candidate identity from the artifact's ``model_manifest.json``.
+
+    Metadata for the audit trail (M3): the exact checkpoint that produced the
+    winning validation metrics must be traceable in every SEMANTIC_VERIFICATION_RUN.
+    Returns '' for legacy artifacts without the field; a missing/unreadable
+    manifest is metadata absence, never an execution failure.
+    """
+    manifest = model_dir / "model_manifest.json"
+    key = str(manifest.resolve())
+    candidate = _CANDIDATE_CACHE.get(key)
+    if candidate is None:
+        import json
+
+        try:
+            data = json.loads(manifest.read_text())
+            candidate = str(data.get("selected_candidate") or "")
+        except Exception:  # noqa: BLE001 - metadata is advisory; never block execution
+            candidate = ""
+        _CANDIDATE_CACHE[key] = candidate
+    return candidate
 
 
 @dataclass(frozen=True)
@@ -254,8 +279,9 @@ def run_semantic_runtime(
             # A missing/corrupt artifact fails CLOSED (CHALLENGE), exactly like
             # the deberta backend's missing-model path; it is never substituted
             # with the keyword stub.
-            v2_dir = (resolve_repo_path(model_dir_v2) if model_dir_v2
-                      else resolve_repo_path(MODEL_DIR_V2))
+            v2_dir = (
+                resolve_repo_path(model_dir_v2) if model_dir_v2 else resolve_repo_path(MODEL_DIR_V2)
+            )
             if not (v2_dir / "config.json").exists():
                 raise FileNotFoundError(f"agentpay-ir-v2 artifact not present at {v2_dir}")
             active_model_dir = v2_dir
@@ -387,9 +413,11 @@ def run_semantic_runtime(
             model_hash = artifact_sha256(active_model_dir)
         except Exception:  # noqa: BLE001 - unreadable weights stay fail-closed, never crash
             model_hash = ""
+        candidate = artifact_selected_candidate(active_model_dir)
     else:
         model_version = "DETERMINISTIC_TEST_STUB"
         model_hash = ""
+        candidate = ""
     record_semantic_verification(
         ledger=ledger,
         intent_id=intent_id,
@@ -398,6 +426,7 @@ def run_semantic_runtime(
         semantic_backend=semantic_backend,
         model_version=model_version,
         model_artifact_hash=model_hash,
+        selected_candidate=candidate,
         pair_count=pair_count,
         duration_ms=duration_ms,
     )

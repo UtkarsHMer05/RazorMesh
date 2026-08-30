@@ -17,6 +17,8 @@ export function SiteNav() {
           <Link href="/#architecture">Architecture</Link>
           <Link href="/protocols">Protocols</Link>
           <Link href="/security-lab">Security</Link>
+          <Link href="/audit">Audit</Link>
+          <Link href="/merchant">Merchant</Link>
         </nav>
         <div className="site-nav__actions">
           <Link href="/buyer" className="site-nav__login">Log in</Link>

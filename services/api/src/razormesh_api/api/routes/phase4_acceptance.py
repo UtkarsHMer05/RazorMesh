@@ -20,6 +20,7 @@ the payment provider, shell access, or arbitrary networking.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 from pathlib import Path as FilePath
 from typing import Annotated, Any
 
@@ -121,6 +122,11 @@ def prepare_acceptance(body: PrepareBody) -> dict[str, Any]:
                 "code": result.rejection_stage or "rejected",
                 "reason": result.rejection_reason,
                 "run_id": result.run.run_id,
+                "rejection_stage": result.rejection_stage,
+                "final_decision": result.run.evidence.final_decision or None,
+                # Full-evidence rejection (M5): per-stage verdicts when the
+                # orchestrator gathered them (firewall/razorguard/semantic).
+                "evidence": result.run.evidence.to_dict()["razormesh"],
             },
         )
     return {
@@ -206,6 +212,189 @@ def get_handoff(run_id: RunIdPath) -> dict[str, Any]:
 def list_runs() -> dict[str, Any]:
     snap = REGISTRY.snapshot()
     return {"runs": snap, "count": len(snap)}
+
+
+# ---------------------------------------------------------------------------
+# Security Lab demo scenarios (M5). Each route provisions its own fixtures,
+# then drives the REAL acceptance pipeline. They are evidence views over the
+# production path — no new trust decisions, no new payment path, no provider
+# call on any rejection.
+# ---------------------------------------------------------------------------
+
+_DEMO_MERCHANT_ID = "mrc_10000000000000000000000000"
+_DEMO_HIDDEN_PRODUCT_ID = "prd_20000000000000000000000000"
+_DEMO_STANDARD_PRODUCT_ID = "prd_30000000000000000000000000"
+
+
+def _ensure_demo_catalog(repos: Any) -> None:
+    """Idempotently provision the demo merchant/products (fixed ids)."""
+    from razormesh_api.persistence.models import Merchant as RowMerchant
+    from razormesh_api.persistence.models import Product as RowProduct
+
+    now = datetime.now(UTC)
+    with repos.transaction() as session:
+        session.merge(
+            RowMerchant(
+                id=_DEMO_MERCHANT_ID,
+                name="RazorMesh Security Lab",
+                display_name="RazorMesh Security Lab",
+                description="Synthetic demo merchant for the Security Lab scenarios (not a real offer).",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        # Products are UPSERTED so fixture changes self-heal across runs.
+        # Structured recurring term: the checkout line item itself carries
+        # the renewal, so the deterministic rule and the semantic recurring
+        # pair both see it. (A term hidden ONLY in untrusted listing text
+        # is NOT visible to the structured evidence builder — a disclosed
+        # limitation motivating the AgentPay-IR v2 corpus work.)
+        session.merge(
+            RowProduct(
+                id=_DEMO_HIDDEN_PRODUCT_ID,
+                merchant_id=_DEMO_MERCHANT_ID,
+                title=(
+                    "CloudFit Annual Pass — includes membership that auto-renews "
+                    "every quarter unless cancelled before day 30"
+                ),
+                description="Synthetic Security Lab demo product with a recurring membership term.",
+                brand="CloudFit",
+                category="fitness",
+                condition="new",
+                price_minor=249_900,
+                currency="INR",
+                shipping_minor=0,
+                tax_minor=0,
+                fees_minor=0,
+                recurring=True,
+                recurring_frequency="quarterly",
+                image_url=None,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        session.merge(
+            RowProduct(
+                id=_DEMO_STANDARD_PRODUCT_ID,
+                merchant_id=_DEMO_MERCHANT_ID,
+                title="Aurora Bluetooth Speaker",
+                description="Synthetic Security Lab demo product (one-time purchase, no recurring terms).",
+                brand="Aurora",
+                category="audio",
+                condition="new",
+                price_minor=249_900,
+                currency="INR",
+                shipping_minor=0,
+                tax_minor=0,
+                fees_minor=0,
+                recurring=False,
+                recurring_frequency=None,
+                image_url=None,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+
+
+def _create_demo_intent(repos: Any, *, max_quantity: int, max_total_minor: int) -> str:
+    """Strict demo authorization: one-time only, quantity- and budget-capped."""
+    from razormesh_api.domain.ids import IntentId, new_ulid
+    from razormesh_api.persistence.models import IntentContract as RowIntent
+
+    iid = IntentId.generate()
+    now = datetime.now(UTC)
+    with repos.transaction() as session:
+        session.merge(
+            RowIntent(
+                intent_id=str(iid),
+                principal_id=f"usr_{new_ulid()}",
+                agent_id=f"agt_{new_ulid()}",
+                authorization_generation=1,
+                status="AUTHORIZED",
+                currency="INR",
+                recurring_allowed=False,
+                max_total_minor=max_total_minor,
+                aggregate_budget_minor=max_total_minor * 2,
+                max_quantity=max_quantity,
+                approval_threshold_minor=max_total_minor,
+                issued_at=now,
+                authorized_at=now,
+                expires_at=now + timedelta(minutes=30),
+                created_at=now,
+                updated_at=now,
+            )
+        )
+    return str(iid)
+
+
+def _demo_response(result: Any, scenario: str) -> dict[str, Any]:
+    ev = result.run.evidence
+    return {
+        "scenario": scenario,
+        "run_id": result.run.run_id,
+        "rejection_stage": result.rejection_stage,
+        "rejection_reason": result.rejection_reason,
+        "protocol_firewall": ev.protocol_firewall or "NOT_RUN",
+        "protocol_firewall_reasons": list(ev.protocol_firewall_reasons),
+        "razorguard_decision": ev.razorguard_decision or "NOT_RUN",
+        "semantic_verifier": ev.semantic_verifier or "NOT_RUN",
+        "semantic_backend": ev.semantic_backend,
+        "semantic_model_version": ev.semantic_model_version,
+        "semantic_probabilities": {
+            "contradiction": ev.semantic_probabilities[0],
+            "entailment": ev.semantic_probabilities[1],
+            "neutral": ev.semantic_probabilities[2],
+        },
+        "semantic_fail_closed": ev.semantic_fail_closed,
+        "final_decision": ev.final_decision,
+        "ticket_issued": bool(result.run.ticket_id),
+        "provider_contacted": False,
+        "consumed": result.consumed,
+        "evidence": ev.to_dict()["razormesh"],
+    }
+
+
+@router.post("/demo/scenario-b-semantic-violation")
+def demo_scenario_b_semantic_violation() -> dict[str, Any]:
+    """SCENARIO B — semantic intent violation: the checkout line carries a
+    recurring membership term the human never authorized. Expected: protocol
+    PASS, deterministic RazorGuard BLOCK (recurring not allowed), semantic
+    BLOCK (contradiction confirmed by the full-evidence rejection path),
+    final BLOCK, no ticket, Razorpay NOT contacted. A term hidden ONLY in
+    untrusted listing text is a disclosed limitation of the structured
+    evidence builder."""
+    repos = _repos(settings=get_settings())
+    _ensure_demo_catalog(repos)
+    intent_id = _create_demo_intent(repos, max_quantity=1, max_total_minor=300_000)
+    orch = build_orchestrator()
+    result = orch.prepare(
+        intent_id=intent_id,
+        product_id=_DEMO_HIDDEN_PRODUCT_ID,
+        quantity=1,
+        currency="INR",
+    )
+    return _demo_response(result, "B_semantic_intent_violation")
+
+
+@router.post("/demo/scenario-c-protocol-valid-intent-invalid")
+def demo_scenario_c_protocol_valid_intent_invalid() -> dict[str, Any]:
+    """SCENARIO C — protocol valid, human intent invalid: a schema-valid,
+    signature-valid, replay-safe protocol message whose transaction (2 units
+    = ₹4,998) exceeds the human authorization (≤ ₹3,000). Expected: protocol
+    PASS, deterministic RazorGuard BLOCK, semantic contradiction, final BLOCK,
+    Razorpay NOT contacted — proving protocol validity is not transaction
+    authority."""
+    repos = _repos(settings=get_settings())
+    _ensure_demo_catalog(repos)
+    intent_id = _create_demo_intent(repos, max_quantity=3, max_total_minor=300_000)
+    orch = build_orchestrator()
+    result = orch.prepare(
+        intent_id=intent_id,
+        product_id=_DEMO_STANDARD_PRODUCT_ID,
+        quantity=2,
+        currency="INR",
+    )
+    return _demo_response(result, "C_protocol_valid_intent_invalid")
 
 
 __all__ = ["router"]

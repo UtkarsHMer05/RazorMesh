@@ -86,8 +86,28 @@ type LiveAcceptanceRun = {
       semantic_verifier: string;
       final_decision: string;
       decided_at: string;
+      // Semantic runtime truth (acceptance evidence §21). Optional: runs
+      // recorded by older builds may omit them — render defensively as "—".
+      semantic_backend?: string;
+      semantic_model_version?: string;
+      semantic_pair_count?: number;
+      semantic_probabilities?: number[];
+      semantic_fail_closed?: boolean;
     };
   };
+};
+
+// Rendered from the HTTP 409 body of POST /phase4/acceptance/prepare. The
+// richer stage fields are additive on the backend: when absent, the card
+// shows an em dash instead of inventing data.
+type RejectionCard = {
+  stage: string;
+  reason: string;
+  firewallStatus: string;
+  razorGuardDecision: string;
+  semanticAction: string;
+  semanticProbabilities: number[] | null;
+  finalDecision: string;
 };
 
 const FIXTURE_SNAPSHOT: GatewaySnapshot = {
@@ -192,11 +212,77 @@ function Section({ eyebrow, title, children }: { eyebrow: string; title: string;
   );
 }
 
+function dashIfEmpty(value: string | null | undefined): string {
+  return value && value.trim().length > 0 ? value : "—";
+}
+
+function fmtProb(value: unknown): string {
+  return typeof value === "number" && Number.isFinite(value) ? value.toFixed(3) : "—";
+}
+
+function decisionTone(decision: string | null | undefined): "allow" | "challenge" | "block" {
+  if (decision === "BLOCK") return "block";
+  if (decision === "CHALLENGE") return "challenge";
+  return "allow";
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value : null;
+}
+
+function asProbabilityArray(value: unknown): number[] | null {
+  if (!Array.isArray(value) || value.length !== 3) return null;
+  return value.every((v) => typeof v === "number" && Number.isFinite(v))
+    ? (value as number[])
+    : null;
+}
+
+// The prepare route answers a rejection with HTTP 409 and a JSON body of the
+// shape `{detail: {...}}`. `rejection_stage` is authoritative when present;
+// `code`/`reason` are the legacy fallbacks. Backend rejection fields are
+// additive — anything missing renders as "—".
+function parseRejection(body: unknown): RejectionCard | null {
+  if (typeof body !== "object" || body === null) return null;
+  const detail = (body as { detail?: unknown }).detail;
+  if (typeof detail !== "object" || detail === null) return null;
+  const d = detail as Record<string, unknown>;
+  const stage = asString(d.rejection_stage) ?? asString(d.code);
+  if (!stage) return null;
+  return {
+    stage,
+    reason: asString(d.rejection_reason) ?? asString(d.reason) ?? "—",
+    firewallStatus: asString(d.firewall_status) ?? "—",
+    razorGuardDecision: asString(d.razorguard_decision) ?? "—",
+    semanticAction: asString(d.semantic_action) ?? "—",
+    semanticProbabilities: asProbabilityArray(d.semantic_probabilities),
+    finalDecision: asString(d.final_decision) ?? "—",
+  };
+}
+
+// Backend semantic_probabilities order is (p_contradiction, p_entailment,
+// p_neutral); the UI always labels the values explicitly.
+function semanticDetailSubLine(rm: NonNullable<LiveAcceptanceRun["evidence"]["razormesh"]>): string {
+  const probs = Array.isArray(rm.semantic_probabilities) ? rm.semantic_probabilities : undefined;
+  const parts: string[] = [
+    `p(entail) ${fmtProb(probs?.[1])}`,
+    `p(neutral) ${fmtProb(probs?.[2])}`,
+    `p(contra) ${fmtProb(probs?.[0])}`,
+  ];
+  if (typeof rm.semantic_pair_count === "number" && rm.semantic_pair_count > 0) {
+    parts.push(`${rm.semantic_pair_count} pairs`);
+  }
+  if (rm.semantic_backend) parts.push(`backend ${rm.semantic_backend}`);
+  if (rm.semantic_model_version) parts.push(`model ${rm.semantic_model_version}`);
+  if (rm.semantic_fail_closed) parts.push("FAIL-CLOSED");
+  return parts.join(" · ");
+}
+
 export default function ProtocolGatewayPage() {
   const [snapshot] = useState<GatewaySnapshot>(() => FIXTURE_SNAPSHOT);
   const [liveRuns, setLiveRuns] = useState<LiveAcceptanceRun[] | null>(null);
   const [liveError, setLiveError] = useState<string | null>(null);
   const [triggerError, setTriggerError] = useState<string | null>(null);
+  const [rejection, setRejection] = useState<RejectionCard | null>(null);
   const [isTriggering, setIsTriggering] = useState(false);
   const [finalizingId, setFinalizingId] = useState<string | null>(null);
 
@@ -238,6 +324,7 @@ export default function ProtocolGatewayPage() {
   const triggerLiveRun = useCallback(async () => {
     setIsTriggering(true);
     setTriggerError(null);
+    setRejection(null);
     try {
       const intentRes = await fetch("/api/buyer/fixture-intent", {
         method: "POST",
@@ -265,6 +352,23 @@ export default function ProtocolGatewayPage() {
         }),
       });
       if (!prepRes.ok) {
+        if (prepRes.status === 409) {
+          // A 409 is a REJECTION DECISION, not a trigger failure: render it
+          // as a decision card instead of a raw error string.
+          let body: unknown = null;
+          try {
+            body = await prepRes.json();
+          } catch {
+            body = null;
+          }
+          const parsed = parseRejection(body);
+          if (parsed) {
+            setRejection(parsed);
+            await fetchRuns();
+            return;
+          }
+          throw new Error("prepare_409");
+        }
         const detail = await prepRes.text();
         throw new Error(`prepare_${prepRes.status}:${detail}`);
       }
@@ -335,6 +439,10 @@ export default function ProtocolGatewayPage() {
           <Pill tone="allow">FIREWALL {snapshot.firewall}</Pill>
           <Pill tone="allow">CONSISTENCY {snapshot.consistency}</Pill>
         </div>
+        <span className="metric__src" data-testid="fixture-sample-note">
+          Sample data — fixture snapshot from the Phase-4 proof harness, not a
+          live run. Live runs appear in the Live section below.
+        </span>
       </Section>
 
       <Section eyebrow="Envelope" title="Protocol Envelope inspector">
@@ -395,6 +503,10 @@ export default function ProtocolGatewayPage() {
             </div>
           ))}
         </div>
+        <span className="metric__src">
+          Sample data — static proof-harness regression results (AgentPay-X),
+          not live traffic.
+        </span>
       </Section>
 
       <Section eyebrow="Live" title="Live acceptance runs (Phase-4 ingress)">
@@ -413,6 +525,24 @@ export default function ProtocolGatewayPage() {
             </p>
           )}
         </div>
+        {rejection && (
+          <div className="card" style={{ marginTop: 16 }} data-testid="rejection-card">
+            <h3 className="card__title">Rejection — {rejection.stage}</h3>
+            <Field label="Stage">{rejection.stage}</Field>
+            <Field label="Reason">{rejection.reason}</Field>
+            <Field label="Protocol firewall">{rejection.firewallStatus}</Field>
+            <Field label="Deterministic RazorGuard">{rejection.razorGuardDecision}</Field>
+            <Field label="Semantic action">{rejection.semanticAction}</Field>
+            <Field label="p(entail) / p(neutral) / p(contra)">
+              {rejection.semanticProbabilities
+                ? `${fmtProb(rejection.semanticProbabilities[1])} / ${fmtProb(
+                    rejection.semanticProbabilities[2],
+                  )} / ${fmtProb(rejection.semanticProbabilities[0])}`
+                : "—"}
+            </Field>
+            <Field label="Final decision">{rejection.finalDecision}</Field>
+          </div>
+        )}
         {liveRuns === null ? (
           <p className="prose" style={{ maxWidth: 720 }}>
             Fetching live acceptance-run registry from <code>/phase4/acceptance/runs</code>…
@@ -457,7 +587,7 @@ export default function ProtocolGatewayPage() {
                                 >
                                   {rm.cross_protocol_consistency}
                                 </Pill>
-                                <Pill tone="allow">{rm.final_decision}</Pill>
+                                <Pill tone={decisionTone(rm.final_decision)}>{rm.final_decision}</Pill>
                                 {!run.completed && (
                                   <button
                                     onClick={() => finalizeRun(run.run_id)}
@@ -512,9 +642,31 @@ export default function ProtocolGatewayPage() {
                     )}
                     {rm && (
                       <>
-                        <RunRow label="Firewall / Guard">
-                          {rm.protocol_firewall} · RazorGuard {rm.razorguard_decision} ·{" "}
-                          {rm.semantic_verifier}
+                        <RunRow label="Protocol firewall">
+                          {dashIfEmpty(rm.protocol_firewall)}
+                          {(rm.protocol_firewall_reasons?.length ?? 0) > 0 && (
+                            <>
+                              <br />
+                              <span className="run-sub">
+                                {rm.protocol_firewall_reasons.join(" · ")}
+                              </span>
+                            </>
+                          )}
+                        </RunRow>
+                        <RunRow label="Deterministic RazorGuard">
+                          {dashIfEmpty(rm.razorguard_decision)}
+                        </RunRow>
+                        <RunRow label="Semantic verifier">
+                          {dashIfEmpty(rm.semantic_verifier)}
+                          {rm.semantic_verifier && (
+                            <>
+                              <br />
+                              <span className="run-sub">{semanticDetailSubLine(rm)}</span>
+                            </>
+                          )}
+                        </RunRow>
+                        <RunRow label="Final decision">
+                          <Pill tone={decisionTone(rm.final_decision)}>{rm.final_decision}</Pill>
                         </RunRow>
                         <RunRow label="IR / Envelope / Commit">
                           <code>{rm.agent_commerce_ir_hash?.slice(0, 16)}…</code>

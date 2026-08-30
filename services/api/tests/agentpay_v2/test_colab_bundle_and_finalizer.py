@@ -38,8 +38,7 @@ SCRIPTS = REPO_ROOT / "scripts"
 BUILDER_SCRIPT = SCRIPTS / "rzp_build_colab_bundle_v2.py"
 FINALIZER_SCRIPT = SCRIPTS / "rzp_finalize_review_v2.py"
 COMMITTED_ZIP = REPO_ROOT / "artifacts" / "agentpay_ir_v2_colab_training_bundle.zip"
-COMMITTED_NOTEBOOK = (REPO_ROOT / "notebooks"
-                      / "RazorGuard_NLI_AgentPayIR_v2_Training.ipynb")
+COMMITTED_NOTEBOOK = REPO_ROOT / "notebooks" / "RazorGuard_NLI_AgentPayIR_v2_Training.ipynb"
 PYTHON = sys.executable
 
 FROZEN_VERSIONS = {"transformers": "5.15.1", "torch": "2.13.0", "accelerate": "1.14.0"}
@@ -90,9 +89,13 @@ def run_verify_cell(cell_source: str, bundle: Path) -> dict:
 
 
 def _fake(unsafe: int, f1: float, c_rec: float, n_rec: float = 0.5, sfb: int = 0) -> dict:
-    return {"eval_unsafe_c_to_e": unsafe, "eval_macro_f1": f1,
-            "eval_contradiction_recall": c_rec, "eval_neutral_recall": n_rec,
-            "eval_safe_false_block": sfb}
+    return {
+        "eval_unsafe_c_to_e": unsafe,
+        "eval_macro_f1": f1,
+        "eval_contradiction_recall": c_rec,
+        "eval_neutral_recall": n_rec,
+        "eval_safe_false_block": sfb,
+    }
 
 
 def test_selection_rule_min_unsafe_then_f1_then_c_recall() -> None:
@@ -104,10 +107,19 @@ def test_selection_rule_min_unsafe_then_f1_then_c_recall() -> None:
     # tie on unsafe + F1 -> higher contradiction recall
     assert select({"A": _fake(0, 0.80, 0.50), "B": _fake(0, 0.80, 0.60)}) == "B"
     # neutral recall and safe false-block are NOT selection inputs
-    assert select({"A": _fake(0, 0.80, 0.50, n_rec=0.01, sfb=100),
-                   "B": _fake(0, 0.80, 0.50, n_rec=0.99, sfb=0)}) == "A"
-    swapped = {"A": _fake(0, 0.80, 0.50, n_rec=0.99, sfb=0),
-               "B": _fake(0, 0.80, 0.50, n_rec=0.01, sfb=100)}
+    assert (
+        select(
+            {
+                "A": _fake(0, 0.80, 0.50, n_rec=0.01, sfb=100),
+                "B": _fake(0, 0.80, 0.50, n_rec=0.99, sfb=0),
+            }
+        )
+        == "A"
+    )
+    swapped = {
+        "A": _fake(0, 0.80, 0.50, n_rec=0.99, sfb=0),
+        "B": _fake(0, 0.80, 0.50, n_rec=0.01, sfb=100),
+    }
     assert select(swapped) == "A"  # reported metrics never flip the frozen ordering
 
 
@@ -118,10 +130,14 @@ def test_notebook_embeds_the_same_selection_rule() -> None:
     ns: dict = {}
     exec(compile(sel_cells[0], "candidate_cell", "exec"), ns)  # noqa: S102 - test rig
     embedded = ns["select_candidate"]
-    cases = [{"A": _fake(1, 0.99, 0.99), "B": _fake(0, 0.40, 0.10)},
-             {"A": _fake(0, 0.80, 0.50), "B": _fake(0, 0.80, 0.60)},
-             {"A": _fake(0, 0.90, 0.10, n_rec=0.01, sfb=50),
-              "B": _fake(0, 0.90, 0.10, n_rec=0.99, sfb=0)}]
+    cases = [
+        {"A": _fake(1, 0.99, 0.99), "B": _fake(0, 0.40, 0.10)},
+        {"A": _fake(0, 0.80, 0.50), "B": _fake(0, 0.80, 0.60)},
+        {
+            "A": _fake(0, 0.90, 0.10, n_rec=0.01, sfb=50),
+            "B": _fake(0, 0.90, 0.10, n_rec=0.99, sfb=0),
+        },
+    ]
     for case in cases:
         assert embedded(case) == mod.select_candidate(case)
 
@@ -151,8 +167,9 @@ def test_notebook_never_references_manifest_bundle_sha256(committed_bundle) -> N
     with zipfile.ZipFile(COMMITTED_ZIP) as z:
         assert "bundle_sha256" not in json.loads(z.read("bundle_manifest.json"))
     for cell in cells:
-        assert not re.search(r"manifest\[.bundle_sha256.\]", cell), \
+        assert not re.search(r"manifest\[.bundle_sha256.\]", cell), (
             "notebook must not read a self-referential manifest['bundle_sha256']"
+        )
 
 
 def test_bundle_verification_logic_executes_against_generated_zip(committed_bundle) -> None:
@@ -175,8 +192,12 @@ def test_bundle_requirements_are_the_single_version_source(committed_bundle) -> 
     bundle, _, cells = committed_bundle
     with zipfile.ZipFile(bundle) as z:
         req_text = z.read("requirements-frozen.txt").decode()
-    req = {k.strip(): v.strip() for line in req_text.splitlines() if "==" in line
-           for k, v in [line.split("==", 1)]}
+    req = {
+        k.strip(): v.strip()
+        for line in req_text.splitlines()
+        if "==" in line
+        for k, v in [line.split("==", 1)]
+    }
     for pkg, ver in FROZEN_VERSIONS.items():
         assert req[pkg] == ver, f"{pkg} must pin {ver} (single version source)"
     install_cell = next(c for c in cells if "%pip install" in c)
@@ -185,8 +206,9 @@ def test_bundle_requirements_are_the_single_version_source(committed_bundle) -> 
     # transformers' lazy imports against torch 2.13; they must be removed
     # BEFORE the post-install imports (notebook uses neither package).
     assert "%pip uninstall -y -q torchvision torchaudio" in install_cell
-    assert install_cell.index("%pip uninstall -y -q torchvision torchaudio") \
-        < install_cell.index("import accelerate")
+    assert install_cell.index("%pip uninstall -y -q torchvision torchaudio") < install_cell.index(
+        "import accelerate"
+    )
     # Colab runtime-correctness regression: `datasets` was pinned but is never
     # imported by the notebook, and the unavailable pin aborted the whole frozen
     # install on Colab (leaving stale torch). The pin must never come back, and
@@ -210,12 +232,13 @@ def test_no_torch_import_before_install_and_versions_asserted(committed_bundle) 
         if i < install_idx:
             assert not imports_torch, f"cell {i} imports torch/transformers before the install cell"
         elif i == install_idx:
-            assert cell.index("%pip install") < cell.index("import torch"), \
+            assert cell.index("%pip install") < cell.index("import torch"), (
                 "torch must be imported only AFTER the frozen install"
+            )
             # primary gate: pinned DISTRIBUTION versions via importlib.metadata
             assert "import importlib.metadata as importlib_metadata" in cell
             assert "for _pkg in REQ:" in cell
-            assert 'assert _installed == REQ[_pkg]' in cell
+            assert "assert _installed == REQ[_pkg]" in cell
             # evidence: runtime-reported torch/CUDA versions recorded, not gated
             assert 'print("torch.__version__ (runtime report):", torch.__version__)' in cell
             assert "torch.version.cuda" in cell
@@ -286,8 +309,12 @@ def test_notebook_packages_the_exact_selected_candidate() -> None:
     assert 'tr.save_model(f"cand_{epochs}ep")' in cand
     assert "validation_metrics.json" in cand
     import ast as _ast
-    _calls = [n for n in _ast.walk(_ast.parse(cand))
-              if isinstance(n, _ast.Call) and getattr(n.func, "id", "") == "TrainingArguments"]
+
+    _calls = [
+        n
+        for n in _ast.walk(_ast.parse(cand))
+        if isinstance(n, _ast.Call) and getattr(n.func, "id", "") == "TrainingArguments"
+    ]
     assert len(_calls) == 1, "exactly one TrainingArguments construction per candidate"
     # packaging copies the selected checkpoint; it never trains or reloads from base
     assert 'shutil.copytree(cand_dir, "agentpay-ir-v2-finetuned")' in final
@@ -299,8 +326,10 @@ def test_notebook_packages_the_exact_selected_candidate() -> None:
     assert copied_assert + 'validation_metrics.json"))' in final
     assert "copied_metrics == results[best]" in final
     assert '"artifact_files_sha256": artifact_files' in final
-    assert ('"packaging": "exact selected candidate checkpoint copied; '
-            'never retrained from base"' in final)
+    assert (
+        '"packaging": "exact selected candidate checkpoint copied; '
+        'never retrained from base"' in final
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -311,11 +340,18 @@ def test_notebook_packages_the_exact_selected_candidate() -> None:
 def _write_mini_corpus(d: Path, n: int = 4) -> tuple[Path, Path]:
     d.mkdir(parents=True, exist_ok=True)
     train, val = d / "train.jsonl", d / "val.jsonl"
-    rows_t = [{"premise": f"t evidence {i}", "hypothesis": f"t constraint {i}",
-               "label": ["contradiction", "entailment", "neutral", "entailment"][i % 4]}
-              for i in range(n)]
-    rows_v = [{"premise": f"v evidence {i}", "hypothesis": f"v constraint {i}", "label": "neutral"}
-              for i in range(n)]
+    rows_t = [
+        {
+            "premise": f"t evidence {i}",
+            "hypothesis": f"t constraint {i}",
+            "label": ["contradiction", "entailment", "neutral", "entailment"][i % 4],
+        }
+        for i in range(n)
+    ]
+    rows_v = [
+        {"premise": f"v evidence {i}", "hypothesis": f"v constraint {i}", "label": "neutral"}
+        for i in range(n)
+    ]
     train.write_text("".join(json.dumps(r) + "\n" for r in rows_t))
     val.write_text("".join(json.dumps(r) + "\n" for r in rows_v))
     return train, val
@@ -325,10 +361,20 @@ def test_builder_zip_train_val_hashes_equal_explicit_corpus_dir(tmp_path: Path) 
     train, val = _write_mini_corpus(tmp_path / "final")
     out_zip = tmp_path / "bundle.zip"
     proc = subprocess.run(  # noqa: S603 - fixed argv, test constants
-        [PYTHON, str(BUILDER_SCRIPT), "--corpus-dir", str(tmp_path / "final"),
-         "--out-zip", str(out_zip),
-         "--notebook-out", str(tmp_path / "nb.ipynb")],
-        capture_output=True, text=True, timeout=120)
+        [
+            PYTHON,
+            str(BUILDER_SCRIPT),
+            "--corpus-dir",
+            str(tmp_path / "final"),
+            "--out-zip",
+            str(out_zip),
+            "--notebook-out",
+            str(tmp_path / "nb.ipynb"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
     assert proc.returncode == 0, proc.stderr
     with zipfile.ZipFile(out_zip) as z:
         assert hashlib.sha256(z.read("train.jsonl")).hexdigest() == sha256_file(train)
@@ -342,10 +388,23 @@ def test_builder_explicit_train_val_paths_and_no_notebook(tmp_path: Path) -> Non
     train, val = _write_mini_corpus(tmp_path)
     out_zip = tmp_path / "b2.zip"
     proc = subprocess.run(  # noqa: S603 - fixed argv, test constants
-        [PYTHON, str(BUILDER_SCRIPT), "--train", str(train), "--val", str(val),
-         "--out-zip", str(out_zip), "--no-notebook",
-         "--notebook-out", str(tmp_path / "none.ipynb")],
-        capture_output=True, text=True, timeout=120)
+        [
+            PYTHON,
+            str(BUILDER_SCRIPT),
+            "--train",
+            str(train),
+            "--val",
+            str(val),
+            "--out-zip",
+            str(out_zip),
+            "--no-notebook",
+            "--notebook-out",
+            str(tmp_path / "none.ipynb"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
     assert proc.returncode == 0, proc.stderr
     with zipfile.ZipFile(out_zip) as z:
         assert hashlib.sha256(z.read("train.jsonl")).hexdigest() == sha256_file(train)
@@ -361,22 +420,43 @@ def synth_record(group: str, idx: int, label: str) -> dict:
     premise = f"Merchant evidence for {group} #{idx}: the listing states the offer terms."
     hypothesis = f"The human authorized the {group} constraint variant {idx}."
     src = f"src-{group}-{idx}"
-    rid = "ap2_" + hashlib.sha256("\x1f".join(
-        ("razormesh_frozen_v2", src, premise, hypothesis)).encode()).hexdigest()[:26]
+    rid = (
+        "ap2_"
+        + hashlib.sha256(
+            "\x1f".join(("razormesh_frozen_v2", src, premise, hypothesis)).encode()
+        ).hexdigest()[:26]
+    )
     return {
-        "record_id": rid, "schema_version": "agentpay-ir-v2",
-        "premise": premise, "hypothesis": hypothesis, "label": label,
-        "family": "quantity", "subfamily": "quantity",
-        "authorization_field": "quantity", "evidence_field": "product_summary",
-        "source_dataset": "razormesh_frozen_v2", "source_record_id": src,
-        "source_license": "project-internal", "source_kind": "deterministic_derived",
-        "source_provenance": json.dumps({"generator_parent_id": group,
-                                         "template_family_id": f"tf_{group}",
-                                         "entity_family_id": f"ef_{group}"}, sort_keys=True),
-        "generator_parent_id": group, "template_family_id": f"tf_{group}",
-        "entity_family_id": f"ef_{group}", "safe_lookalike_family_id": "",
-        "split_group": group, "difficulty": "easy", "safe_or_attack": "safe",
-        "content_sha256": content_sha256(premise, hypothesis, label), "metadata": {},
+        "record_id": rid,
+        "schema_version": "agentpay-ir-v2",
+        "premise": premise,
+        "hypothesis": hypothesis,
+        "label": label,
+        "family": "quantity",
+        "subfamily": "quantity",
+        "authorization_field": "quantity",
+        "evidence_field": "product_summary",
+        "source_dataset": "razormesh_frozen_v2",
+        "source_record_id": src,
+        "source_license": "project-internal",
+        "source_kind": "deterministic_derived",
+        "source_provenance": json.dumps(
+            {
+                "generator_parent_id": group,
+                "template_family_id": f"tf_{group}",
+                "entity_family_id": f"ef_{group}",
+            },
+            sort_keys=True,
+        ),
+        "generator_parent_id": group,
+        "template_family_id": f"tf_{group}",
+        "entity_family_id": f"ef_{group}",
+        "safe_lookalike_family_id": "",
+        "split_group": group,
+        "difficulty": "easy",
+        "safe_or_attack": "safe",
+        "content_sha256": content_sha256(premise, hypothesis, label),
+        "metadata": {},
     }
 
 
@@ -420,42 +500,74 @@ def build_workspace(root: Path) -> dict:
         cid = f"rc2_{i:04d}"
         r = records[key]
         pack_rows.append({"card_id": cid, "premise": r["premise"], "hypothesis": r["hypothesis"]})
-        linkage[cid] = {"record_id": r["record_id"], "split_group": r["split_group"],
-                        "template_family_id": r["template_family_id"],
-                        "source_label": r["label"], "stratum": "quantity",
-                        "source_class": "razormesh_security_corpus"}
+        linkage[cid] = {
+            "record_id": r["record_id"],
+            "split_group": r["split_group"],
+            "template_family_id": r["template_family_id"],
+            "source_label": r["label"],
+            "stratum": "quantity",
+            "source_class": "razormesh_security_corpus",
+        }
         assignments[cid] = "gold" if key in gold_keys else "supervised"
         by_key[key] = cid
     (review / "REVIEW_PACK_V3.jsonl").write_text("".join(json.dumps(c) + "\n" for c in pack_rows))
 
-    role_sha = hashlib.sha256(json.dumps(assignments, sort_keys=True,
-                                         separators=(",", ":")).encode()).hexdigest()
-    (review / "REVIEW_ROLE_MANIFEST_V3.json").write_text(json.dumps({
-        "pack": "REVIEW_PACK_V3", "frozen_at": "2026-08-29T00:00:00+00:00", "seed": 42,
-        "n_gold": sum(1 for v in assignments.values() if v == "gold"),
-        "n_supervised": sum(1 for v in assignments.values() if v == "supervised"),
-        "group_level": True, "assignments": assignments}, indent=1))
+    role_sha = hashlib.sha256(
+        json.dumps(assignments, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    (review / "REVIEW_ROLE_MANIFEST_V3.json").write_text(
+        json.dumps(
+            {
+                "pack": "REVIEW_PACK_V3",
+                "frozen_at": "2026-08-29T00:00:00+00:00",
+                "seed": 42,
+                "n_gold": sum(1 for v in assignments.values() if v == "gold"),
+                "n_supervised": sum(1 for v in assignments.values() if v == "supervised"),
+                "group_level": True,
+                "assignments": assignments,
+            },
+            indent=1,
+        )
+    )
     (review / "REVIEW_LINKAGE_V3.json").write_text(json.dumps(linkage, indent=1, sort_keys=True))
-    (review / "REVIEW_PACK_FREEZE_V3.json").write_text(json.dumps({
-        "pack": "REVIEW_PACK_V3", "cards": len(pack_rows),
-        "unique_record_ids": len(pack_rows), "unique_normalized_pairs": len(pack_rows),
-        "gold_cards": sum(1 for v in assignments.values() if v == "gold"),
-        "supervised_cards": sum(1 for v in assignments.values() if v == "supervised"),
-        "reviewer_pack_sha256": sha256_file(review / "REVIEW_PACK_V3.jsonl"),
-        "role_manifest_sha256": role_sha,
-        "role_sha_definition":
-            "sha256 over {card_id: role} only; stored HERE, never inside the role manifest",
-    }, indent=1))
+    (review / "REVIEW_PACK_FREEZE_V3.json").write_text(
+        json.dumps(
+            {
+                "pack": "REVIEW_PACK_V3",
+                "cards": len(pack_rows),
+                "unique_record_ids": len(pack_rows),
+                "unique_normalized_pairs": len(pack_rows),
+                "gold_cards": sum(1 for v in assignments.values() if v == "gold"),
+                "supervised_cards": sum(1 for v in assignments.values() if v == "supervised"),
+                "reviewer_pack_sha256": sha256_file(review / "REVIEW_PACK_V3.jsonl"),
+                "role_manifest_sha256": role_sha,
+                "role_sha_definition": (
+                    "sha256 over {card_id: role} only; stored HERE, never inside the role manifest"
+                ),
+            },
+            indent=1,
+        )
+    )
 
     ood = [synth_record("ood", 0, "contradiction"), synth_record("ood", 1, "entailment")]
     (eval_dir / "fresh_ood_v2.jsonl").write_text("".join(json.dumps(r) + "\n" for r in ood))
 
-    return {"records": records, "linkage": linkage, "assignments": assignments,
-            "by_key": by_key, "review": review, "corpus": corpus}
+    return {
+        "records": records,
+        "linkage": linkage,
+        "assignments": assignments,
+        "by_key": by_key,
+        "review": review,
+        "corpus": corpus,
+    }
 
 
-def human_export(ws: dict, flips: dict[str, str] | None = None,
-                 ambiguous_card: str | None = None, drop_card: str | None = None) -> dict:
+def human_export(
+    ws: dict,
+    flips: dict[str, str] | None = None,
+    ambiguous_card: str | None = None,
+    drop_card: str | None = None,
+) -> dict:
     """Complete fake decision export in the real UI export shape."""
     flips = flips or {}
     rows = []
@@ -477,7 +589,10 @@ def run_finalizer(root: Path, export: dict) -> subprocess.CompletedProcess:
     dec.write_text(json.dumps(export, indent=1))
     return subprocess.run(  # noqa: S603 - fixed argv, test constants
         [PYTHON, str(FINALIZER_SCRIPT), "--decisions", str(dec), "--root", str(root)],
-        capture_output=True, text=True, timeout=300)
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
 
 
 @pytest.fixture(scope="module")
@@ -487,11 +602,15 @@ def finalized(tmp_path_factory: pytest.TempPathFactory) -> dict:
     # human label flips on 2 supervised cards + 1 gold card (label changes)
     flips = {}
     gold_flip_card = ws["by_key"][("v1", 0)]
-    flips[gold_flip_card] = ("entailment" if ws["linkage"][gold_flip_card]["source_label"]
-                             != "entailment" else "neutral")
+    flips[gold_flip_card] = (
+        "entailment" if ws["linkage"][gold_flip_card]["source_label"] != "entailment" else "neutral"
+    )
     sup_flip_card = ws["by_key"][("t3", 0)]
-    flips[sup_flip_card] = ("contradiction" if ws["linkage"][sup_flip_card]["source_label"]
-                            != "contradiction" else "neutral")
+    flips[sup_flip_card] = (
+        "contradiction"
+        if ws["linkage"][sup_flip_card]["source_label"] != "contradiction"
+        else "neutral"
+    )
     ambiguous = ws["by_key"][("t4", 0)]
     proc = run_finalizer(root, human_export(ws, flips=flips, ambiguous_card=ambiguous))
     assert proc.returncode == 0, proc.stdout + proc.stderr
@@ -499,8 +618,10 @@ def finalized(tmp_path_factory: pytest.TempPathFactory) -> dict:
 
 
 def _export_decisions(finalized: dict) -> dict[str, str]:
-    return {r["card_id"]: r["decision"]
-            for r in json.loads((finalized["root"] / "decisions_export.json").read_text())["rows"]}
+    return {
+        r["card_id"]: r["decision"]
+        for r in json.loads((finalized["root"] / "decisions_export.json").read_text())["rows"]
+    }
 
 
 def test_finalizer_produces_final_splits_and_human_gold(finalized: dict) -> None:
@@ -511,8 +632,9 @@ def test_finalizer_produces_final_splits_and_human_gold(finalized: dict) -> None
     gold_path = root / "data" / "agentpay_ir_v2" / "review" / "GOLD_FROZEN_V3.jsonl"
     assert gold_path.exists()
     gold_rows = [json.loads(line) for line in gold_path.read_text().splitlines()]
-    gold_records = {link["record_id"] for cid, link in ws["linkage"].items()
-                    if ws["assignments"][cid] == "gold"}
+    gold_records = {
+        link["record_id"] for cid, link in ws["linkage"].items() if ws["assignments"][cid] == "gold"
+    }
     assert {g["record_id"] for g in gold_rows} == gold_records  # ONLY reviewed records
     # HUMAN decision is the label; provenance human-reviewed; no source label kept
     decisions = _export_decisions(finalized)
@@ -523,16 +645,20 @@ def test_finalizer_produces_final_splits_and_human_gold(finalized: dict) -> None
         assert g["metadata"]["review_role"] == "gold_frozen"
         assert g["metadata"]["human_label_override"] is True
         assert g["metadata"]["label_agrees_with_source"] == (
-            ws["records"][next(k for k, v in ws["records"].items()
-                               if v["record_id"] == g["record_id"])]["label"] == decisions[cid])
+            ws["records"][
+                next(k for k, v in ws["records"].items() if v["record_id"] == g["record_id"])
+            ]["label"]
+            == decisions[cid]
+        )
         assert "source_label" not in json.dumps(g)
 
 
 def test_finalizer_gold_isolation_is_group_level(finalized: dict) -> None:
     root, ws = finalized["root"], finalized["ws"]
     final = root / "data" / "agentpay_ir_v2" / "corpus" / "final"
-    gold_groups = {lnk["split_group"] for c, lnk in ws["linkage"].items()
-                   if ws["assignments"][c] == "gold"}
+    gold_groups = {
+        lnk["split_group"] for c, lnk in ws["linkage"].items() if ws["assignments"][c] == "gold"
+    }
     for split in ("train", "val", "test"):
         rows = [json.loads(line) for line in (final / f"{split}.jsonl").read_text().splitlines()]
         leaked = gold_groups & {r["split_group"] for r in rows}
@@ -549,8 +675,9 @@ def test_finalizer_recomputes_and_validates_hashes(finalized: dict) -> None:
     final = root / "data" / "agentpay_ir_v2" / "corpus" / "final"
     all_rows = []
     for split in ("train", "val", "test"):
-        all_rows += [json.loads(line)
-                     for line in (final / f"{split}.jsonl").read_text().splitlines()]
+        all_rows += [
+            json.loads(line) for line in (final / f"{split}.jsonl").read_text().splitlines()
+        ]
     gold_file = root / "data/agentpay_ir_v2/review/GOLD_FROZEN_V3.jsonl"
     all_rows += [json.loads(line) for line in gold_file.read_text().splitlines()]
     for r in all_rows:  # canonical contract on EVERY final row
@@ -582,16 +709,21 @@ def test_finalizer_bundle_train_val_hashes_equal_final_corpus(finalized: dict) -
     assert zip_path.exists()
     with zipfile.ZipFile(zip_path) as z:
         assert hashlib.sha256(z.read("train.jsonl")).hexdigest() == sha256_file(
-            final / "train.jsonl")
-        assert hashlib.sha256(z.read("val.jsonl")).hexdigest() == sha256_file(
-            final / "val.jsonl")
+            final / "train.jsonl"
+        )
+        assert hashlib.sha256(z.read("val.jsonl")).hexdigest() == sha256_file(final / "val.jsonl")
         assert "test.jsonl" not in z.namelist()
-    nb_text = "".join(notebook_code_cells(
-        root / "notebooks" / "RazorGuard_NLI_AgentPayIR_v2_Training.ipynb"))
+    nb_text = "".join(
+        notebook_code_cells(root / "notebooks" / "RazorGuard_NLI_AgentPayIR_v2_Training.ipynb")
+    )
     m = re.search(r'EXPECTED_BUNDLE_SHA256 = "([0-9a-f]{64})"', nb_text)
     assert m and m.group(1) == sha256_file(zip_path)
-    cells = [c for c in notebook_code_cells(
-        root / "notebooks" / "RazorGuard_NLI_AgentPayIR_v2_Training.ipynb")]
+    cells = [
+        c
+        for c in notebook_code_cells(
+            root / "notebooks" / "RazorGuard_NLI_AgentPayIR_v2_Training.ipynb"
+        )
+    ]
     run_verify_cell(next(c for c in cells if "def verify_bundle" in c), zip_path)
 
 
@@ -651,8 +783,9 @@ def test_finalizer_rejects_tampered_role_manifest(tmp_path: Path) -> None:
     manifest_path = ws["review"] / "REVIEW_ROLE_MANIFEST_V3.json"
     manifest = json.loads(manifest_path.read_text())
     some = sorted(manifest["assignments"])[0]
-    manifest["assignments"][some] = ("supervised" if manifest["assignments"][some] == "gold"
-                                     else "gold")
+    manifest["assignments"][some] = (
+        "supervised" if manifest["assignments"][some] == "gold" else "gold"
+    )
     manifest_path.write_text(json.dumps(manifest, indent=1))
     proc = run_finalizer(tmp_path, human_export(ws))
     assert proc.returncode == 1
@@ -698,7 +831,10 @@ def run_finalizer_args(root: Path, export: dict, extra: list[str]) -> subprocess
     dec.write_text(json.dumps(export, indent=1))
     return subprocess.run(  # noqa: S603 - fixed argv, test constants
         [PYTHON, str(FINALIZER_SCRIPT), "--decisions", str(dec), "--root", str(root), *extra],
-        capture_output=True, text=True, timeout=300)
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
 
 
 def test_finalizer_augmentation_train_only_and_gates_rerun(tmp_path: Path) -> None:
@@ -712,11 +848,17 @@ def test_finalizer_augmentation_train_only_and_gates_rerun(tmp_path: Path) -> No
     base_proc = run_finalizer_args(base, human_export(ws_base), [])
     assert base_proc.returncode == 0, base_proc.stdout + base_proc.stderr
 
-    proc = run_finalizer_args(tmp_path, export, [
-        "--integrate-prompt-injection-augmentation",
-        # tiny synthetic workspace: the absolute 96-row set dominates the split,
-        # so raise the cap for THIS test only (real runs keep the 0.10 default)
-        "--max-synthetic-fraction", "0.9"])
+    proc = run_finalizer_args(
+        tmp_path,
+        export,
+        [
+            "--integrate-prompt-injection-augmentation",
+            # tiny synthetic workspace: the absolute 96-row set dominates the split,
+            # so raise the cap for THIS test only (real runs keep the 0.10 default)
+            "--max-synthetic-fraction",
+            "0.9",
+        ],
+    )
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert "INTEGRATED into train only: 96 rows" in proc.stdout
 
@@ -783,14 +925,26 @@ def test_final_cell_executes_and_packages_exact_selected_candidate(
     _os.environ["BUNDLE_PATH"] = str(COMMITTED_ZIP)
     ns: dict = {}
     try:
-        exec(compile(next(c for c in cells if "def verify_bundle" in c),  # noqa: S102 - test rig
-                      "verify_cell", "exec"), ns)
+        exec(  # noqa: S102 - test rig
+            compile(
+                next(c for c in cells if "def verify_bundle" in c),
+                "verify_cell",
+                "exec",
+            ),
+            ns,
+        )
         install = next(c for c in cells if "%pip install" in c)
-        python_only = install[: install.index("# NOW import the runtime")].replace(
-            "%pip install -q -r bundle/requirements-frozen.txt",
-            "PIP_STUBBED_IN_PREFLIGHT = True").replace(
-            "%pip uninstall -y -q torchvision torchaudio",
-            "PIP_UNINSTALL_STUBBED_IN_PREFLIGHT = True")
+        python_only = (
+            install[: install.index("# NOW import the runtime")]
+            .replace(
+                "%pip install -q -r bundle/requirements-frozen.txt",
+                "PIP_STUBBED_IN_PREFLIGHT = True",
+            )
+            .replace(
+                "%pip uninstall -y -q torchvision torchaudio",
+                "PIP_UNINSTALL_STUBBED_IN_PREFLIGHT = True",
+            )
+        )
         exec(compile(python_only, "install_cell", "exec"), ns)  # noqa: S102 - test rig
         exec(compile(python_only, "install_cell", "exec"), ns)  # noqa: S102 - test rig
     finally:
@@ -801,12 +955,20 @@ def test_final_cell_executes_and_packages_exact_selected_candidate(
 
     # fake candidate checkpoints with DISTINCT weights and their exact metrics
     results = {
-        "A_2ep": {"eval_unsafe_c_to_e": 0, "eval_macro_f1": 0.91,
-                  "eval_contradiction_recall": 0.82, "eval_neutral_recall": 0.70,
-                  "eval_safe_false_block": 1},
-        "B_3ep": {"eval_unsafe_c_to_e": 0, "eval_macro_f1": 0.88,
-                  "eval_contradiction_recall": 0.79, "eval_neutral_recall": 0.66,
-                  "eval_safe_false_block": 0},
+        "A_2ep": {
+            "eval_unsafe_c_to_e": 0,
+            "eval_macro_f1": 0.91,
+            "eval_contradiction_recall": 0.82,
+            "eval_neutral_recall": 0.70,
+            "eval_safe_false_block": 1,
+        },
+        "B_3ep": {
+            "eval_unsafe_c_to_e": 0,
+            "eval_macro_f1": 0.88,
+            "eval_contradiction_recall": 0.79,
+            "eval_neutral_recall": 0.66,
+            "eval_safe_false_block": 0,
+        },
     }
     for cand, metrics in (("cand_2ep", results["A_2ep"]), ("cand_3ep", results["B_3ep"])):
         d = tmp_path / cand
@@ -824,8 +986,9 @@ def test_final_cell_executes_and_packages_exact_selected_candidate(
         results=results,
         REV="6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
         transformers=_types.SimpleNamespace(__version__="5.15.1"),
-        torch=_types.SimpleNamespace(__version__="2.13.0",
-                                     version=_types.SimpleNamespace(cuda="12.4")),
+        torch=_types.SimpleNamespace(
+            __version__="2.13.0", version=_types.SimpleNamespace(cuda="12.4")
+        ),
         accelerate=_types.SimpleNamespace(__version__="1.14.0"),
         colab_files=_types.SimpleNamespace(download=downloads.append),
     )
@@ -848,15 +1011,20 @@ def test_final_cell_executes_and_packages_exact_selected_candidate(
     assert "never retrained from base" in mm["packaging"]
     import platform as _platform
 
-    assert mm["dependency_versions"] == {"transformers": "5.15.1", "torch": "2.13.0",
-                                         "accelerate": "1.14.0",
-                                         "python": _platform.python_version()}
+    assert mm["dependency_versions"] == {
+        "transformers": "5.15.1",
+        "torch": "2.13.0",
+        "accelerate": "1.14.0",
+        "python": _platform.python_version(),
+    }
 
     # the packaged weights are the SELECTED candidate's exact files (not B's)
-    assert (art / "model.safetensors").read_bytes() == \
-        (tmp_path / "cand_2ep" / "model.safetensors").read_bytes()
-    assert (art / "model.safetensors").read_bytes() != \
-        (tmp_path / "cand_3ep" / "model.safetensors").read_bytes()
+    assert (art / "model.safetensors").read_bytes() == (
+        tmp_path / "cand_2ep" / "model.safetensors"
+    ).read_bytes()
+    assert (art / "model.safetensors").read_bytes() != (
+        tmp_path / "cand_3ep" / "model.safetensors"
+    ).read_bytes()
     assert _json.loads((art / "validation_metrics.json").read_text()) == results["A_2ep"]
 
     # recorded artifact hashes are valid for the packaged files
@@ -882,9 +1050,11 @@ def test_committed_bundle_is_the_post_review_final_bundle() -> None:
         val_member = hashlib.sha256(z.read("val.jsonl")).hexdigest()
     final = REPO_ROOT / "data/agentpay_ir_v2/corpus/final"
     assert train_member == sha256_file(final / "train.jsonl"), (
-        "committed bundle train is not corpus/final — rebuild with --corpus-dir")
+        "committed bundle train is not corpus/final — rebuild with --corpus-dir"
+    )
     assert val_member == sha256_file(final / "val.jsonl"), (
-        "committed bundle val is not corpus/final — rebuild with --corpus-dir")
+        "committed bundle val is not corpus/final — rebuild with --corpus-dir"
+    )
 
 
 def test_trainingarguments_kwargs_match_installed_transformers() -> None:

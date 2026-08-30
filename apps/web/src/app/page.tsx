@@ -249,7 +249,7 @@ export default function HomePage() {
             <div className="metric" data-source="PHASE3_STATUS.md M47">
               <span className="metric__label">Gold accuracy</span>
               <p className="metric__value">94.0%</p>
-              <span className="metric__src">semantic-thresholds-v2</span>
+              <span className="metric__src">semantic-thresholds-v3</span>
             </div>
             <div className="metric" data-source="PHASE3_STATUS.md M44">
               <span className="metric__label">Contradiction F1</span>
@@ -438,8 +438,10 @@ export default function HomePage() {
               <Link href="/merchant">Merchant</Link>
             </nav>
             <p className="site-footer__legal">
-              Unofficial prototype · No real money · Phase&nbsp;3 of 4 complete ·
-              Phase 4 awaiting human approval
+              Unofficial prototype · No real money · Phases&nbsp;1–4 complete ·
+              Semantic verifier: DeBERTa NLI (phase3-finetuned-v2,
+              thresholds-v3) · AgentPay-IR v2 candidate evaluated, not
+              activated by the frozen safety gate
             </p>
           </div>
         </div>

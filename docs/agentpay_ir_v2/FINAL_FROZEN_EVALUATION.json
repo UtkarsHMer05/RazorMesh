@@ -1,0 +1,819 @@
+{
+  "gate_token": "M2_FROZEN_EVALUATION_FAIL / V2_NOT_ACTIVATED",
+  "executed_once": true,
+  "documented_retry": "pre_v2_baseline tag retried once after mid-run process death before any metrics.json was written (partial outputs removed per documented rule)",
+  "tags": {
+    "pre_v2_baseline": {
+      "tag": "pre_v2_baseline",
+      "artifact_dir": "/Users/utkarshkhajuria/Desktop/RazorMesh/artifacts/models/incoming/phase3-finetuned-v2",
+      "model_weights_sha256": {
+        "model.safetensors": "163864e04a07fb56e51526f2f05dab3be742a9f1f290a561fc97fedd8f3c6995"
+      },
+      "label_map": {
+        "0": "contradiction",
+        "1": "entailment",
+        "2": "neutral"
+      },
+      "generated_at_utc": "2026-08-30T12:48:57.598165+00:00",
+      "device": "mps",
+      "torch": "2.13.0",
+      "transformers": "5.15.1",
+      "python": "3.13.15",
+      "max_length": 256,
+      "batch": 32,
+      "frozen_inputs_verified": {
+        "final_test": {
+          "path": "data/agentpay_ir_v2/corpus/final/test.jsonl",
+          "sha256": "ceae19519291836e7daeb7773a7a1c1534b2affe6deb185b8ca9f387bdda8166",
+          "rows": 2227
+        },
+        "human_gold": {
+          "path": "data/agentpay_ir_v2/review/GOLD_FROZEN_V3.jsonl",
+          "sha256": "57f9c469341b7d79936a3674b46f63581dcde1b0aa416a646276714100ade58f",
+          "rows": 301
+        },
+        "fresh_ood": {
+          "path": "data/agentpay_ir_v2/eval/fresh_ood_v2.jsonl",
+          "sha256": "8948a8e3750410a51ab0e3e8ce5b61a662b5d28daa1311a711558db2f2888ade",
+          "rows": 665
+        }
+      },
+      "splits": {
+        "final_test": {
+          "n": 2227,
+          "accuracy": 0.762461,
+          "macro_f1": 0.736725,
+          "per_class": {
+            "entailment": {
+              "precision": 0.899119,
+              "recall": 0.807388,
+              "f1": 0.850788,
+              "support": 1137
+            },
+            "neutral": {
+              "precision": 0.597111,
+              "recall": 0.697936,
+              "f1": 0.643599,
+              "support": 533
+            },
+            "contradiction": {
+              "precision": 0.699828,
+              "recall": 0.732496,
+              "f1": 0.715789,
+              "support": 557
+            }
+          },
+          "confusion": {
+            "entailment": {
+              "entailment": 918,
+              "neutral": 145,
+              "contradiction": 74
+            },
+            "neutral": {
+              "entailment": 60,
+              "neutral": 372,
+              "contradiction": 101
+            },
+            "contradiction": {
+              "entailment": 43,
+              "neutral": 106,
+              "contradiction": 408
+            }
+          },
+          "labels_sha256": null,
+          "recalls": {
+            "entailment": 0.807388,
+            "neutral": 0.697936,
+            "contradiction": 0.732496
+          },
+          "unsafe_c_to_e": {
+            "count": 43,
+            "rate": 0.019308
+          },
+          "safe_e_to_c": {
+            "count": 74,
+            "rate": 0.033229
+          }
+        },
+        "human_gold": {
+          "n": 301,
+          "accuracy": 0.893688,
+          "macro_f1": 0.892988,
+          "per_class": {
+            "entailment": {
+              "precision": 0.959184,
+              "recall": 0.949495,
+              "f1": 0.954315,
+              "support": 99
+            },
+            "neutral": {
+              "precision": 0.815217,
+              "recall": 0.882353,
+              "f1": 0.847458,
+              "support": 85
+            },
+            "contradiction": {
+              "precision": 0.900901,
+              "recall": 0.854701,
+              "f1": 0.877193,
+              "support": 117
+            }
+          },
+          "confusion": {
+            "entailment": {
+              "entailment": 94,
+              "neutral": 2,
+              "contradiction": 3
+            },
+            "neutral": {
+              "entailment": 2,
+              "neutral": 75,
+              "contradiction": 8
+            },
+            "contradiction": {
+              "entailment": 2,
+              "neutral": 15,
+              "contradiction": 100
+            }
+          },
+          "labels_sha256": null,
+          "recalls": {
+            "entailment": 0.949495,
+            "neutral": 0.882353,
+            "contradiction": 0.854701
+          },
+          "unsafe_c_to_e": {
+            "count": 2,
+            "rate": 0.006645
+          },
+          "safe_e_to_c": {
+            "count": 3,
+            "rate": 0.009967
+          }
+        },
+        "fresh_ood": {
+          "n": 665,
+          "accuracy": 0.864662,
+          "macro_f1": 0.82198,
+          "per_class": {
+            "entailment": {
+              "precision": 0.928767,
+              "recall": 0.94958,
+              "f1": 0.939058,
+              "support": 357
+            },
+            "neutral": {
+              "precision": 0.699187,
+              "recall": 0.688,
+              "f1": 0.693548,
+              "support": 125
+            },
+            "contradiction": {
+              "precision": 0.847458,
+              "recall": 0.819672,
+              "f1": 0.833333,
+              "support": 183
+            }
+          },
+          "confusion": {
+            "entailment": {
+              "entailment": 339,
+              "neutral": 9,
+              "contradiction": 9
+            },
+            "neutral": {
+              "entailment": 21,
+              "neutral": 86,
+              "contradiction": 18
+            },
+            "contradiction": {
+              "entailment": 5,
+              "neutral": 28,
+              "contradiction": 150
+            }
+          },
+          "labels_sha256": null,
+          "recalls": {
+            "entailment": 0.94958,
+            "neutral": 0.688,
+            "contradiction": 0.819672
+          },
+          "unsafe_c_to_e": {
+            "count": 5,
+            "rate": 0.007519
+          },
+          "safe_e_to_c": {
+            "count": 9,
+            "rate": 0.013534
+          },
+          "family_breakdown": {
+            "contract_obligation": {
+              "n": 179,
+              "accuracy": 0.692737,
+              "macro_f1": 0.643321,
+              "unsafe_c_to_e": {
+                "count": 3,
+                "rate": 0.01676
+              },
+              "safe_e_to_c": {
+                "count": 9,
+                "rate": 0.050279
+              }
+            },
+            "currency": {
+              "n": 26,
+              "accuracy": 0.884615,
+              "macro_f1": 0.881358,
+              "unsafe_c_to_e": {
+                "count": 1,
+                "rate": 0.038462
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "delivery_constraint": {
+              "n": 25,
+              "accuracy": 1.0,
+              "macro_f1": 1.0,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "membership_insertion": {
+              "n": 32,
+              "accuracy": 1.0,
+              "macro_f1": 1.0,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "misleading_negation": {
+              "n": 24,
+              "accuracy": 1.0,
+              "macro_f1": 0.666667,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "product_condition": {
+              "n": 24,
+              "accuracy": 1.0,
+              "macro_f1": 0.666667,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "product_identity": {
+              "n": 171,
+              "accuracy": 1.0,
+              "macro_f1": 0.333333,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "prompt_injection_like_merchant_text": {
+              "n": 24,
+              "accuracy": 0.333333,
+              "macro_f1": 0.222222,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "quantity": {
+              "n": 32,
+              "accuracy": 1.0,
+              "macro_f1": 1.0,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "recurring_subscription": {
+              "n": 32,
+              "accuracy": 1.0,
+              "macro_f1": 1.0,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "safe_lookalikes": {
+              "n": 24,
+              "accuracy": 1.0,
+              "macro_f1": 0.666667,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "seller_authorization": {
+              "n": 24,
+              "accuracy": 0.666667,
+              "macro_f1": 0.535948,
+              "unsafe_c_to_e": {
+                "count": 1,
+                "rate": 0.041667
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "semantic_fees": {
+              "n": 24,
+              "accuracy": 0.666667,
+              "macro_f1": 0.555556,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "trial_to_paid_renewal": {
+              "n": 24,
+              "accuracy": 1.0,
+              "macro_f1": 0.666667,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            }
+          }
+        }
+      }
+    },
+    "agentpay_ir_v2": {
+      "tag": "agentpay_ir_v2",
+      "artifact_dir": "/Users/utkarshkhajuria/Desktop/RazorMesh/artifacts/models/incoming/agentpay-ir-v2-finetuned",
+      "model_weights_sha256": {
+        "model.safetensors": "f9e0007c78776bf305ad5412c21fc950f142a24f1bb6c9bd3fac3b3a44571d99"
+      },
+      "label_map": {
+        "0": "contradiction",
+        "1": "entailment",
+        "2": "neutral"
+      },
+      "generated_at_utc": "2026-08-30T12:51:00.806514+00:00",
+      "device": "mps",
+      "torch": "2.13.0",
+      "transformers": "5.15.1",
+      "python": "3.13.15",
+      "max_length": 256,
+      "batch": 32,
+      "frozen_inputs_verified": {
+        "final_test": {
+          "path": "data/agentpay_ir_v2/corpus/final/test.jsonl",
+          "sha256": "ceae19519291836e7daeb7773a7a1c1534b2affe6deb185b8ca9f387bdda8166",
+          "rows": 2227
+        },
+        "human_gold": {
+          "path": "data/agentpay_ir_v2/review/GOLD_FROZEN_V3.jsonl",
+          "sha256": "57f9c469341b7d79936a3674b46f63581dcde1b0aa416a646276714100ade58f",
+          "rows": 301
+        },
+        "fresh_ood": {
+          "path": "data/agentpay_ir_v2/eval/fresh_ood_v2.jsonl",
+          "sha256": "8948a8e3750410a51ab0e3e8ce5b61a662b5d28daa1311a711558db2f2888ade",
+          "rows": 665
+        }
+      },
+      "splits": {
+        "final_test": {
+          "n": 2227,
+          "accuracy": 0.97665,
+          "macro_f1": 0.975202,
+          "per_class": {
+            "entailment": {
+              "precision": 0.983216,
+              "recall": 0.978892,
+              "f1": 0.981049,
+              "support": 1137
+            },
+            "neutral": {
+              "precision": 0.982987,
+              "recall": 0.97561,
+              "f1": 0.979284,
+              "support": 533
+            },
+            "contradiction": {
+              "precision": 0.957597,
+              "recall": 0.97307,
+              "f1": 0.965272,
+              "support": 557
+            }
+          },
+          "confusion": {
+            "entailment": {
+              "entailment": 1113,
+              "neutral": 7,
+              "contradiction": 17
+            },
+            "neutral": {
+              "entailment": 6,
+              "neutral": 520,
+              "contradiction": 7
+            },
+            "contradiction": {
+              "entailment": 13,
+              "neutral": 2,
+              "contradiction": 542
+            }
+          },
+          "labels_sha256": null,
+          "recalls": {
+            "entailment": 0.978892,
+            "neutral": 0.97561,
+            "contradiction": 0.97307
+          },
+          "unsafe_c_to_e": {
+            "count": 13,
+            "rate": 0.005837
+          },
+          "safe_e_to_c": {
+            "count": 17,
+            "rate": 0.007634
+          }
+        },
+        "human_gold": {
+          "n": 301,
+          "accuracy": 0.787375,
+          "macro_f1": 0.77573,
+          "per_class": {
+            "entailment": {
+              "precision": 0.804124,
+              "recall": 0.787879,
+              "f1": 0.795918,
+              "support": 99
+            },
+            "neutral": {
+              "precision": 0.75,
+              "recall": 0.635294,
+              "f1": 0.687898,
+              "support": 85
+            },
+            "contradiction": {
+              "precision": 0.795455,
+              "recall": 0.897436,
+              "f1": 0.843373,
+              "support": 117
+            }
+          },
+          "confusion": {
+            "entailment": {
+              "entailment": 78,
+              "neutral": 13,
+              "contradiction": 8
+            },
+            "neutral": {
+              "entailment": 12,
+              "neutral": 54,
+              "contradiction": 19
+            },
+            "contradiction": {
+              "entailment": 7,
+              "neutral": 5,
+              "contradiction": 105
+            }
+          },
+          "labels_sha256": null,
+          "recalls": {
+            "entailment": 0.787879,
+            "neutral": 0.635294,
+            "contradiction": 0.897436
+          },
+          "unsafe_c_to_e": {
+            "count": 7,
+            "rate": 0.023256
+          },
+          "safe_e_to_c": {
+            "count": 8,
+            "rate": 0.026578
+          }
+        },
+        "fresh_ood": {
+          "n": 665,
+          "accuracy": 0.933835,
+          "macro_f1": 0.918196,
+          "per_class": {
+            "entailment": {
+              "precision": 0.969014,
+              "recall": 0.963585,
+              "f1": 0.966292,
+              "support": 357
+            },
+            "neutral": {
+              "precision": 0.809524,
+              "recall": 0.952,
+              "f1": 0.875,
+              "support": 125
+            },
+            "contradiction": {
+              "precision": 0.969325,
+              "recall": 0.863388,
+              "f1": 0.913295,
+              "support": 183
+            }
+          },
+          "confusion": {
+            "entailment": {
+              "entailment": 344,
+              "neutral": 9,
+              "contradiction": 4
+            },
+            "neutral": {
+              "entailment": 5,
+              "neutral": 119,
+              "contradiction": 1
+            },
+            "contradiction": {
+              "entailment": 6,
+              "neutral": 19,
+              "contradiction": 158
+            }
+          },
+          "labels_sha256": null,
+          "recalls": {
+            "entailment": 0.963585,
+            "neutral": 0.952,
+            "contradiction": 0.863388
+          },
+          "unsafe_c_to_e": {
+            "count": 6,
+            "rate": 0.009023
+          },
+          "safe_e_to_c": {
+            "count": 4,
+            "rate": 0.006015
+          },
+          "family_breakdown": {
+            "contract_obligation": {
+              "n": 179,
+              "accuracy": 0.960894,
+              "macro_f1": 0.949594,
+              "unsafe_c_to_e": {
+                "count": 3,
+                "rate": 0.01676
+              },
+              "safe_e_to_c": {
+                "count": 3,
+                "rate": 0.01676
+              }
+            },
+            "currency": {
+              "n": 26,
+              "accuracy": 0.807692,
+              "macro_f1": 0.794712,
+              "unsafe_c_to_e": {
+                "count": 2,
+                "rate": 0.076923
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "delivery_constraint": {
+              "n": 25,
+              "accuracy": 0.8,
+              "macro_f1": 0.803947,
+              "unsafe_c_to_e": {
+                "count": 1,
+                "rate": 0.04
+              },
+              "safe_e_to_c": {
+                "count": 1,
+                "rate": 0.04
+              }
+            },
+            "membership_insertion": {
+              "n": 32,
+              "accuracy": 0.90625,
+              "macro_f1": 0.912886,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "misleading_negation": {
+              "n": 24,
+              "accuracy": 1.0,
+              "macro_f1": 0.666667,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "product_condition": {
+              "n": 24,
+              "accuracy": 1.0,
+              "macro_f1": 0.666667,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "product_identity": {
+              "n": 171,
+              "accuracy": 1.0,
+              "macro_f1": 0.333333,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "prompt_injection_like_merchant_text": {
+              "n": 24,
+              "accuracy": 0.666667,
+              "macro_f1": 0.266667,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "quantity": {
+              "n": 32,
+              "accuracy": 1.0,
+              "macro_f1": 1.0,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "recurring_subscription": {
+              "n": 32,
+              "accuracy": 1.0,
+              "macro_f1": 1.0,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "safe_lookalikes": {
+              "n": 24,
+              "accuracy": 1.0,
+              "macro_f1": 0.666667,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "seller_authorization": {
+              "n": 24,
+              "accuracy": 0.666667,
+              "macro_f1": 0.555556,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "semantic_fees": {
+              "n": 24,
+              "accuracy": 0.666667,
+              "macro_f1": 0.555556,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            },
+            "trial_to_paid_renewal": {
+              "n": 24,
+              "accuracy": 1.0,
+              "macro_f1": 0.666667,
+              "unsafe_c_to_e": {
+                "count": 0,
+                "rate": 0.0
+              },
+              "safe_e_to_c": {
+                "count": 0,
+                "rate": 0.0
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "policy_context": {
+    "pre_v2_baseline": {
+      "tau_block": 0.05,
+      "tau_entail": 0.9,
+      "gold_contradictions_to_runtime_pass": 1,
+      "ood_contradictions_to_runtime_pass": 4,
+      "gold_false_blocks": 4
+    },
+    "agentpay_ir_v2": {
+      "tau_block": 0.4,
+      "tau_entail": 0.9,
+      "gold_contradictions_to_runtime_pass": 5,
+      "ood_contradictions_to_runtime_pass": 5,
+      "gold_false_blocks": 9
+    }
+  },
+  "activation_gate": {
+    "orientation_failure": false,
+    "human_gold_macro_f1_delta": -0.1173,
+    "unsafe_c_to_e_human_gold": {
+      "pre_v2": 2,
+      "v2": 7,
+      "worsened": true
+    },
+    "unsafe_c_to_e_fresh_ood": {
+      "pre_v2": 5,
+      "v2": 6,
+      "worsened": true
+    },
+    "verdict": "FAIL",
+    "decision": "PRE_V2 remains active; v2 candidate not activated"
+  }
+}

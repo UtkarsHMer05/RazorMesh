@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+type AuditEventDetailValue = string | number | boolean | null;
+
 type AuditEvent = {
   seq: number;
   event_id: string;
@@ -12,7 +14,118 @@ type AuditEvent = {
   reason_codes: string[];
   previous_event_hash_head: string;
   current_event_hash_head: string;
+  ticket_id?: string | null;
+  // Additive payload fields surfaced by GET /audit/timeline (M47 dashboard).
+  // Optional + nullable: the UI must render fine against older backends.
+  details?: Record<string, AuditEventDetailValue> | null;
 };
+
+// Human-readable step names for the evidence timeline. The canonical raw
+// event_type stays visible in the sub-line so the ledger vocabulary is never
+// hidden; unknown event types fall back to their raw type.
+const EVENT_STEP_NAMES: Record<string, string> = {
+  INTENT_CONFIRMED: "Human intent confirmed",
+  CHECKOUT_PROPOSED: "Checkout proposed/normalized",
+  DECISION_RECORDED: "RazorGuard decision",
+  SEMANTIC_VERIFICATION_RUN: "Semantic verification",
+  POLICY_FUSION_DECIDED: "RazorGuard fusion decision",
+  TICKET_ISSUED: "ExecutionTicket issued",
+  TICKET_WITHHELD: "ExecutionTicket withheld (no provider contact)",
+  PHASE4_ACCEPTANCE_REJECTED: "Acceptance run rejected (full evidence)",
+  RAZORPAY_ORDER_CREATED: "Razorpay order created (provider contacted)",
+  RAZORPAY_ORDER_REJECTED: "Razorpay order rejected (provider refused)",
+  RAZORPAY_ORDER_UNKNOWN: "Razorpay order outcome unknown (ambiguous)",
+  RAZORPAY_WEBHOOK_INGESTED: "Webhook received",
+  RAZORPAY_RECONCILIATION_RUN: "Reconciliation run",
+  RAZORPAY_RECONCILED_LATE_CAPTURE: "Reconciliation: late capture settled",
+  RAZORPAY_CALLBACK_VERIFIED: "Provider callback verified",
+  RAZORPAY_PAYMENT_VERIFIED: "Provider payment verified",
+  EXECUTION_ATTEMPT_CREATED: "Execution attempt created",
+  INTENT_COMPILED: "Intent compiled",
+  INTENT_COMPILE_FAILED: "Intent compile failed",
+  INTENT_DRAFT_SUPERSEDED: "Draft superseded by a newer generation",
+  INTENT_REJECTED: "Intent rejected",
+  TAMPER_TEST_SEED: "Tamper-test seed event",
+};
+
+const DETAIL_LABELS: Record<string, string> = {
+  action: "action",
+  p_entailment: "p(entail)",
+  p_neutral: "p(neutral)",
+  p_contradiction: "p(contra)",
+  fail_closed: "fail-closed",
+  model_version: "model",
+  selected_candidate: "candidate",
+  pair_count: "pairs",
+  deterministic: "deterministic",
+  semantic_action: "semantic",
+  final: "final",
+  decision: "decision",
+  razorpay_order_id: "order",
+  reason_code: "reason",
+  amount_minor: "amount",
+  currency: "currency",
+  ticket_id_head: "ticket",
+  provider_event_type: "provider event",
+  signature_verified: "signature verified",
+  state_before: "state before",
+  state_after: "state after",
+  provider_order_status: "provider status",
+  settled_by_reconciliation: "settled",
+};
+
+// Canonical sub-line key order per event type. Keys the backend did not
+// surface render as an em dash, so missing evidence is visible, never invented.
+const DETAIL_KEYS_BY_EVENT: Record<string, string[]> = {
+  SEMANTIC_VERIFICATION_RUN: [
+    "action",
+    "p_entailment",
+    "p_neutral",
+    "p_contradiction",
+    "pair_count",
+    "model_version",
+    "selected_candidate",
+    "fail_closed",
+  ],
+  POLICY_FUSION_DECIDED: ["deterministic", "semantic_action", "final"],
+  DECISION_RECORDED: ["decision"],
+  RAZORPAY_ORDER_CREATED: ["razorpay_order_id", "amount_minor", "currency"],
+  RAZORPAY_ORDER_REJECTED: ["reason_code"],
+  RAZORPAY_ORDER_UNKNOWN: ["reason_code"],
+  TICKET_ISSUED: ["ticket_id_head", "amount_minor"],
+  RAZORPAY_WEBHOOK_INGESTED: [
+    "provider_event_type",
+    "razorpay_order_id",
+    "signature_verified",
+  ],
+  RAZORPAY_RECONCILIATION_RUN: [
+    "state_before",
+    "state_after",
+    "provider_order_status",
+    "settled_by_reconciliation",
+  ],
+};
+
+function formatDetailValue(
+  key: string,
+  value: AuditEventDetailValue | undefined,
+): string {
+  if (value === undefined || value === null || value === "") return "—";
+  if (typeof value === "number" && key.startsWith("p_")) {
+    return Number.isFinite(value) ? value.toFixed(3) : "—";
+  }
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  return String(value);
+}
+
+function eventDetailLine(e: AuditEvent): string | null {
+  const keys = DETAIL_KEYS_BY_EVENT[e.event_type];
+  if (!keys) return null;
+  const details = e.details ?? {};
+  return keys
+    .map((key) => `${DETAIL_LABELS[key] ?? key} ${formatDetailValue(key, details[key])}`)
+    .join(" · ");
+}
 
 type VerifyBody = {
   valid: boolean;
@@ -201,14 +314,29 @@ export default function AuditPage() {
       <div className="card" data-testid="audit-timeline">
         <h3>Evidence timeline ({events.length} events)</h3>
         <ol reversed>
-          {[...events].reverse().map((e) => (
-            <li key={e.event_id}>
-              #{e.seq} · <strong>{e.event_type}</strong> · {e.actor} · sha256:
-              {e.current_event_hash_head}…
-              {e.intent_id && <> · intent {e.intent_id}</>}
-              {e.reason_codes.length > 0 && <> · codes: {e.reason_codes.join(", ")}</>}
-            </li>
-          ))}
+          {[...events].reverse().map((e) => {
+            const detailLine = eventDetailLine(e);
+            return (
+              <li key={e.event_id}>
+                #{e.seq} · <strong>{EVENT_STEP_NAMES[e.event_type] ?? e.event_type}</strong> ·{" "}
+                {e.actor} · sha256:{e.current_event_hash_head}…
+                {e.intent_id && <> · intent {e.intent_id}</>}
+                {e.reason_codes.length > 0 && <> · codes: {e.reason_codes.join(", ")}</>}
+                {detailLine && (
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      color: "var(--rm-muted-fg)",
+                      marginTop: 2,
+                    }}
+                  >
+                    <code>{e.event_type}</code> · {detailLine}
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ol>
       </div>
       </div>

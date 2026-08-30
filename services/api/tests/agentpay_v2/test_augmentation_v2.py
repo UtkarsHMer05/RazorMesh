@@ -29,8 +29,9 @@ def norm(t: str) -> str:
 
 @pytest.fixture(scope="module")
 def aug() -> list[dict]:
-    assert AUG_JSONL.exists() and AUG_MANIFEST.exists(), \
+    assert AUG_JSONL.exists() and AUG_MANIFEST.exists(), (
         "run scripts/rzp_build_prompt_injection_augmentation_v2.py"
+    )
     return [json.loads(line) for line in AUG_JSONL.read_text().splitlines() if line.strip()]
 
 
@@ -48,17 +49,27 @@ def test_augmentation_matches_manifest_and_is_not_integrated(aug: list[dict]) ->
     # must never reference it at all.
     assert "--integrate-prompt-injection-augmentation" in FINALIZER
     squashed = " ".join(FINALIZER.split())
-    assert ('add_argument("--integrate-prompt-injection-augmentation",'
-            ' action="store_true"' in squashed)
+    assert (
+        'add_argument("--integrate-prompt-injection-augmentation", action="store_true"' in squashed
+    )
     builder_src = (REPO_ROOT / "scripts" / "rzp_build_colab_bundle_v2.py").read_text()
     assert "prompt_injection_aug" not in builder_src
 
 
 def test_augmentation_rows_carry_v2_contract_and_aug_namespace(aug: list[dict]) -> None:
     for r in aug:
-        for field in ("record_id", "schema_version", "source_dataset", "source_kind",
-                      "source_license", "split_group", "generator_parent_id",
-                      "template_family_id", "entity_family_id", "content_sha256"):
+        for field in (
+            "record_id",
+            "schema_version",
+            "source_dataset",
+            "source_kind",
+            "source_license",
+            "split_group",
+            "generator_parent_id",
+            "template_family_id",
+            "entity_family_id",
+            "content_sha256",
+        ):
             assert r.get(field), (r.get("record_id"), field)
         assert r["schema_version"] == "agentpay-ir-v2"
         assert r["source_dataset"] == "razormesh_internal_adversarial"
@@ -97,9 +108,11 @@ def test_augmentation_disjoint_from_corpus_ood_gold_and_pvb008(aug: list[dict]) 
         ood_groups.add(r["split_group"])
         ood_blob += norm(r["premise"]) + norm(r["hypothesis"])
     gold_path = REPO_ROOT / "data/agentpay_ir_v2/review/GOLD_FROZEN_V3.jsonl"
-    gold_hashes = ({json.loads(ln)["content_sha256"]
-                   for ln in gold_path.read_text().splitlines()}
-                   if gold_path.exists() else set())
+    gold_hashes = (
+        {json.loads(ln)["content_sha256"] for ln in gold_path.read_text().splitlines()}
+        if gold_path.exists()
+        else set()
+    )
     pvb_blob = ""
     for fam in json.loads(PVB008.read_text())["families"]:
         for pair in fam["pairs"]:

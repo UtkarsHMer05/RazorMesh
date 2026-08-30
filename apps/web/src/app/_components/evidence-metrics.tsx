@@ -6,7 +6,7 @@
  * Sources (do not change the values without updating the source documents):
  *   - docs/PHASE3_COMPLETION_REPORT.md (final numbers)
  *   - docs/PHASE3_NLI_FINETUNED_METRICS.json (fine-tuned NLI metrics)
- *   - data/phase3/policy/semantic_thresholds.json (semantic-thresholds-v2)
+ *   - data/phase3/policy/semantic_thresholds_v3.json (semantic-thresholds-v3)
  *   - data/phase3/gold/gold_frozen.json (gold review outcome)
  */
 
@@ -48,10 +48,10 @@ const EVIDENCE = {
     source: 'docs/PHASE3_NLI_FINETUNE_EVAL.md',
   },
   thresholds: {
-    value: 'τ=0.30 / 0.40',
+    value: 'τ=0.05 / 0.90',
     label: 'Semantic thresholds',
-    detail: 'semantic-thresholds-v2, GOLD_VALIDATED',
-    source: 'data/phase3/policy/semantic_thresholds.json',
+    detail: 'semantic-thresholds-v3, GOLD_VALIDATED',
+    source: 'data/phase3/policy/semantic_thresholds_v3.json',
   },
   e2eBlockF1: {
     value: 0.989,

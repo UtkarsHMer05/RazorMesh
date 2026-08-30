@@ -21,6 +21,77 @@ from razormesh_api.settings import Settings, get_settings
 
 router = APIRouter(prefix="/audit", tags=["audit"])
 
+# Event types whose selected payload fields the dashboard timeline surfaces.
+# Surfacing is strictly additive and read-only: values are copied out of the
+# stored payload; the ledger itself is never rewritten here.
+_SEMANTIC_RUN = "SEMANTIC_VERIFICATION_RUN"
+_POLICY_FUSION = "POLICY_FUSION_DECIDED"
+_DECISION_RECORDED = "DECISION_RECORDED"
+_TICKET_ISSUED = "TICKET_ISSUED"
+_PROVIDER_ORDER_EVENTS = frozenset(
+    {"RAZORPAY_ORDER_CREATED", "RAZORPAY_ORDER_REJECTED", "RAZORPAY_ORDER_UNKNOWN"}
+)
+_WEBHOOK_INGESTED = "RAZORPAY_WEBHOOK_INGESTED"
+_RECONCILIATION_RUN = "RAZORPAY_RECONCILIATION_RUN"
+
+
+def _timeline_details(
+    event_type: str,
+    payload: dict[str, Any],
+    ticket_id: str | None,
+) -> dict[str, Any]:
+    """Selected human-readable payload fields for one timeline event.
+
+    Missing payload fields are simply omitted; the dashboard renders them
+    as an em dash. Identifiers and numbers only — never raw commerce text.
+    """
+    details: dict[str, Any] = {}
+    if event_type == _SEMANTIC_RUN:
+        details = {
+            "action": payload.get("action"),
+            "p_entailment": payload.get("p_entailment"),
+            "p_neutral": payload.get("p_neutral"),
+            "p_contradiction": payload.get("p_contradiction"),
+            "fail_closed": payload.get("fail_closed"),
+            "model_version": payload.get("model_version"),
+            "selected_candidate": payload.get("selected_candidate"),
+            "pair_count": payload.get("pair_count"),
+        }
+    elif event_type == _POLICY_FUSION:
+        details = {
+            "deterministic": payload.get("deterministic"),
+            "semantic_action": payload.get("semantic_action"),
+            "final": payload.get("final"),
+        }
+    elif event_type == _DECISION_RECORDED:
+        details = {"decision": payload.get("decision")}
+    elif event_type in _PROVIDER_ORDER_EVENTS:
+        details = {
+            "razorpay_order_id": payload.get("razorpay_order_id"),
+            "reason_code": payload.get("reason_code"),
+            "amount_minor": payload.get("amount_minor"),
+            "currency": payload.get("currency"),
+        }
+    elif event_type == _TICKET_ISSUED:
+        details = {
+            "ticket_id_head": (ticket_id or "")[:16] or None,
+            "amount_minor": payload.get("amount_minor"),
+        }
+    elif event_type == _WEBHOOK_INGESTED:
+        details = {
+            "provider_event_type": payload.get("event_type"),
+            "razorpay_order_id": payload.get("razorpay_order_id"),
+            "signature_verified": payload.get("signature_verified"),
+        }
+    elif event_type == _RECONCILIATION_RUN:
+        details = {
+            "state_before": payload.get("state_before"),
+            "state_after": payload.get("state_after"),
+            "provider_order_status": payload.get("provider_order_status"),
+            "settled_by_reconciliation": payload.get("settled_by_reconciliation"),
+        }
+    return {key: value for key, value in details.items() if value is not None}
+
 
 def _repos(settings: Annotated[Settings, Depends(get_settings)]) -> Repositories:
     from razormesh_api.persistence.db import create_db_engine, create_session_factory
@@ -55,6 +126,11 @@ def timeline(
                 "reason_codes": sorted(e.reason_codes) if e.reason_codes else [],
                 "previous_event_hash_head": (e.previous_event_hash or "")[:16],
                 "current_event_hash_head": e.current_event_hash[:16],
+                "details": _timeline_details(
+                    e.event_type,
+                    dict(e.metadata_json) if e.metadata_json else {},
+                    e.ticket_id,
+                ),
             }
             for e in reversed(events)  # oldest first = chronological timeline
         ],

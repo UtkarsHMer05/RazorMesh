@@ -608,6 +608,28 @@ class Phase4AcceptanceOrchestrator:
             )
 
         if authz.outcome.decision.value != "ALLOW":
+            # Full-evidence rejection (M5 demo-evidence path): the deterministic
+            # decision already blocks execution; the remaining pure-validation
+            # stages (protocol firewall, semantic verifier) still run READ-ONLY
+            # so one response can prove "protocol validity is not transaction
+            # authority". No ticket is minted, no provider is contacted, and
+            # the idempotency key stays unconsumed.
+            evidence = self._gather_rejection_evidence(
+                intent_id=intent_id,
+                proposal=proposal,
+                deterministic=authz.outcome.decision.value,
+                run_id=run_id,
+                idempotency_key=idempotency_key,
+                mcp_message_id=mcp_message_id,
+            )
+            _record_rejection(
+                self._checkout.ledger,
+                run_id=run_id,
+                intent_id=intent_id,
+                stage="razorguard",
+                reason=f"razorguard:{authz.outcome.decision.value}",
+                evidence=evidence,
+            )
             return OrchestratorResult(
                 run=AcceptanceRun(
                     run_id=run_id,
@@ -618,7 +640,7 @@ class Phase4AcceptanceOrchestrator:
                     amount_minor=0,
                     currency=currency,
                     idempotency_key=idempotency_key,
-                    evidence=_empty_evidence(),
+                    evidence=evidence,
                 ),
                 consumed=False,
                 rejection_reason=f"razorguard:{authz.outcome.decision.value}",
@@ -648,6 +670,20 @@ class Phase4AcceptanceOrchestrator:
         )
         firewall = evaluate_envelope(envelope)
         if firewall.decision != _FirewallDecisionEnum.PASS:
+            evidence = _rejection_evidence(
+                firewall_status=firewall.decision.value,
+                firewall_reasons=tuple(str(r) for r in firewall.reasons),
+                razorguard_decision="ALLOW",
+                final_decision="BLOCK",
+            )
+            _record_rejection(
+                self._checkout.ledger,
+                run_id=run_id,
+                intent_id=intent_id,
+                stage="firewall",
+                reason=f"firewall:{firewall.decision.value}",
+                evidence=evidence,
+            )
             return OrchestratorResult(
                 run=AcceptanceRun(
                     run_id=run_id,
@@ -658,7 +694,7 @@ class Phase4AcceptanceOrchestrator:
                     amount_minor=ir.totals.total_minor,
                     currency=currency,
                     idempotency_key=idempotency_key,
-                    evidence=_empty_evidence(),
+                    evidence=evidence,
                 ),
                 consumed=False,
                 rejection_reason=f"firewall:{firewall.decision.value}",
@@ -700,6 +736,21 @@ class Phase4AcceptanceOrchestrator:
         )
         result = compare_ir_to_envelope(ir, forged_env)
         if not result.is_match() or not irs_equal:
+            evidence = _rejection_evidence(
+                firewall_status=firewall.decision.value,
+                firewall_reasons=tuple(str(r) for r in firewall.reasons),
+                razorguard_decision="ALLOW",
+                consistency="MISMATCH",
+                final_decision="BLOCK",
+            )
+            _record_rejection(
+                self._checkout.ledger,
+                run_id=run_id,
+                intent_id=intent_id,
+                stage="consistency",
+                reason="cross_protocol_mismatch",
+                evidence=evidence,
+            )
             return OrchestratorResult(
                 run=AcceptanceRun(
                     run_id=run_id,
@@ -710,7 +761,7 @@ class Phase4AcceptanceOrchestrator:
                     amount_minor=ir.totals.total_minor,
                     currency=currency,
                     idempotency_key=idempotency_key,
-                    evidence=_empty_evidence(),
+                    evidence=evidence,
                 ),
                 consumed=False,
                 rejection_reason="cross_protocol_mismatch",
@@ -731,6 +782,21 @@ class Phase4AcceptanceOrchestrator:
 
         intent_row = self._checkout.repos.intents.get(IntentId(intent_id))
         if intent_row is None:
+            evidence = _rejection_evidence(
+                firewall_status=firewall.decision.value,
+                firewall_reasons=tuple(str(r) for r in firewall.reasons),
+                razorguard_decision=razorguard,
+                semantic_action="NOT_RUN",
+                final_decision="BLOCK",
+            )
+            _record_rejection(
+                self._checkout.ledger,
+                run_id=run_id,
+                intent_id=intent_id,
+                stage="semantic_verifier",
+                reason="intent_not_found",
+                evidence=evidence,
+            )
             return OrchestratorResult(
                 run=AcceptanceRun(
                     run_id=run_id,
@@ -741,7 +807,7 @@ class Phase4AcceptanceOrchestrator:
                     amount_minor=ir.totals.total_minor,
                     currency=currency,
                     idempotency_key=idempotency_key,
-                    evidence=_empty_evidence(),
+                    evidence=evidence,
                 ),
                 consumed=False,
                 rejection_reason="intent_not_found",
@@ -763,6 +829,30 @@ class Phase4AcceptanceOrchestrator:
         )
         semantic_verdict = semantic.semantic_action.value
         if semantic.final_decision != DeterministicDecision.ALLOW:
+            evidence = _rejection_evidence(
+                firewall_status=firewall.decision.value,
+                firewall_reasons=tuple(str(r) for r in firewall.reasons),
+                razorguard_decision=razorguard,
+                semantic_action=semantic_verdict,
+                semantic_backend=semantic.semantic_backend,
+                semantic_model_version=semantic.model_version,
+                semantic_pair_count=semantic.pair_count,
+                semantic_probabilities=(
+                    semantic.p_contradiction,
+                    semantic.p_entailment,
+                    semantic.p_neutral,
+                ),
+                semantic_fail_closed=semantic.fail_closed,
+                final_decision=semantic.final_decision.value,
+            )
+            _record_rejection(
+                self._checkout.ledger,
+                run_id=run_id,
+                intent_id=intent_id,
+                stage="semantic_verifier",
+                reason=f"semantic_verifier:{semantic_verdict}",
+                evidence=evidence,
+            )
             return OrchestratorResult(
                 run=AcceptanceRun(
                     run_id=run_id,
@@ -773,7 +863,7 @@ class Phase4AcceptanceOrchestrator:
                     amount_minor=ir.totals.total_minor,
                     currency=currency,
                     idempotency_key=idempotency_key,
-                    evidence=_empty_evidence(),
+                    evidence=evidence,
                 ),
                 consumed=False,
                 rejection_reason=f"semantic_verifier:{semantic_verdict}",
@@ -841,6 +931,107 @@ class Phase4AcceptanceOrchestrator:
         )
         REGISTRY.record(run)
         return OrchestratorResult(run=run, consumed=True)
+
+    def _gather_rejection_evidence(
+        self,
+        *,
+        intent_id: str,
+        proposal: Any,
+        deterministic: str,
+        run_id: str,
+        idempotency_key: str,
+        mcp_message_id: str,
+    ) -> AcceptanceProtocolEvidence:
+        """READ-ONLY evidence gathering for a deterministic rejection.
+
+        Runs the protocol firewall and (when the envelope is protocol-valid)
+        the semantic verifier so the rejection response shows every stage's
+        verdict — proving "protocol validity is not transaction authority"
+        in a single response. Strictly evidence: no ticket, no provider call,
+        no ledger mutation beyond the semantic stage's own audit events.
+        """
+        from ..semantic_verifier import DeterministicDecision, SemanticVerdict, fuse
+
+        ir = _ir_from_envelope(proposal.envelope, intent_id=intent_id)
+        envelope: ProtocolEnvelope = envelope_from_raw(
+            source_protocol=SourceProtocol.MCP,
+            source_protocol_version="2026-07-28",
+            source_transport="http",
+            adapter_version="razormesh-mcp-adapter-0.1.0",
+            message_id=mcp_message_id,
+            request_id=f"req-{uuid.uuid4().hex[:10]}",
+            idempotency_key=idempotency_key,
+            raw_payload=ir.model_dump_json().encode("utf-8"),
+            signature_evidence={"scheme": "RMA-ED25519-2026"},
+            identity_evidence={"scheme": "razormesh-fp-v1"},
+            capability_evidence={"scopes": ["mcp.complete_authorized_checkout"]},
+            agent="razormesh-buyer-agent",
+            principal_reference="principal",
+            merchant_reference=str(ir.merchant.merchant_id),
+            commerce_payload_reference=hash_payload(ir.model_dump_json().encode("utf-8")),
+        )
+        firewall = evaluate_envelope(envelope)
+        firewall_status = firewall.decision.value
+        firewall_reasons = tuple(str(r) for r in firewall.reasons)
+
+        semantic_action = "NOT_RUN"
+        semantic_backend = ""
+        semantic_model_version = ""
+        semantic_pair_count = 0
+        semantic_probs = (0.0, 0.0, 0.0)
+        semantic_fail_closed = False
+        if firewall_status == _FirewallDecisionEnum.PASS.value:
+            from ..domain.ids import IntentId
+            from ..revalidation import domain_intent_from_row
+            from ..semantic_runtime import run_semantic_runtime
+
+            intent_row = self._checkout.repos.intents.get(IntentId(intent_id))
+            if intent_row is not None:
+                outcome = run_semantic_runtime(
+                    intent=domain_intent_from_row(intent_row),
+                    envelope=proposal.envelope,
+                    deterministic=DeterministicDecision(deterministic),
+                    intent_id=intent_id,
+                    attempt_id=f"run:{run_id}",
+                    ledger=self._checkout.ledger,
+                    model_dir=self._semantic_model_dir,
+                    model_dir_v2=self._semantic_model_dir_v2,
+                    policy_path=self._semantic_policy_path,
+                    semantic_backend=self._semantic_backend,
+                )
+                semantic_action = outcome.semantic_action.value
+                semantic_backend = outcome.semantic_backend
+                semantic_model_version = outcome.model_version
+                semantic_pair_count = outcome.pair_count
+                semantic_probs = (
+                    outcome.p_contradiction,
+                    outcome.p_entailment,
+                    outcome.p_neutral,
+                )
+                semantic_fail_closed = outcome.fail_closed
+        final = fuse(
+            DeterministicDecision(deterministic),
+            SemanticVerdict(
+                action=_semantic_action_of(semantic_action),
+                p_entailment=semantic_probs[1],
+                p_neutral=semantic_probs[2],
+                p_contradiction=semantic_probs[0],
+                model_id="rejection-evidence",
+                policy_version="n/a",
+            ),
+        )
+        return _rejection_evidence(
+            firewall_status=firewall_status,
+            firewall_reasons=firewall_reasons,
+            razorguard_decision=deterministic,
+            semantic_action=semantic_action,
+            semantic_backend=semantic_backend,
+            semantic_model_version=semantic_model_version,
+            semantic_pair_count=semantic_pair_count,
+            semantic_probabilities=semantic_probs,
+            semantic_fail_closed=semantic_fail_closed,
+            final_decision=final.value,
+        )
 
     # -- finalize: hand off to the production executor (no new payment path)
     def finalize(
@@ -1052,6 +1243,109 @@ def _ir_from_envelope(envelope: Any, *, intent_id: str) -> AgentCommerceIR:
         recurring=None,
         fulfillment=None,
         provenance=_IRProvenance(source_protocols=[SourceProtocol.MCP]),
+    )
+
+
+def _semantic_action_of(verdict: str) -> Any:
+    """Map a semantic-verdict string to SemanticAction (NOT_RUN -> PASS so the
+    stricten-only fusion reduces to the deterministic decision alone)."""
+    from ..semantic_verifier import SemanticAction
+
+    try:
+        return SemanticAction(verdict)
+    except ValueError:
+        return SemanticAction.PASS
+
+
+def _rejection_evidence(
+    *,
+    firewall_status: str = "NOT_RUN",
+    firewall_reasons: tuple[str, ...] = (),
+    razorguard_decision: str = "NOT_RUN",
+    semantic_action: str = "NOT_RUN",
+    semantic_backend: str = "",
+    semantic_model_version: str = "",
+    semantic_pair_count: int = 0,
+    semantic_probabilities: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    semantic_fail_closed: bool = False,
+    consistency: str = "",
+    final_decision: str = "BLOCK",
+) -> AcceptanceProtocolEvidence:
+    """Evidence for a REJECTED acceptance run (M5 demo-evidence path).
+
+    Stages that ran report their real verdicts; stages that did not run
+    report NOT_RUN. This evidence never grants execution: the run is
+    rejected, no ticket is minted, no provider is contacted.
+    """
+    return AcceptanceProtocolEvidence(
+        mcp_version="2026-07-28" if firewall_status != "NOT_RUN" else "",
+        mcp_endpoint="/mcp" if firewall_status != "NOT_RUN" else "",
+        mcp_method_tool="",
+        mcp_message_id="",
+        ucp_version="",
+        ucp_profile_path="",
+        ucp_signature_digest_verified=False,
+        ucp_idempotency_key="",
+        ucp_commerce_evidence_hash="",
+        ap2_version="",
+        ap2_evidence_type="",
+        ap2_signature_verified=False,
+        ap2_vct="",
+        ap2_expires_at="",
+        ap2_checkout_hash_binding=False,
+        ap2_evidence_hash="",
+        ap2_key_binding_pop_verified=False,
+        intent_hash="",
+        protocol_firewall=firewall_status,
+        protocol_firewall_reasons=firewall_reasons,
+        protocol_envelope_hash="",
+        agent_commerce_ir_hash="",
+        commerce_commitment="",
+        commerce_commitment_version=COMMERCE_COMMITMENT_VERSION,
+        cross_protocol_consistency=consistency,
+        razorguard_decision=razorguard_decision,
+        semantic_verifier=semantic_action,
+        semantic_verifier_source="",
+        semantic_backend=semantic_backend,
+        semantic_model_version=semantic_model_version,
+        semantic_policy_version="",
+        semantic_pair_count=semantic_pair_count,
+        semantic_probabilities=semantic_probabilities,
+        semantic_fail_closed=semantic_fail_closed,
+        final_decision=final_decision,
+        decided_at=datetime.now(UTC).isoformat(),
+    )
+
+
+def _record_rejection(
+    ledger: Any,
+    *,
+    run_id: str,
+    intent_id: str,
+    stage: str,
+    reason: str,
+    evidence: AcceptanceProtocolEvidence,
+) -> None:
+    """Tamper-evident record of a REJECTED acceptance run. Payload carries
+    identifiers and verdicts only — never raw premise/hypothesis text."""
+    ledger.append(
+        event_type="PHASE4_ACCEPTANCE_REJECTED",
+        actor="phase4-acceptance-orchestrator",
+        intent_id=intent_id,
+        payload={
+            "acceptance_run_id": run_id,
+            "rejection_stage": stage,
+            "rejection_reason": reason,
+            "protocol_firewall": evidence.protocol_firewall,
+            "razorguard_decision": evidence.razorguard_decision,
+            "semantic_verifier": evidence.semantic_verifier,
+            "semantic_backend": evidence.semantic_backend,
+            "semantic_pair_count": evidence.semantic_pair_count,
+            "semantic_fail_closed": evidence.semantic_fail_closed,
+            "final_decision": evidence.final_decision,
+            "ticket_issued": False,
+            "provider_contacted": False,
+        },
     )
 
 

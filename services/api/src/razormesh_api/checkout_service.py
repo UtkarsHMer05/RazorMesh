@@ -408,6 +408,24 @@ class CheckoutService:
         )
 
         if outcome.decision is not Decision.ALLOW:
+            # Explicit negative marker (M5): the audit timeline must show
+            # "ticket NOT issued / provider NOT contacted" as a recorded fact,
+            # not as an absence of positive events.
+            self._ledger.append(
+                event_type="TICKET_WITHHELD",
+                actor="razorguard",
+                intent_id=str(contract.intent_id),
+                checkout_id=str(env.checkout_id),
+                decision_id=str(decision_id),
+                intent_hash=proposal.intent_hash,
+                checkout_hash=proposal.checkout_hash,
+                reason_codes=list(outcome.reason_codes) or None,
+                payload={
+                    "decision": outcome.decision.value,
+                    "ticket_issued": False,
+                    "provider_contacted": False,
+                },
+            )
             return AuthorizationResult(outcome, decision_id)
 
         # ALLOW only: mint the context-bound single-use ticket (M34).

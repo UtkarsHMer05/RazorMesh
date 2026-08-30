@@ -135,7 +135,10 @@ class DebertaNLISemanticVerifier:
 
         A manifest with a mismatching model SHA-256 must fail closed (correction
         brief §15/§20): the load raises and ``verify`` converts that into a
-        CHALLENGE verdict rather than running tampered weights.
+        CHALLENGE verdict rather than running tampered weights. Two manifest
+        shapes attest the weight digest: the legacy top-level ``model_sha256``
+        and the Colab bundle's ``artifact_files_sha256["model.safetensors"]``
+        map — at least one must be present and must match the actual weights.
         """
         manifest_path = self._model_dir / "model_manifest.json"
         if not manifest_path.exists():
@@ -143,6 +146,12 @@ class DebertaNLISemanticVerifier:
         manifest = json.loads(manifest_path.read_text())
         weights = self._model_dir / "model.safetensors"
         expected = manifest.get("model_sha256")
+        if not isinstance(expected, str) or not expected:
+            files_map = manifest.get("artifact_files_sha256")
+            if isinstance(files_map, dict):
+                candidate = files_map.get("model.safetensors")
+                if isinstance(candidate, str):
+                    expected = candidate
         if not isinstance(expected, str) or not expected:
             raise ValueError("model_manifest.json missing model_sha256")
         import hashlib
@@ -223,7 +232,7 @@ class DebertaNLISemanticVerifier:
                 model_id=self._model_id,
                 policy_version=self._policy_version,
                 fail_closed=True,
-                reason=f"{type(exc).__name__}",
+                reason=f"{type(exc).__name__}: {exc}",
             )
         action = apply_threshold_policy(
             p_entailment=pe,

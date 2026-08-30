@@ -29,8 +29,20 @@ ROLE_MANIFEST = REVIEW / "REVIEW_ROLE_MANIFEST_V3.json"
 CARD_ID_RE = re.compile(r"^rc2_\d{4}$")
 # Label-bearing metadata keys must never appear anywhere reviewer-facing.
 LABEL_BEARING_SUFFIXES = ("_contradiction", "_entailment", "_neutral")
-FORBIDDEN_KEYS = {"stratum", "source_class", "label", "review_role", "role", "hint",
-                  "metadata", "source_label", "expected_label", "label_hint", "gold", "supervised"}
+FORBIDDEN_KEYS = {
+    "stratum",
+    "source_class",
+    "label",
+    "review_role",
+    "role",
+    "hint",
+    "metadata",
+    "source_label",
+    "expected_label",
+    "label_hint",
+    "gold",
+    "supervised",
+}
 
 
 def norm(t: str) -> str:
@@ -196,9 +208,12 @@ def test_roles_are_group_level_no_grouping_unit_spans_gold_and_supervised(
         entity_roles[row["entity_family_id"] or link["split_group"]].add(role)
         if link["source_class"] == "razormesh_security_corpus" and link["template_family_id"]:
             internal_tf_roles[link["template_family_id"]].add(role)
-    for name, mapping in (("split_group", group_roles), ("record_id", record_roles),
-                          ("entity_family", entity_roles),
-                          ("internal_template_family", internal_tf_roles)):
+    for name, mapping in (
+        ("split_group", group_roles),
+        ("record_id", record_roles),
+        ("entity_family", entity_roles),
+        ("internal_template_family", internal_tf_roles),
+    ):
         spanning = {unit for unit, rs in mapping.items() if len(rs) > 1}
         assert not spanning, f"{name} spans GOLD and SUPERVISED: {sorted(spanning)[:5]}"
     exc = freeze["template_family_exception"]

@@ -201,8 +201,12 @@ def test_evidence_builder_never_lets_merchant_text_authorize() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _run(backend: str, deterministic: DeterministicDecision, model_dir: Path | None = None,
-         model_dir_v2: Path | None = None):  # type: ignore[no-untyped-def]
+def _run(
+    backend: str,
+    deterministic: DeterministicDecision,
+    model_dir: Path | None = None,
+    model_dir_v2: Path | None = None,
+):  # type: ignore[no-untyped-def]
     sr.clear_semantic_verifier_cache()
     try:
         return sr.run_semantic_runtime(
@@ -319,6 +323,34 @@ def test_manifest_hash_match_passes(tmp_path: Path) -> None:  # type: ignore[no-
     verifier._verify_artifact_integrity()  # must not raise
 
 
+def test_manifest_artifact_files_sha256_fallback_accepted(tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
+    """Colab bundle manifest shape: no top-level ``model_sha256`` — the weight
+    digest attested inside ``artifact_files_sha256`` must be honored too."""
+    import hashlib
+
+    payload = b"weights"
+    (tmp_path / "model.safetensors").write_bytes(payload)
+    (tmp_path / "model_manifest.json").write_text(
+        json.dumps(
+            {"artifact_files_sha256": {"model.safetensors": hashlib.sha256(payload).hexdigest()}}
+        ),
+        encoding="utf-8",
+    )
+    verifier = _verifier_for(tmp_path)
+    verifier._verify_artifact_integrity()  # must not raise
+
+
+def test_manifest_without_attested_weight_hash_raises(tmp_path: Path) -> None:  # type: ignore[no-untyped-def]
+    """A manifest that attests the weight digest NOWHERE must fail closed."""
+    (tmp_path / "model.safetensors").write_bytes(b"weights")
+    (tmp_path / "model_manifest.json").write_text(
+        json.dumps({"artifact_files_sha256": {}}), encoding="utf-8"
+    )
+    verifier = _verifier_for(tmp_path)
+    with pytest.raises(ValueError, match="missing model_sha256"):
+        verifier._verify_artifact_integrity()
+
+
 # ---------------------------------------------------------------------------
 # §21: Phase-4 orchestrator builder wires the declared runtime
 # ---------------------------------------------------------------------------
@@ -340,14 +372,21 @@ def test_phase4_builder_uses_settings_declared_semantic_runtime() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_v2_backend_missing_artifact_fails_closed_never_keyword() -> None:
-    """`deberta_v2` with no returned artifact fails CLOSED to CHALLENGE — it
-    must never fall back to the keyword stub and never run silently."""
-    outcome = _run("deberta_v2", DeterministicDecision.ALLOW)
+def test_v2_backend_missing_artifact_fails_closed_never_keyword(tmp_path: Path) -> None:
+    """`deberta_v2` with no artifact at the CONFIGURED v2 path fails CLOSED to
+    CHALLENGE — it must never fall back to the keyword stub and never run
+    silently. (The verified v2 artifact now lives at the default incoming
+    path, so the missing-artifact case is proven at an explicit absent path.)"""
+    outcome = _run(
+        "deberta_v2",
+        DeterministicDecision.ALLOW,
+        model_dir_v2=tmp_path / "absent-v2-artifact",
+    )
     assert outcome.fail_closed is True
     assert outcome.semantic_action is SemanticAction.CHALLENGE
     assert outcome.final_decision is DeterministicDecision.CHALLENGE
     assert "not present" in (outcome.reason or "")
+    assert str(tmp_path / "absent-v2-artifact") in (outcome.reason or "")
     assert outcome.semantic_backend == "deberta_v2"
     assert "stub" not in outcome.model_id.lower()
     assert outcome.model_id == "unknown"  # no model ran
@@ -388,6 +427,17 @@ def test_v2_backend_missing_configured_path_fails_closed_not_constant_fallback(
     assert outcome.semantic_action is SemanticAction.CHALLENGE
     assert str(absent) in (outcome.reason or "")
     assert "stub" not in outcome.model_id.lower()
+
+
+def test_artifact_selected_candidate_metadata_for_audit(tmp_path: Path) -> None:
+    """M3: the promoted AgentPay-IR v2 artifact's selected candidate must be
+    retrievable for the SEMANTIC_VERIFICATION_RUN audit payload; a legacy
+    artifact/absent manifest yields '' (metadata absence, never a failure)."""
+    promoted = REPO_ROOT / "artifacts" / "models" / "incoming" / "agentpay-ir-v2-finetuned"
+    if not (promoted / "model_manifest.json").exists():
+        pytest.skip("agentpay-ir-v2 artifact not promoted on this machine")
+    assert sr.artifact_selected_candidate(promoted) == "A_2ep"
+    assert sr.artifact_selected_candidate(tmp_path) == ""
 
 
 # ---------------------------------------------------------------------------

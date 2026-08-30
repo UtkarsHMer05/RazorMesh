@@ -26,6 +26,7 @@ def record_semantic_verification(
     semantic_backend: str = "deberta",
     model_version: str = "",
     model_artifact_hash: str = "",
+    selected_candidate: str = "",
     pair_count: int = 0,
     duration_ms: float = 0.0,
 ) -> None:
@@ -39,6 +40,7 @@ def record_semantic_verification(
             "model_id": verdict.model_id,
             "model_version": model_version,
             "model_artifact_hash": model_artifact_hash,
+            "selected_candidate": selected_candidate,
             "policy_version": verdict.policy_version,
             "pair_count": pair_count,
             "p_entailment": round(verdict.p_entailment, 6),

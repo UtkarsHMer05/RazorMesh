@@ -20,15 +20,34 @@ FROZEN = EVAL / "fresh_ood_v2_FROZEN.json"
 CORPUS = REPO_ROOT / "data" / "agentpay_ir_v2" / "corpus"
 
 SECURITY_FAMILIES = (
-    "recurring_subscription", "trial_to_paid_renewal", "membership_insertion",
-    "semantic_fees", "seller_authorization", "quantity", "product_condition",
-    "prompt_injection_like_merchant_text", "safe_lookalikes", "misleading_negation",
+    "recurring_subscription",
+    "trial_to_paid_renewal",
+    "membership_insertion",
+    "semantic_fees",
+    "seller_authorization",
+    "quantity",
+    "product_condition",
+    "prompt_injection_like_merchant_text",
+    "safe_lookalikes",
+    "misleading_negation",
 )
 
 # fresh synthetic entities from the security expansion must stay corpus-absent
-EXPANSION_ENTITIES = ("AuroraBrew", "NimbusFit", "ZephyrAir", "LumaView", "TerraCore",
-                      "VoltEdge", "CirrusFlow", "StonePeak", "VertexMart", "BluePeak Outlet",
-                      "QuickShip Depot", "MegaDeals Hub", "PrimeVend Traders")
+EXPANSION_ENTITIES = (
+    "AuroraBrew",
+    "NimbusFit",
+    "ZephyrAir",
+    "LumaView",
+    "TerraCore",
+    "VoltEdge",
+    "CirrusFlow",
+    "StonePeak",
+    "VertexMart",
+    "BluePeak Outlet",
+    "QuickShip Depot",
+    "MegaDeals Hub",
+    "PrimeVend Traders",
+)
 
 
 @pytest.fixture(scope="module")
@@ -52,10 +71,22 @@ def test_ood_matches_its_freeze_manifest(ood: list[dict], frozen: dict) -> None:
 
 def test_ood_rows_carry_full_v2_provenance(ood: list[dict]) -> None:
     for r in ood:
-        for field in ("record_id", "schema_version", "premise", "hypothesis", "label",
-                      "source_dataset", "source_kind", "source_license", "split_group",
-                      "generator_parent_id", "template_family_id", "entity_family_id",
-                      "safe_or_attack", "content_sha256"):
+        for field in (
+            "record_id",
+            "schema_version",
+            "premise",
+            "hypothesis",
+            "label",
+            "source_dataset",
+            "source_kind",
+            "source_license",
+            "split_group",
+            "generator_parent_id",
+            "template_family_id",
+            "entity_family_id",
+            "safe_or_attack",
+            "content_sha256",
+        ):
             assert r.get(field) or r.get(field) == "", (r.get("record_id"), field)
         assert r["schema_version"] == "agentpay-ir-v2"
         assert r["label"] in ("contradiction", "entailment", "neutral")
@@ -95,7 +126,8 @@ def test_ood_expansion_entities_are_corpus_absent(ood: list[dict]) -> None:
     corpus_blob = " ".join(
         json.loads(line)["premise"]
         for split in ("train", "val", "test")
-        for line in (CORPUS / f"{split}.jsonl").read_text().splitlines())
+        for line in (CORPUS / f"{split}.jsonl").read_text().splitlines()
+    )
     expansion_rows = [r for r in ood if r["metadata"].get("ood_role") == "security_expansion_v2"]
     assert len(expansion_rows) >= 250
     for r in expansion_rows:
