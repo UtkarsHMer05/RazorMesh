@@ -97,9 +97,8 @@ REQUIREMENTS = """\
 transformers==5.15.1
 torch==2.13.0
 accelerate==1.14.0
-datasets==4.0.1
 scikit-learn==1.7.1
-safetensors==0.6.2
+safetensors==0.8.0
 """
 
 
@@ -210,9 +209,12 @@ import transformers
 
 # PRIMARY gate: pinned DISTRIBUTION versions via importlib.metadata (robust to
 # runtime-report quirks); every package in requirements-frozen.txt is checked.
+# The PEP 440 LOCAL segment (+cu120 etc.) is ignored for equality — it is a
+# build variant, not a different release — while the release itself stays strict.
 for _pkg in REQ:
-    _installed = importlib_metadata.version(_pkg)
+    _installed = importlib_metadata.version(_pkg).split("+", 1)[0]
     assert _installed == REQ[_pkg], f"{_pkg} {_installed} != frozen {REQ[_pkg]}"
+print("installed distributions:", {p: importlib_metadata.version(p) for p in REQ})
 
 # EVIDENCE (recorded, not equality-gated): runtime-reported torch version and
 # the CUDA build the runtime was compiled against.

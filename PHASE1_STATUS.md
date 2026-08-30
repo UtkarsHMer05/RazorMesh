@@ -523,10 +523,26 @@ outside the agent).
   excluded; gold 301/301 usable; supervised 307 confirmed / 25 relabeled;
   96 augmentation rows into TRAIN only (0.71% synthetic); 18,394 rows
   hash-validated; leakage gate PASS; final 13,605/2,261/2,227 + 301 gold.
-- FINAL Colab bundle sha256 809687bb… (train+val only; members hash-equal
+- FINAL Colab bundle sha256 28ea606b… (train+val only; members hash-equal
   corpus/final files); notebook EXPECTED_BUNDLE_SHA256 = final bundle sha;
   no-training preflight + both dry-run phases PASS; agentpay_v2 suite 43/43;
   backend suite 804/804 (exit 0) after the freeze.
 - Provenance: decisions were AI-assisted, exported and accepted as final by the
   owner (disclosed in STATUS.md); owner may amend in the UI and re-finalize
   before training. No training started; nothing pushed.
+
+---
+
+# AgentPay-IR v2 Colab install fix append (2026-08-30)
+
+- First real Colab run: `datasets==4.0.1` unresolvable in the Colab index → whole
+  frozen install aborted → metadata gate correctly rejected stale torch
+  2.11.0+cu12. Root causes fixed at the single version source:
+  `datasets` pin removed (notebook never imports it — regression test added),
+  `safetensors` corrected to 0.8.0 (semantic-runtime alignment), metadata gate
+  now ignores PEP 440 local segments (+cuXXX) with full-version evidence lines.
+- FINAL bundle REBUILT from corpus/final: sha256 28ea606b084f4544d7f73d8001569cd
+  91476ab49dc8a2110bc73634149fca24d; notebook EXPECTED_BUNDLE_SHA256 matches;
+  verify_bundle PASS; new regression test pins committed bundle == corpus/final.
+- Dry-run both phases PASS. Colab rerun requires a FRESH runtime (old session
+  already imported torch 2.11). No training; nothing pushed.

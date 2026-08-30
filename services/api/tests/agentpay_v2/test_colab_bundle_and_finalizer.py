@@ -181,6 +181,15 @@ def test_bundle_requirements_are_the_single_version_source(committed_bundle) -> 
         assert req[pkg] == ver, f"{pkg} must pin {ver} (single version source)"
     install_cell = next(c for c in cells if "%pip install" in c)
     assert "%pip install -q -r bundle/requirements-frozen.txt" in install_cell
+    # Colab runtime-correctness regression: `datasets` was pinned but is never
+    # imported by the notebook, and the unavailable pin aborted the whole frozen
+    # install on Colab (leaving stale torch). The pin must never come back, and
+    # the metadata gate must ignore PEP 440 local segments (+cuXXX build variants).
+    assert "datasets" not in req_text
+    for cell in cells:
+        assert "import datasets" not in cell
+    assert req.get("safetensors") == "0.8.0"  # must match the semantic runtime group
+    assert 'split("+", 1)[0]' in install_cell  # local-segment-normalized equality
     # no hardcoded 4.55.4 / 1.10.1 legacy pins anywhere
     assert "4.55.4" not in req_text and "1.10.1" not in req_text
     for cell in cells:
@@ -845,3 +854,19 @@ def test_final_cell_executes_and_packages_exact_selected_candidate(
     with _zipfile.ZipFile(zip_path) as z:
         assert any(n.startswith("agentpay-ir-v2-finetuned/") for n in z.namelist())
         assert "agentpay-ir-v2-finetuned/model_manifest.json" in z.namelist()
+
+
+def test_committed_bundle_is_the_post_review_final_bundle() -> None:
+    """Regression guard (2026-08-30): after post-review finalization, the tracked
+    bundle must be the one built from corpus/final — a rebuild with the builder's
+    PRE-REVIEW default corpus would silently replace it and is caught here."""
+    if not (REPO_ROOT / "data/agentpay_ir_v2/corpus/final/train.jsonl").exists():
+        pytest.skip("post-review final freeze not present")
+    with zipfile.ZipFile(COMMITTED_ZIP) as z:
+        train_member = hashlib.sha256(z.read("train.jsonl")).hexdigest()
+        val_member = hashlib.sha256(z.read("val.jsonl")).hexdigest()
+    final = REPO_ROOT / "data/agentpay_ir_v2/corpus/final"
+    assert train_member == sha256_file(final / "train.jsonl"), (
+        "committed bundle train is not corpus/final — rebuild with --corpus-dir")
+    assert val_member == sha256_file(final / "val.jsonl"), (
+        "committed bundle val is not corpus/final — rebuild with --corpus-dir")

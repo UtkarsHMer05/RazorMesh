@@ -192,7 +192,7 @@ finalization is trusted.
 - content_sha256 recomputed + validated on all 18,394 final rows; leakage gate PASS.
 - Final freeze: train 13,605 / val 2,261 / test 2,227 + 301 gold.
 - FINAL bundle `artifacts/agentpay_ir_v2_colab_training_bundle.zip` sha256
-  `809687bb…` — train+val ONLY (no test/gold/OOD/linkage/roles/decisions/augmentation);
+  `28ea606b…` — train+val ONLY (no test/gold/OOD/linkage/roles/decisions/augmentation);
   train/val members hash-equal `corpus/final/` files.
 - Notebook `notebooks/RazorGuard_NLI_AgentPayIR_v2_Training.ipynb` regenerated;
   `EXPECTED_BUNDLE_SHA256` = the FINAL bundle sha (verified + `verify_bundle` executed).
@@ -201,3 +201,29 @@ finalization is trusted.
 by AI-assisted labeling and were exported and accepted as final by the owner
 (instruction of 2026-08-30: "Human review is complete"). The owner may still amend
 any decision in the reviewer UI and re-run the finalizer before Colab training.
+
+---
+
+# COLAB INSTALL FIX (2026-08-30) — requirements corrected, FINAL bundle rebuilt
+
+First real Colab run failed: `datasets==4.0.1` did not resolve in the Colab
+environment, aborting the entire frozen install and leaving Colab's preinstalled
+`torch 2.11.0+cu12` (caught, as designed, by the metadata gate).
+
+Fixes (bundle rebuilt; corpus freeze untouched):
+- `datasets` pin REMOVED from requirements-frozen.txt — the notebook uses a plain
+  torch Dataset and never imports it (regression test added).
+- `safetensors` corrected 0.6.2 → **0.8.0** to match the semantic runtime group.
+- Metadata gate now ignores PEP 440 local segments (+cuXXX build variants) while
+  keeping release equality strict, and records the full installed distribution
+  versions + torch.version.cuda as evidence.
+- FINAL bundle rebuilt from corpus/final: sha256 **`28ea606b084f4544d7f73d8001569cd91476ab49dc8a2110bc73634149fca24d`**;
+  notebook `EXPECTED_BUNDLE_SHA256` matches; a committed regression test now
+  asserts the tracked bundle always equals corpus/final (a default-corpus rebuild
+  is caught).
+- PyPI-verified pins: transformers 5.15.1 ✔ · torch 2.13.0 ✔ · accelerate 1.14.0 ✔ ·
+  scikit-learn 1.7.1 ✔ · safetensors 0.8.0 ✔.
+
+**IMPORTANT for the next Colab run:** the failed attempt already imported torch —
+Runtime → Disconnect and delete runtime (fresh session), upload the NEW
+`artifacts/agentpay_ir_v2_colab_training_bundle.zip` (sha256 above), run all.

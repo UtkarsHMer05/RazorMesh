@@ -53,7 +53,7 @@ correction/privacy commits; the agent itself never pushes (see REMOTE_STATE.md).
 **Last updated:** 2026-08-30 (POST-REVIEW FINALIZATION COMPLETE). Final freeze:
 train 13,605 / val 2,261 / test 2,227 + 301 gold (human-review decisions, AI-assisted
 and owner-accepted — see STATUS.md); 96 injection rows integrated TRAIN-only; leakage
-gates PASS; FINAL bundle sha 809687bb… (train+val only); notebook
+gates PASS; FINAL bundle sha 28ea606b… (train+val only); notebook
 EXPECTED_BUNDLE_SHA256 matches; next: owner uploads the bundle to Colab and runs the
 notebook (T4/L4), then returns agentpay-ir-v2-finetuned.zip.
 **Gate (Phase 4 final M49, historical):** `services/api` ruff clean / mypy clean / pytest
