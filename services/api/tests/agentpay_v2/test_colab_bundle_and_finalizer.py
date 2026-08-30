@@ -285,7 +285,10 @@ def test_notebook_packages_the_exact_selected_candidate() -> None:
     # both candidates saved with their exact validation metrics bound to them
     assert 'tr.save_model(f"cand_{epochs}ep")' in cand
     assert "validation_metrics.json" in cand
-    assert cand.count("TrainingArguments(") == 1  # one training run per candidate
+    import ast as _ast
+    _calls = [n for n in _ast.walk(_ast.parse(cand))
+              if isinstance(n, _ast.Call) and getattr(n.func, "id", "") == "TrainingArguments"]
+    assert len(_calls) == 1, "exactly one TrainingArguments construction per candidate"
     # packaging copies the selected checkpoint; it never trains or reloads from base
     assert 'shutil.copytree(cand_dir, "agentpay-ir-v2-finetuned")' in final
     assert "Trainer(" not in final and "from_pretrained(" not in final
@@ -882,3 +885,28 @@ def test_committed_bundle_is_the_post_review_final_bundle() -> None:
         "committed bundle train is not corpus/final — rebuild with --corpus-dir")
     assert val_member == sha256_file(final / "val.jsonl"), (
         "committed bundle val is not corpus/final — rebuild with --corpus-dir")
+
+
+def test_trainingarguments_kwargs_match_installed_transformers() -> None:
+    """Colab/5.15.1 drift guard: transformers 5.x removed TrainingArguments
+    warmup_ratio — the exact Colab failure. Every TrainingArguments kwarg the
+    notebook uses must exist in the INSTALLED transformers signature (the test
+    venv pins the same frozen 5.15.1 that Colab installs)."""
+    import ast
+    import inspect
+
+    from transformers import TrainingArguments
+
+    cand = next(c for c in notebook_code_cells(COMMITTED_NOTEBOOK) if "def run(epochs)" in c)
+    tree = ast.parse(cand)
+    kwargs_used: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "TrainingArguments":
+            kwargs_used.update(kw.arg for kw in node.keywords if kw.arg is not None)
+    assert kwargs_used, "notebook must construct TrainingArguments"
+    assert "warmup_ratio" not in kwargs_used, "removed in transformers 5.x — use warmup_steps"
+    params = set(inspect.signature(TrainingArguments.__init__).parameters)
+    missing = sorted(kwargs_used - params)
+    assert not missing, f"TrainingArguments kwargs unsupported by installed transformers: {missing}"
+    # warmup semantics stay frozen: derived from the bundle's train_config ratio
+    assert "WARMUP_RATIO" in cand and "warmup_steps" in cand

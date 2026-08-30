@@ -286,16 +286,24 @@ SELECTION_CELL = '''
 '''
 
 CANDIDATE_CELL = '''
+import math
+
 from transformers import AutoModelForSequenceClassification, Trainer, TrainingArguments
+
+# transformers 5.x removed TrainingArguments(warmup_ratio=...); the warmup
+# semantics stay frozen by deriving warmup_steps from the bundle's frozen
+# train_config.json (6% of total optimizer steps per candidate).
+WARMUP_RATIO = json.load(open("bundle/train_config.json")).get("warmup_ratio", 0.06)
 
 
 def run(epochs):
     set_seed(42)
     model = AutoModelForSequenceClassification.from_pretrained(
         MANIFEST["base_model"], revision=REV, num_labels=3)
+    warmup_steps = math.ceil(WARMUP_RATIO * math.ceil(len(train_ds) / 16) * epochs)
     args = TrainingArguments(f"cand_{{epochs}}ep", num_train_epochs=epochs, learning_rate=2e-5,
                              per_device_train_batch_size=16, per_device_eval_batch_size=32,
-                             warmup_ratio=0.06, fp16=True, logging_steps=200,
+                             warmup_steps=warmup_steps, fp16=True, logging_steps=200,
                              eval_strategy="epoch", save_strategy="no", report_to=[])
     tr = Trainer(model=model, args=args, train_dataset=train_ds, eval_dataset=val_ds,
                  compute_metrics=metrics)

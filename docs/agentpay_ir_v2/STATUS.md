@@ -245,3 +245,19 @@ torchvision either — locally proven). Notebook regenerated; bundle sha UNCHANG
 `28ea606b…` (EXPECTED_BUNDLE_SHA256 still matches). Static + exercise tests
 guard the removal order. A CUDA-less runtime still fails fast with
 "GPU required" (that is the intended gate, not a bug — select a T4/L4 runtime).
+
+---
+
+# COLAB TRAININGARGS FIX (2026-08-30) — transformers 5.x warmup_ratio drift
+
+Third Colab failure: model download + load succeeded (738MB, T4), then
+`TypeError: TrainingArguments.__init__() got an unexpected keyword argument
+'warmup_ratio'` — transformers 5.x removed that argument.
+
+Fix: the candidate cell derives `warmup_steps = ceil(warmup_ratio × total steps)`
+from the bundle's frozen `train_config.json` (`warmup_ratio: 0.06` — semantics
+preserved, single version source kept) and passes `warmup_steps=` to
+TrainingArguments. New drift-guard test parses the generated notebook with AST
+and asserts every TrainingArguments kwarg exists in the INSTALLED transformers
+(5.15.1) signature — this exact bug class is now caught before upload.
+Bundle sha UNCHANGED `28ea606b…` (only the notebook changed).
