@@ -1,10 +1,33 @@
 # AUTHORITATIVE STATUS (PVB020 + PRE-REVIEW FINAL CORRECTION)
 
-# POST_REVIEW_FINALIZATION_PASS / FINAL_COLAB_BUNDLE_READY (2026-08-30)
+# POST_COLAB_FINAL_ACCEPTANCE_PASS / V2_EVALUATED_NOT_ACTIVATED (2026-08-30)
 
-**Recorded:** 2026-08-29 · This file is the SINGLE current handoff document. Older
-handoff text in TRANSFORMATION_REPORT.md §"OVERNIGHT" is superseded history; the
-workflow below is the only current one.
+**CURRENT STATE (2026-08-30, post-Colab acceptance run):** the Colab artifact was
+integrity-verified (ZIP sha256 `4c933eec…`; candidate **A_2ep**; weights
+`f9e0007c…`) and promoted to `artifacts/models/incoming/agentpay-ir-v2-finetuned/`.
+The one-shot frozen evaluation ran exactly once per model on the hash-pinned
+frozen sets (test 2,227 / gold 301 / OOD 665) and **the v2 candidate FAILED the
+frozen safety gate** — unsafe C→E worsened on human gold (2→7) and OOD (5→6);
+gold macro-F1 regressed 0.893→0.776 despite test macro-F1 improving to 0.975.
+**Gate token: M2_FROZEN_EVALUATION_FAIL / V2_NOT_ACTIVATED. The ACTIVE runtime
+remains `deberta` + `phase3-finetuned-v2` + `semantic-thresholds-v3`.** A v4
+policy (tau 0.40/0.90, val-split-only calibration, pre-frozen-contact) exists on
+disk but is NOT wired. Full reports:
+`FINAL_FROZEN_EVALUATION.{md,json}` + `frozen_eval/` predictions; submission
+evidence: `docs/submission/`. Regression gates all green (813 backend tests,
+AgentPay-X 191/191, mypy/ruff/tsc/eslint/vitest/build clean); Razorpay Test
+acceptance chains proven (SAFE exactly-once provider call; both attack chains
+BLOCK with zero provider calls; replay rejected).
+
+---
+
+## PRE-REVIEW FINAL CORRECTION (historical, all enforced by tests)
+
+**Recorded:** 2026-08-29 · The workflow below is the training-handoff record that
+produced the bundle the Colab run consumed (final train = 13,605 / val = 2,261 /
+test = 2,227 + 301 gold; FINAL bundle sha256 `28ea606b…`, superseding the stale
+`809687bb…` pin via the committed Colab install-fix with the corpus freeze
+unchanged).
 
 ## What changed in the PRE-REVIEW FINAL CORRECTION (all enforced by tests)
 
