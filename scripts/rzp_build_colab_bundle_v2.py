@@ -201,6 +201,14 @@ print("frozen requirements:", REQ)
 # Install EXACTLY the frozen requirement set (#14) — before ANY torch import.
 %pip install -q -r bundle/requirements-frozen.txt
 
+# Colab preinstalls torchvision/torchaudio builds PINNED to its stock torch
+# (torchvision 0.26.0+cpu requires torch==2.11.0). Against the frozen torch
+# 2.13.0 they break transformers' lazy imports ("operator torchvision::nms does
+# not exist" -> ModuleNotFoundError: set_seed). The text-only NLI notebook uses
+# neither package, so remove them before importing (the semantic runtime group
+# has no torchvision either).
+%pip uninstall -y -q torchvision torchaudio
+
 # NOW import the runtime and reconcile actual versions against the frozen file.
 import accelerate
 import importlib.metadata as importlib_metadata

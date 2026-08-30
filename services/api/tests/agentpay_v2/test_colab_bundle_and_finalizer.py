@@ -181,6 +181,12 @@ def test_bundle_requirements_are_the_single_version_source(committed_bundle) -> 
         assert req[pkg] == ver, f"{pkg} must pin {ver} (single version source)"
     install_cell = next(c for c in cells if "%pip install" in c)
     assert "%pip install -q -r bundle/requirements-frozen.txt" in install_cell
+    # Colab's stock torchvision/torchaudio pin torch==2.11.0 and break
+    # transformers' lazy imports against torch 2.13; they must be removed
+    # BEFORE the post-install imports (notebook uses neither package).
+    assert "%pip uninstall -y -q torchvision torchaudio" in install_cell
+    assert install_cell.index("%pip uninstall -y -q torchvision torchaudio") \
+        < install_cell.index("import accelerate")
     # Colab runtime-correctness regression: `datasets` was pinned but is never
     # imported by the notebook, and the unavailable pin aborted the whole frozen
     # install on Colab (leaving stale torch). The pin must never come back, and
@@ -241,6 +247,9 @@ def test_install_cell_extracts_bundle_before_pip_in_dependency_free_env(
     python_only = python_only.replace(
         "%pip install -q -r bundle/requirements-frozen.txt",
         "PIP_STUBBED_AT_SAME_POSITION = True",
+    ).replace(
+        "%pip uninstall -y -q torchvision torchaudio",
+        "PIP_UNINSTALL_STUBBED_AT_SAME_POSITION = True",
     )
     assert "PIP_STUBBED_AT_SAME_POSITION" in python_only
 
@@ -771,12 +780,15 @@ def test_final_cell_executes_and_packages_exact_selected_candidate(
     _os.environ["BUNDLE_PATH"] = str(COMMITTED_ZIP)
     ns: dict = {}
     try:
-        exec(compile(next(c for c in cells if "def verify_bundle" in c),
-                      "verify_cell", "exec"), ns)  # noqa: S102 - test rig
+        exec(compile(next(c for c in cells if "def verify_bundle" in c),  # noqa: S102 - test rig
+                      "verify_cell", "exec"), ns)
         install = next(c for c in cells if "%pip install" in c)
         python_only = install[: install.index("# NOW import the runtime")].replace(
             "%pip install -q -r bundle/requirements-frozen.txt",
-            "PIP_STUBBED_IN_PREFLIGHT = True")
+            "PIP_STUBBED_IN_PREFLIGHT = True").replace(
+            "%pip uninstall -y -q torchvision torchaudio",
+            "PIP_UNINSTALL_STUBBED_IN_PREFLIGHT = True")
+        exec(compile(python_only, "install_cell", "exec"), ns)  # noqa: S102 - test rig
         exec(compile(python_only, "install_cell", "exec"), ns)  # noqa: S102 - test rig
     finally:
         if old_env is None:

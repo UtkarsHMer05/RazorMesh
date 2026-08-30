@@ -227,3 +227,21 @@ Fixes (bundle rebuilt; corpus freeze untouched):
 **IMPORTANT for the next Colab run:** the failed attempt already imported torch —
 Runtime → Disconnect and delete runtime (fresh session), upload the NEW
 `artifacts/agentpay_ir_v2_colab_training_bundle.zip` (sha256 above), run all.
+
+---
+
+# COLAB TORCHVISION FIX (2026-08-30) — second runtime failure resolved
+
+After the requirements fix, the T4 run passed verify/extract/install (torch
+2.13.0+cu130, CUDA 13.0, gate OK) but crashed in the setup cell:
+`RuntimeError: operator torchvision::nms does not exist` → transformers lazy
+import → `ModuleNotFoundError: set_seed`. Root cause: Colab preinstalls
+`torchvision 0.26.0+cpu` / torchaudio pinned to its stock torch 2.11; against
+torch 2.13 the binary ops are missing.
+
+Fix: the install cell now removes `torchvision`/`torchaudio` BEFORE the imports
+(the text-only NLI notebook uses neither, and the semantic runtime group has no
+torchvision either — locally proven). Notebook regenerated; bundle sha UNCHANGED
+`28ea606b…` (EXPECTED_BUNDLE_SHA256 still matches). Static + exercise tests
+guard the removal order. A CUDA-less runtime still fails fast with
+"GPU required" (that is the intended gate, not a bug — select a T4/L4 runtime).
