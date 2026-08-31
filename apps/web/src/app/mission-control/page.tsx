@@ -64,6 +64,9 @@ export default function MissionControlPage() {
     checks: { component: string; ready: boolean; detail: string; environment?: string }[];
   } | null>(null);
   const [preflightBusy, setPreflightBusy] = useState(false);
+  const timerRef = useRef<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
 
   const runPreflight = useCallback(async (warmUp: boolean) => {
     setPreflightBusy(true);
@@ -80,9 +83,6 @@ export default function MissionControlPage() {
       setPreflightBusy(false);
     }
   }, []);
-  const timerRef = useRef<number | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
 
   const displayed = useMemo(
     () => (playIndex === null ? events : events.slice(0, playIndex + 1)),

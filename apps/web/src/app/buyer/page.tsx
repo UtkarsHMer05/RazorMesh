@@ -217,9 +217,12 @@ export default function BuyerPage() {
   }, []);
 
   // Auto-create the fixture intent on load (synthetic fallback path; the
-  // mission flow replaces it once a compiled mandate is confirmed).
+  // mission flow replaces it once a compiled mandate is confirmed). F015:
+  // suppressed once a draft exists — a late fixture-intent could otherwise
+  // race the confirm flow and swap the active intent (and its trace) after
+  // the human already confirmed a specific mandate.
   useEffect(() => {
-    if (intentId || busy) return;
+    if (intentId || busy || draft) return;
     let ignore = false;
     (async () => {
       try {
@@ -234,7 +237,7 @@ export default function BuyerPage() {
     return () => {
       ignore = true;
     };
-  }, [intentId, busy]);
+  }, [intentId, busy, draft]);
 
   // Bind the display trace for the active intent.
   useEffect(() => {

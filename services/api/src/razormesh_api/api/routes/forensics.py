@@ -313,6 +313,7 @@ def forensic_trace(
                 .where(AuditEvent.seq >= min_seq)
                 .where(AuditEvent.seq <= max_seq)
             ).scalar()
+            or 0
         ) if seqs else 0
     chain_nodes: list[dict[str, Any]] = []
     prev_row: AuditEvent | None = None

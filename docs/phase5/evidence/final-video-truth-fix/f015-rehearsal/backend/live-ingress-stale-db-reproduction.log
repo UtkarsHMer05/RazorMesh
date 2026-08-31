@@ -1,0 +1,68 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.15, pytest-9.1.1, pluggy-1.6.0 -- /Users/utkarshkhajuria/Desktop/RazorMesh/services/api/.venv/bin/python
+cachedir: .pytest_cache
+hypothesis profile 'default'
+rootdir: /Users/utkarshkhajuria/Desktop/RazorMesh/services/api
+configfile: pyproject.toml
+plugins: cov-7.1.0, asyncio-1.4.0, anyio-4.14.2, hypothesis-6.165.10
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 13 items
+
+services/api/tests/phase4/test_live_ingress_e2e.py::test_ucp_well_known_discovery PASSED [  7%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_ap2_jwks_discovery PASSED [ 15%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_server_discover_no_session PASSED [ 23%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_tools_list_without_initialize PASSED [ 30%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_tools_call_without_initialize FAILED [ 38%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_no_session_id_in_response PASSED [ 46%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_missing_protocol_metadata_rejected PASSED [ 53%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_unsupported_version_rejected PASSED [ 61%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_positive_phase4_chain_to_razorguard_allow FAILED [ 69%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_negative_material_mutation_blocks PASSED [ 76%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_replay_same_request_no_duplicate_authority PASSED [ 84%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_conflict_same_idempotency_changed_payload PASSED [ 92%]
+services/api/tests/phase4/test_live_ingress_e2e.py::test_concurrent_identical_complete_authorized_checkout_exactly_one_effect FAILED [100%]
+
+=================================== FAILURES ===================================
+________________ test_mcp_modern_tools_call_without_initialize _________________
+services/api/tests/phase4/test_live_ingress_e2e.py:444: in test_mcp_modern_tools_call_without_initialize
+    assert result["decision"] == "ALLOW", result
+E   AssertionError: {'decision': 'BLOCK', 'intent_id': 'intent_01M1CB359K11HAW6T80C942ECC', 'reason': 'razorguard:BLOCK', 'run_id': 'acc-20260831T164028Z-172fabd6de8b8ef0', ...}
+E   assert 'BLOCK' == 'ALLOW'
+E     
+E     - ALLOW
+E     + BLOCK
+----------------------------- Captured stderr call -----------------------------
+Loading weights:   0%|          | 0/202 [00:00<?, ?it/s]Loading weights: 100%|██████████| 202/202 [00:00<00:00, 10660.31it/s]
+________________ test_positive_phase4_chain_to_razorguard_allow ________________
+services/api/tests/phase4/test_live_ingress_e2e.py:551: in test_positive_phase4_chain_to_razorguard_allow
+    assert result["decision"] == "ALLOW", result
+E   AssertionError: {'decision': 'BLOCK', 'intent_id': 'intent_01M1CB3EDSNXWF2W1QEBMAQJXB', 'reason': 'razorguard:BLOCK', 'run_id': 'acc-20260831T164037Z-aa0413b660a96fc1', ...}
+E   assert 'BLOCK' == 'ALLOW'
+E     
+E     - ALLOW
+E     + BLOCK
+__ test_concurrent_identical_complete_authorized_checkout_exactly_one_effect ___
+services/api/tests/phase4/test_live_ingress_e2e.py:720: in test_concurrent_identical_complete_authorized_checkout_exactly_one_effect
+    assert len(matching) == 1, matching
+E   AssertionError: []
+E   assert 0 == 1
+E    +  where 0 = len([])
+=============================== warnings summary ===============================
+tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_tools_call_without_initialize
+tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_tools_call_without_initialize
+tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_tools_call_without_initialize
+tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_tools_call_without_initialize
+tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_tools_call_without_initialize
+tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_tools_call_without_initialize
+tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_tools_call_without_initialize
+  /Users/utkarshkhajuria/Desktop/RazorMesh/services/api/.venv/lib/python3.13/site-packages/torch/jit/_script.py:1488: DeprecationWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED services/api/tests/phase4/test_live_ingress_e2e.py::test_mcp_modern_tools_call_without_initialize
+FAILED services/api/tests/phase4/test_live_ingress_e2e.py::test_positive_phase4_chain_to_razorguard_allow
+FAILED services/api/tests/phase4/test_live_ingress_e2e.py::test_concurrent_identical_complete_authorized_checkout_exactly_one_effect
+================== 3 failed, 10 passed, 7 warnings in 13.45s ===================
+
+EXIT_CODE=1

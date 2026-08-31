@@ -342,7 +342,7 @@ def run_mission(
             currency="INR",
         )
         ev = run.run.evidence
-        pipeline = {
+        pipeline: dict[str, Any] = {
             "scenario": recipe.acceptance_scenario,
             "run_id": run.run.run_id,
             "intent_id": run.run.intent_id,

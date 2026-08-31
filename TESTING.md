@@ -378,7 +378,14 @@ rejection literal, the allowlist's own repeated `rzp_live_` literal, and the
 synthetic TokenRouter-shaped key `tr_test_key_placeholder` in
 `tests/test_intent_compiler_client.py` + `tests/test_intent_compilation_service.py`
 (required to prove Bearer auth works and errors never leak the key, P3-S01;
-added P3-M15 when the scanner flagged the M09/M13 fixtures).
+added P3-M15 when the scanner flagged the M09/M13 fixtures), the synthetic
+`rzp_test_phase5public` stub key in `e2e/phase5-payment-fsm.spec.ts` (M095-M100
+payment-FSM e2e; the stubbed Razorpay checkout payload needs a key-shaped string
+to be realistic — synthetic, never a credential), and the same literal QUOTED in
+`docs/phase5/DEEP_ENGINE_CORRECTION_STATUS.md` (the status doc's evidence-ledger
+entry describing that very allowlist decision; added 2026-09-01 during the Final
+Video Truth Fix when the scan flagged the documentation quote — same
+self-referencing justification as the allowlist's own repeated literal).
 
 ## 15. Phase-3 release-blocking gates (added P3-M08)
 

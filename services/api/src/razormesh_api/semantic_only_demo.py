@@ -135,7 +135,10 @@ def run_semantic_only_demo() -> dict[str, Any]:
     outcomes: list[SemanticOnlyOutcome] = []
     model_version = str(verifier.model_version)
     policy_version = str(verifier.policy_version)
-    for pair in NEW_DEMO_FIXTURE["pairs"]:
+    pairs = NEW_DEMO_FIXTURE["pairs"]
+    assert isinstance(pairs, list)
+    for pair in pairs:
+        assert isinstance(pair["premise"], str) and isinstance(pair["hypothesis"], str)
         verdict: SemanticVerdict = verifier.verify(
             premise=pair["premise"], hypothesis=pair["hypothesis"]
         )

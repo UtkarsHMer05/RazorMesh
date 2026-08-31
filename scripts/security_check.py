@@ -124,6 +124,14 @@ _ALLOWED_TEST_FIXTURES: dict[tuple[str, str], frozenset[str]] = {
         "scripts/security_check.py",
         "razorpay-key-shape",
     ): frozenset({"rzp_live_CkYzExample", "rzp_test_phase5public"}),
+    # The deep-engine-correction status doc QUOTES the pinned synthetic literal
+    # while documenting the allowlist decision itself (evidence ledger entry,
+    # e934bfe). Same justification as the self-referencing entry above: the
+    # quoted value is the documented synthetic fixture, never a credential.
+    (
+        "docs/phase5/DEEP_ENGINE_CORRECTION_STATUS.md",
+        "razorpay-key-shape",
+    ): frozenset({"rzp_test_phase5public"}),
 }
 _SCAN_SUFFIXES = {
     ".py",

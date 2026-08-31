@@ -6,6 +6,7 @@ context bindings against freshly read durable rows). No endpoint executes
 without a valid ticket; no client field influences totals.
 """
 
+import logging
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
@@ -43,6 +44,8 @@ from razormesh_api.rules.policy_rules import POLICY_RULES
 from razormesh_api.settings import ProviderConfigError, Settings, get_settings
 from razormesh_api.spend import SpendError, SpendManager
 from razormesh_api.tickets import CurrentBinding, SignedTicket, TicketRejected
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["buyer"])
 
@@ -192,6 +195,40 @@ def propose(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except NotExecutableError as exc:
         raise HTTPException(status_code=422, detail=f"authorization not executable: {exc}") from exc
+    # G012/G015/F015: capture the immutable TransactionBaseline for this
+    # checkout (projection only, never part of the money path) and link the
+    # checkout to the mission's display trace — so Mission Control's
+    # current-transaction diff/revert/execute can act on buyer-proposed
+    # checkouts exactly like mission-engine ones. Best-effort by design: an
+    # existing baseline is never replaced, and a capture failure must never
+    # change the buyer pipeline's own verdicts.
+    _checkout_id = str(proposal.envelope.checkout_id)
+    try:
+        from razormesh_api.merchant_sandbox import _capture_baseline
+        from razormesh_api.persistence.models import Checkout as _RowCheckout
+        from razormesh_api.persistence.models import Product
+        from razormesh_api.persistence.repositories import session_scope
+
+        with session_scope(repos.factory) as session:
+            row = session.get(_RowCheckout, _checkout_id)
+            product = session.get(Product, body.items[0].product_id) if body.items else None
+            if row is not None and product is not None:
+                _capture_baseline(
+                    session,
+                    intent_id=str(intent_id),
+                    row=row,
+                    product=product,
+                    quantity=body.items[0].quantity,
+                    expected_checkout_hash=proposal.checkout_hash,
+                    expected_intent_hash=proposal.intent_hash,
+                )
+    except Exception:  # noqa: BLE001 - projection only; never block the buyer flow
+        logger.debug("baseline capture skipped for %s", _checkout_id)
+    _link_trace(
+        repos,
+        str(intent_id),
+        checkout_id=_checkout_id,
+    )
 
     return DecisionBody(
         decision=result.outcome.decision.value,
