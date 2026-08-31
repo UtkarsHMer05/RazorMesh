@@ -55,6 +55,30 @@ type DemoEvidence = {
   provider_contacted: boolean;
 };
 
+type WhySemanticAi = {
+  label: string;
+  honest: boolean;
+  fixture: {
+    provenance: string;
+    non_frozen: boolean;
+    not_used_for_model_selection: boolean;
+    not_used_for_calibration: boolean;
+    orientation: string;
+  };
+  runtime: { model_id: string; policy_version: string; fail_closed: boolean };
+  demonstration: {
+    pair_id: string;
+    aspect: string;
+    razorguard: string;
+    semantic: string;
+    probabilities: { contradiction: number; entailment: number; neutral: number };
+    fusion: string;
+    ticket: string;
+    provider_calls: number;
+  }[];
+  story: string;
+};
+
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 export default function SecurityLabPage() {
@@ -64,6 +88,23 @@ export default function SecurityLabPage() {
   const [error, setError] = useState<string | null>(null);
   const [demo, setDemo] = useState<DemoEvidence | null>(null);
   const [demoBusy, setDemoBusy] = useState<string | null>(null);
+  const [whySemantic, setWhySemantic] = useState<WhySemanticAi | null>(null);
+  const [whySemanticBusy, setWhySemanticBusy] = useState(false);
+
+  const runWhySemanticAi = async () => {
+    setWhySemanticBusy(true);
+    setWhySemantic(null);
+    try {
+      const res = await fetch(`${API}/security-lab/why-semantic-ai`);
+      const body = await res.json();
+      if (!res.ok) throw new Error("demo failed");
+      setWhySemantic(body as WhySemanticAi);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setWhySemanticBusy(false);
+    }
+  };
 
   const runDemo = async (
     slug: "scenario-b-semantic-violation" | "scenario-c-protocol-valid-intent-invalid",
@@ -176,6 +217,69 @@ export default function SecurityLabPage() {
           the known gap the AgentPay-IR v2 training corpus targeted; the v2 candidate was
           evaluated on frozen data and not activated by the safety gate.
         </p>
+      </div>
+
+      <div className="card" data-testid="why-semantic-ai">
+        <h3>Why semantic AI matters — semantic-only tightening</h3>
+        <p className="page-sub">
+          If RazorGuard catches everything deterministic, why does the semantic model exist?
+          Run this: the deterministic rules read the structured projection (no recurring
+          semantics, price within cap) and ALLOW — the REAL active semantic model reads the
+          commerce evidence against the human authorization, finds the contradiction, and
+          BLOCKs through conservative fusion. Ticket withheld, provider contacted zero times.
+          Verdicts come from the live model at runtime (new, non-frozen demo fixture — never
+          used for model selection or calibration).
+        </p>
+        <button
+          onClick={() => void runWhySemanticAi()}
+          disabled={whySemanticBusy}
+          data-testid="run-why-semantic-ai"
+        >
+          {whySemanticBusy ? "Running real model…" : "Run WHY SEMANTIC AI MATTERS demo"}
+        </button>
+        {whySemantic && (
+          <div data-testid="why-semantic-ai-result">
+            <p>
+              <strong>{whySemantic.label}</strong> · active model{" "}
+              <code>{whySemantic.runtime.model_id}</code> · policy{" "}
+              <code>{whySemantic.runtime.policy_version}</code> · fixture{" "}
+              <code>{whySemantic.fixture.provenance}</code> (non-frozen)
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Demo pair</th>
+                  <th>RazorGuard (structured)</th>
+                  <th>Semantic (real model)</th>
+                  <th>p(contradiction)</th>
+                  <th>Fusion</th>
+                  <th>Ticket</th>
+                  <th>Provider calls</th>
+                </tr>
+              </thead>
+              <tbody>
+                {whySemantic.demonstration.map((row) => (
+                  <tr key={row.pair_id}>
+                    <td>
+                      <code>{row.pair_id}</code>
+                    </td>
+                    <td>{row.razorguard}</td>
+                    <td>
+                      <strong>{row.semantic}</strong>
+                    </td>
+                    <td>{row.probabilities.contradiction.toFixed(4)}</td>
+                    <td>
+                      <strong>{row.fusion}</strong>
+                    </td>
+                    <td>{row.ticket}</td>
+                    <td>{row.provider_calls}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="page-sub">{whySemantic.story}</p>
+          </div>
+        )}
       </div>
 
       {demo && (

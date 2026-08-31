@@ -30,6 +30,21 @@ def _repos(runner: AdversarialRunner) -> Repositories:
     return runner.repositories
 
 
+@router.get("/why-semantic-ai")
+def why_semantic_ai() -> dict[str, Any]:
+    """F011: WHY SEMANTIC AI MATTERS — the real active model on a new
+    non-frozen demo fixture, fused through the real `fuse` seam.
+
+    RazorGuard ALLOWs on the structured facts; the REAL semantic model BLOCKs
+    the evidence-vs-authorization contradiction; conservative fusion BLOCKs;
+    the ticket is withheld and the provider is never contacted. Verdicts are
+    computed at runtime by the ACTIVE PRE_V2 model — never painted.
+    """
+    from razormesh_api.semantic_only_demo import run_semantic_only_demo
+
+    return run_semantic_only_demo()
+
+
 @router.get("/scenarios")
 def list_scenarios() -> dict[str, Any]:
     return {
