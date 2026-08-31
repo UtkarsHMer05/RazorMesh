@@ -516,13 +516,13 @@ def run_packet(spec: PacketSpec) -> dict[str, Any]:
                 else "N/A — not implemented for this protocol"
             ),
             "detail": (
-                (
+
                     f"real {crypto['scheme']}: verifier returned '{crypto['reason']}'"
                     if crypto is not None
                     else "No cryptographic signature verification is implemented for this "
                     "protocol in this repository — the identity check above is a "
                     "commitment/binding comparison only (SIGNATURE EVIDENCE PRESENT)."
-                )
+
             ),
             "engine": (
                 (

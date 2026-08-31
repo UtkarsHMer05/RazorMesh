@@ -27,6 +27,7 @@ import json
 from collections.abc import Mapping
 from typing import Any
 
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec
 
@@ -139,6 +140,10 @@ def verify_ap2_merchant_jwt_es256(
         )
     except (ValueError, TypeError) as e:
         return False, f"signature_invalid:{e}"
+    except InvalidSignature:
+        # F004: a tampered header/payload segment makes the ES256 signature
+        # not verify — the verifier must REJECT, never crash.
+        return False, "signature_invalid:signature_does_not_cover_tampered_claims"
     return True, "ok"
 
 

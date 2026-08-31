@@ -60,7 +60,8 @@ const fmtINR = (m: number) => `₹${(m / 100).toLocaleString("en-IN")}`;
 
 const CHECK_ORDER = [
   ["schema_version", "Schema / version"],
-  ["identity_signature", "Identity / signature"],
+  ["identity_signature", "Identity / commitment binding"],
+  ["packet_crypto", "Cryptographic signature (real verifier)"],
   ["replay_idempotency", "Replay / idempotency"],
   ["protocol_firewall", "Protocol firewall"],
   ["consistency", "Commitment consistency"],

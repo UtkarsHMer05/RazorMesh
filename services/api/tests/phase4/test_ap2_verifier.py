@@ -194,3 +194,38 @@ def test_separate_from_execution_ticket_key():
     ed_key = Ed25519PrivateKey.generate()
     # Different families / object types. The separation is structural.
     assert type(ap2_key).__name__ != type(ed_key).__name__
+
+
+def test_tampered_jwt_is_rejected_not_crash() -> None:
+    """F004 regression: a tampered claim segment must be REJECTED with a
+    (False, signature_invalid:...) verdict, never raise InvalidSignature."""
+
+    from razormesh_api.protocol.ap2_verifier import (
+        export_ap2_test_merchant_pub_jwk,
+        generate_ap2_test_merchant_key,
+        sign_ap2_merchant_jwt_es256,
+        verify_ap2_merchant_jwt_es256,
+    )
+
+    key = generate_ap2_test_merchant_key()
+    kid = "tamper-regression"
+    jwt = sign_ap2_merchant_jwt_es256(
+        key=key, kid=kid, payload={"vct": "ap2-checkout-authorization", "total_minor": 100}
+    )
+    pub = export_ap2_test_merchant_pub_jwk(key, kid)
+    header_b64, payload_b64, sig_b64 = jwt.split(".")
+    import base64
+    import json as _json
+
+    pad = "=" * (-len(payload_b64) % 4)
+    claims = _json.loads(base64.urlsafe_b64decode(payload_b64 + pad))
+    claims["total_minor"] = 999  # tamper AFTER signing
+    tampered = base64.urlsafe_b64encode(
+        _json.dumps(claims, sort_keys=True, separators=(",", ":")).encode()
+    ).rstrip(b"=")
+    forged = f"{header_b64}.{tampered.decode('ascii')}.{sig_b64}"
+    ok, reason = verify_ap2_merchant_jwt_es256(
+        jwt=forged, public_jwk=pub, expected_vct="ap2-checkout-authorization"
+    )
+    assert ok is False
+    assert "signature_invalid" in reason

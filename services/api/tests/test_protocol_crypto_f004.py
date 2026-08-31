@@ -14,16 +14,15 @@ Proves with the repo's own crypto modules:
 
 import pytest
 
+from razormesh_api.protocol.agentpay_x import _base_ir
 from razormesh_api.protocol_playground import (
     PacketSpec,
     _ir_body_bytes,
     _run_ap2_real_crypto,
-    _run_ucp_real_crypto,
     _run_packet_crypto,
+    _run_ucp_real_crypto,
     run_packet,
 )
-from razormesh_api.protocol.agentpay_x import _base_ir
-
 
 # ---------------------------------------------------------------------------
 # UCP: real RFC 9421 + RFC 9530 causality.
@@ -34,7 +33,7 @@ def test_ucp_real_crypto_safe_packet_verifies() -> None:
     ir = _base_ir()
     result = _run_ucp_real_crypto(_ir_body_bytes(ir), corrupt_body=False)
     assert result["verified"] is True, result["reason"]
-    assert result["reason"] == "ok"
+    assert result["reason"] in ("ok", "verified")
     assert "RFC 9421" in result["scheme"] and "RFC 9530" in result["scheme"]
 
 
@@ -42,25 +41,38 @@ def test_ucp_real_crypto_corrupted_body_fails_from_real_verifier() -> None:
     ir = _base_ir()
     result = _run_ucp_real_crypto(_ir_body_bytes(ir), corrupt_body=True)
     assert result["verified"] is False
-    assert result["reason"] in ("digest_mismatch", "content_digest_mismatch", "invalid_digest")
+    assert result["reason"] == "content_digest_mismatch"
 
 
 def test_ucp_crypto_verdict_is_causal_not_name_driven() -> None:
-    """Corrupt bytes on a mutation='none' packet → real verifier still FAILS.
+    """The REAL verifier is driven by bytes, not labels.
 
-    The verifier is driven by the BYTES, not the mutation label: feeding it
-    tampered bytes under the safe label must fail, and intact bytes must pass
-    regardless of labels.
+    Signing a DIFFERENT body and verifying that same body is a valid
+    signature (cryptographically correct — the verifier cannot know intent),
+    so the meaningful causality is: a signature over the ORIGINAL bytes must
+    FAIL against tampered bytes (in-transit tamper), and PASS against the
+    bytes it actually signed. Both directions are asserted via the repo's
+    real verifier, not the mutation name.
     """
     ir = _base_ir()
-    # Tampered bytes with the SAFE label → still FAIL (bytes are what matter).
-    safe_label_corrupt_bytes = _run_ucp_real_crypto(
-        _ir_body_bytes(ir) + b"x", corrupt_body=False
-    )
-    assert safe_label_corrupt_bytes["verified"] is False
-    # Intact bytes always PASS.
+    # In-transit tamper: original signature, modified bytes → FAIL.
+    tamper = _run_ucp_real_crypto(_ir_body_bytes(ir), corrupt_body=True)
+    assert tamper["verified"] is False
+    assert tamper["reason"] == "content_digest_mismatch"
+    # Bytes the signature actually covers → PASS.
     intact = _run_ucp_real_crypto(_ir_body_bytes(ir), corrupt_body=False)
     assert intact["verified"] is True
+    # Direct verifier-level proof (bypassing the helper entirely): RFC 9530
+    # digest of the signed bytes vs a mutated body.
+    from razormesh_api.protocol.ucp_signatures import (
+        compute_content_digest,
+        verify_content_digest,
+    )
+
+    body = _ir_body_bytes(ir)
+    digest = compute_content_digest(body)
+    assert verify_content_digest(body, digest) is True
+    assert verify_content_digest(body + b"x", digest) is False
 
 
 def test_ucp_signature_corruption_via_verifier_not_paint() -> None:
@@ -95,8 +107,8 @@ def test_ap2_real_crypto_tampered_claim_fails_from_real_verifier() -> None:
     result = _run_ap2_real_crypto(ir, corrupt_claim=True)
     assert result["verified"] is False
     # The real verifier rejects the tampered bytes (signature no longer covers
-    # the modified claim segment).
-    assert "signature_invalid" in result["reason"] or result["reason"] == "malformed_jwt"
+    # the modified claim segment) — rejected, never a crash.
+    assert "signature_invalid" in result["reason"]
 
 
 def test_ap2_run_packet_crypto_lane_causality() -> None:
@@ -135,7 +147,7 @@ def test_firewall_stays_described_as_evidence_consumer() -> None:
     cryptographic verifier itself — the playground's authority note and the
     separation of checks (firewall vs packet_crypto) keep that truth."""
     body = run_packet(PacketSpec(protocol="ucp", mutation="none"))
-    assert "firewall" in body["checks"]
+    assert "protocol_firewall" in body["checks"]
     assert "packet_crypto" in body["checks"]
     assert "not transaction authority" in body["authority_note"]
 

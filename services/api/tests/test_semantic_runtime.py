@@ -362,8 +362,10 @@ def test_phase4_builder_uses_settings_declared_semantic_runtime() -> None:
     settings = get_settings()
     orchestrator = build_orchestrator()
     assert orchestrator._semantic_backend == settings.semantic_verifier_backend
-    assert orchestrator._semantic_model_dir == Path(settings.semantic_model_path)
-    assert orchestrator._semantic_policy_path == Path(settings.semantic_policy_path)
+    # F005: build_orchestrator resolves repo-relative paths to absolute via
+    # settings.repo_path(), so the orchestrator stores absolute paths.
+    assert orchestrator._semantic_model_dir == settings.repo_path(settings.semantic_model_path)
+    assert orchestrator._semantic_policy_path == settings.repo_path(settings.semantic_policy_path)
     assert "phase3-finetuned-v2" in str(orchestrator._semantic_model_dir)
 
 
