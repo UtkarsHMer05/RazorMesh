@@ -51,9 +51,17 @@ type Dossier = {
     reconcile_state: string | null;
   };
   chain?: {
-    nodes: { seq: number; event_type: string; prev_head: string; hash_head: string }[];
-    linked: boolean;
+    nodes: {
+      seq: number;
+      event_type: string;
+      prev_head: string;
+      hash_head: string;
+      global_gap_before?: number | null;
+      directly_linked_to_prev?: boolean | null;
+    }[];
+    anchored: boolean;
     node_count: number;
+    global_events_between_first_last_anchor?: number;
     note: string;
   };
 };
@@ -223,7 +231,7 @@ export function AuditForensics() {
       {/* Smart search (M080) */}
       <div className={styles.searchRow} data-testid="forensics-search">
         <label htmlFor="forensics-q" className="field-label">
-          Search trace / intent / checkout
+          Search trace / intent / checkout / attempt / order
         </label>
         <div className={styles.searchBar}>
           <input
@@ -231,7 +239,7 @@ export function AuditForensics() {
             className={styles.searchInput}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="RM-84C91A or intent_… or chk_…"
+            placeholder="RM-84C91A or intent_… or chk_… or att_… or order_…"
             onKeyDown={(e) => e.key === "Enter" && void search()}
           />
           <button type="button" className="btn btn-primary btn-sm" onClick={() => void search()} disabled={busy}>
@@ -471,17 +479,23 @@ export function AuditForensics() {
             </p>
           </div>
 
-          {/* G023: the SELECTED trace's own hash-chain nodes */}
+          {/* F009: THIS TRACE'S ANCHORS IN THE GLOBAL AUDIT CHAIN */}
           {dossier.chain && dossier.chain.nodes.length > 0 && (
             <div className={styles.chainView} data-testid="trace-chain">
               <h4>
-                This trace&apos;s hash chain ({dossier.chain.node_count} events{" "}
-                {dossier.chain.linked ? "· LINKED" : "· LINK BROKEN"})
+                This trace&apos;s anchors in the global audit chain
+                {dossier.chain.anchored !== false ? " · ANCHORED" : " · UNANCHORED"} (
+                {dossier.chain.node_count} events)
               </h4>
               <p className="page-sub">
-                Each event&apos;s hash covers the previous event. Change any row and every
-                later link in THIS trace breaks — that is where tamper would be caught.
-                Global ledger verification is a separate action above.
+                The audit ledger is GLOBAL: events from other traces can lie between two
+                anchors of this trace (the gap counts below) — that is expected
+                interleaving, not a break. Each anchor links into the global chain via
+                prev_hash; the cryptographic authority is the{" "}
+                <strong>GLOBAL CHAIN VERIFY</strong> action above.
+                {typeof dossier.chain.global_events_between_first_last_anchor === "number" &&
+                  dossier.chain.global_events_between_first_last_anchor > 0 &&
+                  ` ${dossier.chain.global_events_between_first_last_anchor} other global events lie between this trace's first and last anchor.`}
               </p>
               <ol className={styles.chainNodes} data-testid="chain-nodes">
                 {dossier.chain.nodes.map((n, i) => (
@@ -499,8 +513,19 @@ export function AuditForensics() {
                       {n.hash_head}…
                     </span>
                     {i > 0 && (
-                      <span className={styles.chainLink} title="linked to previous">
-                        ← {n.prev_head}…
+                      <span
+                        className={styles.chainLink}
+                        title={
+                          n.directly_linked_to_prev === false
+                            ? "linked into the global chain (unrelated events interleave between these anchors)"
+                            : "directly linked to the previous anchor"
+                        }
+                      >
+                        {n.directly_linked_to_prev === false
+                          ? `← global chain (${n.global_gap_before} global ${
+                              (n.global_gap_before ?? 0) === 1 ? "event" : "events"
+                            } between anchors)`
+                          : `← ${n.prev_head}…`}
                       </span>
                     )}
                   </li>

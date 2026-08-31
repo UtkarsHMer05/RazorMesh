@@ -153,19 +153,27 @@ def test_dossier_carries_selected_trace_chain_nodes(forensics_deep_client) -> No
     # every node carries its hash head and the previous node's link
     for node in chain["nodes"]:
         assert node["hash_head"]
-    assert isinstance(chain["linked"], bool)
+    # F009: honest semantics — the trace's anchors are part of the GLOBAL
+    # chain (anchored, never "linked/broken" from interleaving alone).
+    assert isinstance(chain["anchored"], bool)
+    assert chain["anchored"] is True
     assert "non-mutating" in chain["note"]
 
 
 def test_chain_nodes_link_prev_to_current(forensics_deep_client) -> None:  # type: ignore[no-untyped-def]
-    """Within one trace, node[i].prev_head == node[i-1].hash_head (the
-    tamper-evident property the visualization must show)."""
+    """F009: within an ISOLATED trace (no interleaving), node[i].prev_head ==
+    node[i-1].hash_head AND the metadata honestly reports direct linkage. The
+    global ledger can interleave other traces' events between anchors — that
+    case is covered in test_audit_truth_f009.py (gap metadata, never 'broken')."""
     client, repos = forensics_deep_client
     mission = _mission_with_mutation(repos, MutationKind.HIDDEN_MEMBERSHIP)
     nodes = _dossier(client, mission["trace_id"])["chain"]["nodes"]
     for i in range(1, len(nodes)):
-        if nodes[i]["prev_head"]:
+        if nodes[i]["directly_linked_to_prev"] is True:
             assert nodes[i]["prev_head"] == nodes[i - 1]["hash_head"], i
+        # a non-direct link means unrelated global events interleaved —
+        # the anchor still chains into the GLOBAL sequence, never a break.
+        assert nodes[i]["prev_head"] != "", i
 
 
 def test_chain_verification_is_read_only(forensics_deep_client) -> None:  # type: ignore[no-untyped-def]

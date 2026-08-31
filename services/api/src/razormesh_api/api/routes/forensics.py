@@ -17,13 +17,15 @@ import re
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from razormesh_api.persistence.db import create_db_engine, create_session_factory
 from razormesh_api.persistence.models import (
     AuditEvent,
+    DemoTrace,
     ExecutionAttempt,
     IntentContract,
+    ProviderEvent,
     TransactionBaseline,
 )
 from razormesh_api.persistence.models import Checkout as RowCheckout
@@ -59,7 +61,10 @@ def search(
     repos: Annotated[Repositories, Depends(_repos)],
     registry: Annotated[TraceRegistry, Depends(_registry)],
 ) -> dict[str, Any]:
-    """Smart trace search (M080): display trace or Intent/Checkout/Attempt id."""
+    """Smart trace search (M080 + F010): direct indexed lookups for every
+    modeled id a judge may paste — display trace id, intent id, checkout id,
+    execution attempt id, and provider/Razorpay order id. Direct DB queries,
+    never a recent(100) scan, so OLD traces are findable."""
     q = q.strip()
 
     def intent_to_trace(intent_id: str) -> dict[str, Any] | None:
@@ -72,6 +77,39 @@ def search(
         if trace is None:  # pragma: no cover
             return None
         return summarize_trace(repos, trace)
+
+    def checkout_to_intent(checkout_id: str) -> str | None:
+        """F010: direct row lookups, never the recent(100) registry scan."""
+        with session_scope(repos.factory) as session:
+            # Direct indexed lookup on the trace registry's own linkage table.
+            trace_row = (
+                session.execute(
+                    select(DemoTrace).where(DemoTrace.checkout_id == checkout_id)
+                )
+                .scalars()
+                .first()
+            )
+            if trace_row is not None:
+                return trace_row.intent_id
+            # Baseline carries the proposal-time intent for the checkout.
+            baseline = (
+                session.execute(
+                    select(TransactionBaseline).where(
+                        TransactionBaseline.checkout_id == checkout_id
+                    )
+                )
+                .scalars()
+                .first()
+            )
+            if baseline is not None:
+                return baseline.intent_id
+            # Execution attempts reference checkouts directly.
+            attempt = session.execute(
+                select(ExecutionAttempt).where(ExecutionAttempt.checkout_id == checkout_id)
+            ).scalar_one_or_none()
+            if attempt is not None:
+                return attempt.intent_id
+        return None
 
     if _DISPLAY_RE.match(q):
         trace = registry.by_trace(q)
@@ -86,27 +124,19 @@ def search(
         return {"match": result}
 
     if _CHECKOUT_RE.match(q):
-        with session_scope(repos.factory) as session:
-            row = session.execute(
-                select(RowCheckout).where(RowCheckout.checkout_id == q)
-            ).scalar_one_or_none()
-            if row is None:
-                raise HTTPException(status_code=404, detail="Unknown checkout")
-        # find the trace whose checkout_id matches
-        traces = registry.recent(100)
-        for t in traces:
-            if t.checkout_id == q:
-                return {"match": summarize_trace(repos, t)}
-        # fall back: locate the intent via decisions/attempts referencing it
-        with session_scope(repos.factory) as session:
-            attempt = session.execute(
-                select(ExecutionAttempt).where(ExecutionAttempt.checkout_id == q)
-            ).scalar_one_or_none()
-            if attempt is not None:
-                result = intent_to_trace(attempt.intent_id)
-                if result is not None:
-                    return {"match": result}
-        raise HTTPException(status_code=404, detail="Checkout not linked to a trace yet")
+        # F010: direct checkout-row lookup (outside any recent window).
+        intent_id = checkout_to_intent(q)
+        if intent_id is None:
+            # The checkout row exists but nothing links it to a trace yet.
+            with session_scope(repos.factory) as session:
+                row = session.get(RowCheckout, q)
+            if row is not None:
+                raise HTTPException(status_code=404, detail="Checkout not linked to a trace yet")
+            raise HTTPException(status_code=404, detail="Unknown checkout")
+        result = intent_to_trace(intent_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Unknown checkout")
+        return {"match": result}
 
     if _ATTEMPT_RE.match(q):
         with session_scope(repos.factory) as session:
@@ -119,7 +149,33 @@ def search(
             raise HTTPException(status_code=404, detail="Unknown attempt")
         return {"match": result}
 
-    raise HTTPException(status_code=404, detail="Unrecognized id shape")
+    # F010: provider/Razorpay order id — direct lookups over attempts and the
+    # provider-event table (public trace summary only; nothing else exposed).
+    with session_scope(repos.factory) as session:
+        attempts = (
+            session.execute(
+                select(ExecutionAttempt).where(ExecutionAttempt.razorpay_order_id == q)
+            )
+            .scalars()
+            .all()
+        )
+        for attempt in attempts:
+            result = intent_to_trace(attempt.intent_id)
+            if result is not None:
+                return {"match": result}
+        provider_events = (
+            session.execute(
+                select(ProviderEvent).where(ProviderEvent.razorpay_order_id == q)
+            )
+            .scalars()
+            .all()
+        )
+        for provider_event in provider_events:
+            if provider_event.intent_id:
+                result = intent_to_trace(provider_event.intent_id)
+                if result is not None:
+                    return {"match": result}
+        raise HTTPException(status_code=404, detail="Unrecognized id shape")
 
 
 @router.get("/trace/{trace_id}")
@@ -226,6 +282,14 @@ def forensic_trace(
     # G023: the SELECTED trace's own hash-chain nodes (event hash heads +
     # prev-hash links, read-only) so the judge can see exactly where tamper
     # would break THIS trace's chain. Global ledger verify stays at /audit/verify.
+    # F009: the audit ledger is GLOBAL — a selected trace's events interleave
+    # with OTHER traces' events in one hash chain. Two consecutive events of
+    # THIS trace are NOT expected to link by prev_hash directly when unrelated
+    # global events lie between them. The honest semantics: this trace's
+    # ANCHORS in the global chain, with the number of global events between
+    # consecutive anchors, and the GLOBAL ledger verify as the cryptographic
+    # authority. A trace view must never report "broken" merely because of
+    # interleaving.
     with session_scope(repos.factory) as session:
         chain_rows = (
             session.execute(
@@ -237,20 +301,52 @@ def forensic_trace(
             .scalars()
             .all()
         )
-    chain_nodes = [
-        {
-            "seq": e.seq,
-            "event_type": e.event_type,
-            "prev_head": (e.previous_event_hash or "")[:16],
-            "hash_head": e.current_event_hash[:16],
-        }
-        for e in chain_rows
-    ]
-    chain_linked = all(
-        chain_nodes[i]["prev_head"] == chain_nodes[i - 1]["hash_head"]
-        or not chain_nodes[i]["prev_head"]
-        for i in range(1, len(chain_nodes))
-    )
+        seqs = [e.seq for e in chain_rows]
+        min_seq = min(seqs) if seqs else 0
+        max_seq = max(seqs) if seqs else 0
+        # Contiguous global segment between this trace's first/last anchor —
+        # the exact global events that link the anchors (includes other
+        # traces' events; that is the truth of a global ledger).
+        global_between = int(
+            session.execute(
+                select(func.count())
+                .where(AuditEvent.seq >= min_seq)
+                .where(AuditEvent.seq <= max_seq)
+            ).scalar()
+        ) if seqs else 0
+    chain_nodes: list[dict[str, Any]] = []
+    prev_row: AuditEvent | None = None
+    for e in chain_rows:
+        gap = None
+        directly_linked = None
+        if prev_row is not None:
+            # Real global linkage: does e's prev point at the immediately
+            # preceding GLOBAL event (which is prev_row only when no other
+            # trace's event lies between them)?
+            gap = int(e.seq) - int(prev_row.seq) - 1
+            directly_linked = (
+                e.previous_event_hash is not None
+                and e.previous_event_hash == prev_row.current_event_hash
+            )
+        chain_nodes.append(
+            {
+                "seq": e.seq,
+                "event_type": e.event_type,
+                "prev_head": (e.previous_event_hash or "")[:16],
+                "hash_head": e.current_event_hash[:16],
+                # F009: honest interleaving metadata — how many OTHER global
+                # events separate consecutive anchors of THIS trace, and
+                # whether the two anchors are ALSO directly linked (gap 0).
+                "global_gap_before": gap,
+                "directly_linked_to_prev": directly_linked,
+            }
+        )
+        prev_row = e
+    # The selected trace is well-anchored in the global chain when every one
+    # of its events carries a prev_hash into the chain (it does not require
+    # trace-consecutive linkage — that would mislabel interleaving as a
+    # break). The cryptographic authority remains /audit/verify.
+    chain_anchored = all(n["prev_head"] != "" for n in chain_nodes) and bool(chain_nodes)
 
     # Chain anchors (M086): heads of the trace's own events.
     return {
@@ -260,12 +356,19 @@ def forensic_trace(
         "provider": provider,
         "chain": {
             "nodes": chain_nodes,
-            "linked": chain_linked,
+            "anchored": chain_anchored,
             "node_count": len(chain_nodes),
+            "global_events_between_first_last_anchor": (
+                global_between - len(chain_nodes) if seqs else 0
+            ),
             "note": (
-                "This trace's own hash-chain nodes: each event's hash covers the "
-                "previous. Tamper simulation is non-mutating; the global ledger "
-                "verifier lives at /audit/verify."
+                "THIS TRACE'S ANCHORS IN THE GLOBAL AUDIT CHAIN. The ledger is "
+                "global: unrelated events from other traces may lie between "
+                "two anchors (global_gap_before counts them) — that is "
+                "expected interleaving, NOT a break. Each anchor links to the "
+                "global chain via prev_hash; cryptographic authority is the "
+                "GLOBAL CHAIN VERIFY at /audit/verify. Tamper simulation is "
+                "non-mutating."
             ),
         },
         "raw_view": "/audit/timeline",
