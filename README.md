@@ -71,11 +71,12 @@ it was less safe. Full one-shot evaluation evidence:
 
 | Gate | Result |
 |---|---|
-| **AgentPay-X** cross-protocol security benchmark | **191/191** — 37 safe scenarios pass, 154 attack scenarios blocked, 0 false allows, 0 false blocks, 0 exactly-once violations |
+| **AgentPay-X** adversarial policy benchmark | **191-scenario benchmark: 100% safe-pass and 100% attack-block at the policy gate, 0 false allows, 0 false blocks, 0 exactly-once violations** — with separate provider/exactly-once acceptance tests. Strict per-case granularity is 156/191; the other 35 cases carry **documented firewall-granularity differences** (e.g. a malformed-JSONRPC attack blocks at the consistency layer rather than the firewall) while meeting the headline rates. Not 191 literal live provider attacks. |
 | Frozen evaluation (active PRE_V2 vs rejected v2) | see table below |
-| Backend test suite | 813 collected, exit 0 (live DeBERTa runtime in the loop) |
+| Backend test suite | 992 collected, exit 0 (live DeBERTa runtime in the loop; run as separate targeted suites — never claimed as one invocation) |
+| Live-ingress isolation suite | 13/13 in isolation (the full-suite run can flake 2–3 of these from cross-test DB interference — documented, rerun-in-isolation is the recorded gate) |
 | Static/type gates | ruff clean, mypy clean (97 files), tsc/eslint 0 errors |
-| Frontend | vitest 18/18, next build OK |
+| Frontend | vitest 35/35, next build OK |
 | Security scan | PASS — 0 findings |
 
 Frozen evaluation, one-shot, hash-pinned sets (final test 2,227 · human gold 301
@@ -116,11 +117,32 @@ creation and all rejection paths, not a completed payment.
    signature-valid, replay-safe message carrying 2 units against a ≤ ₹3,000
    authorization — protocol PASS, intent mismatch, final BLOCK, **Razorpay never
    contacted**. *Protocol validity is not transaction authority — proven live.*
+4. **Why semantic AI matters** (Security Lab): the deterministic rules ALLOW a
+   structured-clean transaction; the REAL active model reads the commerce
+   evidence against the human authorization, finds the contradiction
+   (p(contradiction) ≈ 0.9998) and BLOCKs through conservative fusion — ticket
+   withheld, provider called zero times.
+5. **Mission Control** (`/mission-control`): one transaction end-to-end — the
+   13-stage pipeline moves only as far as the real evidence says, live
+   authorization-vs-current diff, mutations/revert/execute on the CURRENT
+   trace, read-only replay, and DEMO PREFLIGHT proving every component ready.
+6. **Governance truth** (`/governance`): the actual rejected AgentPay-IR v2
+   checkpoint runs live in a non-authoritative shadow (canonical NLI
+   orientation: premise = commerce evidence, hypothesis = human authorization);
+   even when it disagrees, authority stays with the active model alone.
 
-**Pages:** `/buyer` (purchase flow) · `/security-lab` (attack demos, per-stage
-decisions) · `/protocols` (cross-protocol pipeline with per-stage verdicts and
-semantic probabilities) · `/audit` (tamper-evident event timeline, chain verify,
-tamper test).
+**Pages:** `/buyer` (purchase flow) · `/mission-control` (presenter console:
+13-stage live pipeline, current-transaction diff, real actions on the current
+trace, DEMO PREFLIGHT readiness probes, read-only replay) ·
+`/merchant` (offer sandbox — mutate a real checkout and watch the same trace
+drift) · `/protocols` (playground: real packet mutations, real UCP
+RFC 9421/9530 + AP2 ES256 signature verification, per-stage verdicts, cross-
+protocol consistency) · `/security-lab` (attack demos, per-stage decisions,
+**Why semantic AI matters** — the real model tightening an ALLOW into BLOCK) ·
+`/audit` (forensics: search by trace/intent/checkout/attempt/order id,
+tamper-evident anchors in the global chain, read-only replay, tamper test) ·
+`/governance` (active vs challenger model truth + the REAL rejected v2
+running non-authoritatively in shadow, canonical NLI orientation).
 
 ## Quick local run
 
