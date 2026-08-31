@@ -278,10 +278,14 @@ def _project_one(ev: AuditEvent) -> StageEvent | None:
         detail = (
             "Full-evidence rejection: per-stage verdicts recorded, no ticket, no provider contact."
         )
+        # F008: real keys as appended by _record_rejection (protocol_firewall,
+        # razorguard_decision, final_decision) — the earlier projection read
+        # firewall/razorguard/final and always rendered empty evidence.
         evidence = {
-            "firewall": payload.get("firewall"),
-            "razorguard": payload.get("razorguard"),
-            "final": payload.get("final"),
+            "firewall": payload.get("protocol_firewall"),
+            "razorguard": payload.get("razorguard_decision"),
+            "final": payload.get("final_decision"),
+            "semantic_verifier": payload.get("semantic_verifier"),
         }
     elif t in _PROVIDER_ORDER_EVENTS:
         stage = "provider"
@@ -402,7 +406,7 @@ def summarize_trace(repos: Repositories, trace: DemoTrace) -> dict[str, Any]:
             provider_contacted = True
             provider_calls += 1
         elif ev.event_type == _REJECTION_EVENT:
-            final = str(payload.get("final") or final)
+            final = str(payload.get("final_decision") or final)
             if payload.get("provider_contacted") is False:
                 provider_contacted = provider_contacted or False
 

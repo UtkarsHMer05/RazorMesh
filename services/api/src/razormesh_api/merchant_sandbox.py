@@ -334,12 +334,17 @@ def propose_checkout_for_demo(
     product_id: str,
     quantity: int = 1,
     intent_id: str | None = None,
+    max_quantity: int = 2,
+    max_total_minor: int = 50_000_000,
 ) -> tuple[str, str, dict[str, Any]]:
     """Create a proposed checkout for a product.
 
     With ``intent_id`` (G015): the checkout is a new revision of the CURRENT
     mission's transaction - one intent, one trace, no disconnected missions.
-    Without: a fresh fixture intent is created (explicit new mission).
+    Without: a fresh fixture intent is created (explicit new mission); its
+    authorization profile (max quantity/total) is the caller's contract to
+    set for the scenario it wants to demonstrate (F006: scenario semantics
+    live in the mission's single intent, not a second one minted later).
 
     Returns (intent_id, checkout_id, expected) where expected carries the
     authorization-relevant hashes for post-authorization drift defense checks
@@ -374,10 +379,10 @@ def propose_checkout_for_demo(
                     status="AUTHORIZED",
                     currency="INR",
                     recurring_allowed=False,
-                    max_total_minor=50_000_000,
-                    aggregate_budget_minor=200_000_000,
-                    max_quantity=2,
-                    approval_threshold_minor=40_000_000,
+                    max_total_minor=max_total_minor,
+                    aggregate_budget_minor=max_total_minor * 2,
+                    max_quantity=max_quantity,
+                    approval_threshold_minor=int(max_total_minor * 0.8),
                     issued_at=now,
                     authorized_at=now,
                     expires_at=now + timedelta(minutes=30),

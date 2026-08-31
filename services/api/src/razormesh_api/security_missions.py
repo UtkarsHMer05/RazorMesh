@@ -56,8 +56,16 @@ class MissionRecipe:
     pipeline: str  # "razorguard" | "acceptance"
     # Merchant-sandbox mutations applied after proposal (G013 checkout-local).
     mutations: tuple[MutationKind, ...] = field(default_factory=tuple)
-    # For pipeline="acceptance": the D-056 demo scenario to delegate to.
+    # For pipeline="acceptance": the D-056 demo scenario semantics to run on
+    # THIS mission's intent (F006: same orchestrator, same scenario semantics,
+    # but ONE intent/checkout/trace — never a second mission).
     acceptance_scenario: str | None = None
+    # Per-recipe authorization profile for the mission intent (F006): the
+    # scenario semantics live in the SINGLE intent the mission creates, so a
+    # protocol-valid/intent-invalid mission violates its own authorization
+    # instead of a silently-minted second intent.
+    intent_max_quantity: int = 2
+    intent_max_total_minor: int = 50_000_000
 
 
 _RECIPES: dict[str, MissionRecipe] = {
@@ -123,11 +131,21 @@ _RECIPES: dict[str, MissionRecipe] = {
             title="Protocol-valid, intent-invalid",
             description=(
                 "A perfectly valid protocol packet carries a transaction the human "
-                "never authorized (2 units vs 1). Protocol PASS; RazorGuard BLOCK."
+                "never authorized (2 units = ₹4,998 vs a ₹3,000 authorization). "
+                "Protocol PASS; RazorGuard BLOCK."
             ),
             attack=True,
             pipeline="acceptance",
             acceptance_scenario="scenario-c-protocol-valid-intent-invalid",
+            # Scenario-C semantics carried by THIS mission's single intent:
+            # quantity 2 is PROPOSABLE (the packet is protocol-valid and
+            # schema-valid — that's the thesis), but the ₹3,000 total cap
+            # makes RazorGuard BLOCK the transaction at the authority layer.
+            # Mirrors the scenario-C endpoint's max_quantity=3 cap loosely:
+            # here the quantity is allowed and the BUDGET is the violated
+            # authorization (2 x ₹2,499 = ₹4,998 > ₹3,000).
+            intent_max_quantity=2,
+            intent_max_total_minor=300_000,
         ),
     )
 }
@@ -256,10 +274,20 @@ def run_mission(
     if recipe is None:
         raise MissionError("UNKNOWN_MISSION", f"unknown mission {mission_id}")
 
-    # 1. create the mission checkout (current-trace binding when intent given)
+    # 1. create the mission checkout (current-trace binding when intent given).
+    # F006: the mission's SINGLE intent carries the recipe's authorization
+    # profile, so acceptance-pipeline scenarios (protocol-valid/intent-invalid)
+    # violate THIS intent rather than a second one minted at execute time.
+    # The proposal uses a normal catalog product (the scenario products are
+    # provisioned by the demo catalog only inside the acceptance pipeline).
     pid = product_id or _product_for_mission(repos)
     i_id, c_id, _expected = propose_checkout_for_demo(
-        repos, product_id=pid, quantity=quantity, intent_id=intent_id
+        repos,
+        product_id=pid,
+        quantity=quantity,
+        intent_id=intent_id,
+        max_quantity=recipe.intent_max_quantity,
+        max_total_minor=recipe.intent_max_total_minor,
     )
 
     # 2. apply the recipe's mutations via the merchant-sandbox primitives
@@ -274,23 +302,77 @@ def run_mission(
 
     # 3. execute through the chosen pipeline
     if recipe.pipeline == "acceptance":
-        # Delegate to the owner-accepted D-056 live orchestrator endpoints
-        # (same code path the UI calls; real pipeline, DeBERTa in loop).
-        from razormesh_api.api.routes.phase4_acceptance import (
-            demo_scenario_b_semantic_violation,
-            demo_scenario_c_protocol_valid_intent_invalid,
-        )
+        # F006: run the SAME Phase-4 acceptance orchestrator the scenario-B/C
+        # endpoints use, but on THIS mission's intent — ONE intent, ONE
+        # checkout, ONE trace. The demo-scenario endpoints mint their own
+        # fresh intent (their contract); delegating to them from here would
+        # create a second intent/checkout and orphan the mission's first
+        # proposal. The orchestrator takes an existing intent_id directly, so
+        # the mission lineage is preserved while the pipeline stays identical.
+        from razormesh_api.protocol.acceptance import Phase4AcceptanceOrchestrator
 
-        if recipe.acceptance_scenario == "scenario-b-semantic-violation":
-            pipeline = demo_scenario_b_semantic_violation()
-        elif recipe.acceptance_scenario == "scenario-c-protocol-valid-intent-invalid":
-            pipeline = demo_scenario_c_protocol_valid_intent_invalid()
-        else:  # pragma: no cover - recipes are data; guarded above
+        from .api.routes.phase4_acceptance import _ensure_demo_catalog, build_orchestrator
+
+        # The scenario products (hidden-recurring / standard) are provisioned
+        # by the demo catalog — same idempotent seeding the scenario endpoints
+        # run before orchestrating. Provisioned BEFORE the acceptance proposal
+        # so the scenario product exists for the orchestrator's prepare().
+        _ensure_demo_catalog(repos)
+        orch: Phase4AcceptanceOrchestrator = build_orchestrator()
+        acceptance_product = {
+            # scenario-b-semantic-violation: the hidden-recurring product.
+            "scenario-b-semantic-violation": "prd_20000000000000000000000000",
+            # scenario-c-protocol-valid-intent-invalid: the standard product.
+            "scenario-c-protocol-valid-intent-invalid": "prd_30000000000000000000000000",
+        }.get(recipe.acceptance_scenario or "")
+        if acceptance_product is None:  # pragma: no cover - recipes are data
             raise MissionError("BAD_RECIPE", "unknown acceptance scenario")
-        # The acceptance pipeline runs its OWN intent/checkout; bind this
-        # mission's trace to it so the movie reads one coherent trace.
-        i_id = str(pipeline.get("intent_id") or i_id)
-        c_id = str(pipeline.get("checkout_id") or c_id)
+        # Scenario-C packet semantics: quantity 2 (protocol-valid packet) —
+        # the human's single intent authorizes it quantity-wise, and RazorGuard
+        # BLOCKs on the violated budget instead.
+        acceptance_quantity = (
+            2
+            if recipe.acceptance_scenario == "scenario-c-protocol-valid-intent-invalid"
+            else quantity
+        )
+        run = orch.prepare(
+            intent_id=i_id,
+            product_id=acceptance_product,
+            quantity=acceptance_quantity,
+            currency="INR",
+        )
+        ev = run.run.evidence
+        pipeline = {
+            "scenario": recipe.acceptance_scenario,
+            "run_id": run.run.run_id,
+            "intent_id": run.run.intent_id,
+            "checkout_id": run.run.checkout_id,
+            "rejection_stage": run.rejection_stage,
+            "rejection_reason": run.rejection_reason,
+            "protocol_firewall": ev.protocol_firewall or "NOT_RUN",
+            "protocol_firewall_reasons": list(ev.protocol_firewall_reasons),
+            "razorguard_decision": ev.razorguard_decision or "NOT_RUN",
+            "semantic_verifier": ev.semantic_verifier or "NOT_RUN",
+            "semantic_backend": ev.semantic_backend,
+            "semantic_model_version": ev.semantic_model_version,
+            "semantic_probabilities": {
+                "contradiction": ev.semantic_probabilities[0],
+                "entailment": ev.semantic_probabilities[1],
+                "neutral": ev.semantic_probabilities[2],
+            },
+            "semantic_fail_closed": ev.semantic_fail_closed,
+            "final_decision": ev.final_decision,
+            "ticket_issued": bool(run.run.ticket_id),
+            "provider_contacted": False,
+            "consumed": run.consumed,
+        }
+        # The acceptance run may create its own checkout revision for the
+        # SAME intent (a new revision of the same transaction, not a new
+        # mission). Keep the mission bound to its original checkout for the
+        # mutation/baseline surface; the acceptance run_id is recorded as
+        # evidence of the executed pipeline.
+        if run.run.checkout_id:
+            pipeline["acceptance_checkout_id"] = run.run.checkout_id
     else:
         # RazorGuard pipeline: drive the REAL decision path over this
         # mission's (possibly mutated) checkout through the sanctioned

@@ -16,7 +16,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useLiveTrace } from "@/lib/live-trace";
 import { formatTransactionValue } from "@/lib/formatTransactionValue";
 import styles from "./mission-control.module.css";
@@ -29,12 +28,14 @@ type StageNode = {
 
 const PIPELINE: StageNode[] = [
   { id: "human", label: "Human mandate", role: "Authority" },
-  { id: "agent", label: "AI Agent", role: "Proposes only" },
+  { id: "agent", label: "Shopping Agent", role: "Proposes only" },
   { id: "merchant", label: "Merchant", role: "Offer (untrusted)" },
   { id: "protocol", label: "Protocol", role: "MCP·UCP·AP2·ACP·A2A" },
+  { id: "firewall", label: "Protocol Firewall", role: "Adapter evidence gate" },
+  { id: "ir", label: "AgentCommerceIR", role: "Canonical normalization + commitment" },
   { id: "razorguard", label: "RazorGuard", role: "Deterministic rules" },
   { id: "semantic", label: "Semantic Trust", role: "Advisory" },
-  { id: "fusion", label: "Fusion", role: "Only tightens" },
+  { id: "fusion", label: "Conservative Fusion", role: "Only tightens" },
   { id: "ticket", label: "Execution Ticket", role: "Single-use authority" },
   { id: "provider", label: "Razorpay", role: "Trusted executor only" },
   { id: "reconciliation", label: "Reconciliation", role: "Exactly-once" },
@@ -46,7 +47,6 @@ const fmtINR = (m: number | null | undefined) =>
   m == null ? "—" : `₹${(m / 100).toLocaleString("en-IN")}`;
 
 export default function MissionControlPage() {
-  const router = useRouter();
   const { traceId, summary, events, setTraceId } = useLiveTrace({
     active: true,
     autoStop: false, // keep polling: the video page stays live
@@ -96,6 +96,35 @@ export default function MissionControlPage() {
     const byStage = new Map<string, { status: string; detail: string }>();
     for (const e of displayed) {
       byStage.set(e.stage, { status: e.status, detail: e.detail ?? "" });
+    }
+    // F008: FIREWALL + IR derive from REAL trace evidence, not decoration.
+    // The full-evidence rejection event (stage=protocol) carries the real
+    // firewall verdict in its evidence payload; the acceptance pipeline's IR
+    // normalization produced the commitment the packet was judged against.
+    const rejection = displayed.find(
+      (e) => e.stage === "protocol" && e.status === "BLOCK",
+    );
+    const firewallVerdict =
+      typeof rejection?.evidence?.firewall === "string"
+        ? (rejection.evidence.firewall as string)
+        : null;
+    if (firewallVerdict) {
+      byStage.set("firewall", {
+        status: firewallVerdict,
+        detail: "Protocol firewall verdict from the acceptance run evidence (adapter verification gate).",
+      });
+    }
+    // The IR stage is proven by the packet having REACHED the decision stages:
+    // normalization + commitment happened (the commitment the envelope
+    // carries is the normalized IR's). Never marked DONE without a packet.
+    const reachedDecision = displayed.some((e) =>
+      ["razorguard", "semantic", "fusion", "ticket"].includes(e.stage),
+    );
+    if (reachedDecision) {
+      byStage.set("ir", {
+        status: "DONE",
+        detail: "Packet normalized into the canonical AgentCommerceIR; commitment bound to the envelope.",
+      });
     }
     return PIPELINE.map((node) => {
       const hit = byStage.get(node.id);
@@ -234,10 +263,6 @@ export default function MissionControlPage() {
     },
     [traceId, refreshCurrentTransaction],
   );
-
-  const startSafeMission = useCallback(() => {
-    router.push("/buyer");
-  }, [router]);
 
   const demoReset = useCallback(async () => {
     setBusy(true);
@@ -420,13 +445,15 @@ export default function MissionControlPage() {
           <section className={styles.deck} data-testid="mc-controls">
             <h2>Control deck</h2>
             <p className="page-sub">
-              Every action below acts on the CURRENT mission&apos;s transaction (trace{" "}
-              <strong>{traceId ?? "—"}</strong>). Navigation is labeled as navigation.
+              Actions on the CURRENT mission&apos;s transaction (trace{" "}
+              <strong>{traceId ?? "—"}</strong>) are labeled “on current”.
+              Launching a NEW mission or navigating elsewhere is labeled as
+              exactly that — never as a transaction action.
             </p>
             <div className={styles.deckGrid}>
-              <button type="button" className="btn btn-primary btn-sm" onClick={startSafeMission} data-testid="mc-safe">
-                Start safe mission
-              </button>
+              <Link className="btn btn-primary btn-sm" href="/buyer" data-testid="mc-safe">
+                Open Buyer — launch new mission (navigate) →
+              </Link>
               <button
                 type="button"
                 className="btn btn-sm"
@@ -434,7 +461,7 @@ export default function MissionControlPage() {
                 disabled={busy}
                 data-testid="mc-hidden-membership"
               >
-                Hidden membership attack
+                Launch new Hidden-membership mission
               </button>
               <button
                 type="button"
@@ -443,7 +470,7 @@ export default function MissionControlPage() {
                 disabled={busy}
                 data-testid="mc-protocol-thesis"
               >
-                Protocol-valid / intent-invalid
+                Launch new Protocol-thesis mission
               </button>
               <button
                 type="button"
@@ -475,6 +502,24 @@ export default function MissionControlPage() {
               <button
                 type="button"
                 className="btn btn-sm"
+                onClick={() => void actOnCurrent("mutate", "hidden_membership")}
+                disabled={busy || !traceId}
+                data-testid="mc-mutate-hidden-recurring"
+              >
+                Hidden recurring on current
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => void actOnCurrent("mutate", "protocol_mutation")}
+                disabled={busy || !traceId}
+                data-testid="mc-mutate-protocol"
+              >
+                Protocol mutation on current
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
                 onClick={() => void actOnCurrent("execute")}
                 disabled={busy || !traceId}
                 data-testid="mc-execute-current"
@@ -493,8 +538,8 @@ export default function MissionControlPage() {
               <Link className="btn btn-secondary btn-sm" href={traceId ? `/audit?trace=${traceId}` : "/audit"} data-testid="mc-open-audit">
                 Open Audit (navigate) →
               </Link>
-              <Link className="btn btn-secondary btn-sm" href="/protocols" data-testid="mc-replay-scenario">
-                Protocol playground (navigate) →
+              <Link className="btn btn-secondary btn-sm" href="/protocols" data-testid="mc-open-protocols">
+                Open Protocols (navigate) →
               </Link>
               <button
                 type="button"
