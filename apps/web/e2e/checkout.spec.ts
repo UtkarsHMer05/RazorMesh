@@ -18,6 +18,10 @@ declare global {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     __rzpCaptured: any;
     __rzpOpened?: boolean;
+    // Phase-5 payment-FSM stub (e2e/phase5-payment-fsm.spec.ts)
+    __rzpClosed?: boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    __rzpFailHandler?: (payload: any) => void;
   }
 }
 
@@ -216,7 +220,7 @@ test.describe("P2-M46: stubbed-checkout E2E", () => {
         razorpay_signature: "ee".repeat(32),
       });
     }, LAUNCH.razorpay_order_id);
-    await expect(page.getByTestId("pay-state")).toHaveText("FAILED");
+    await expect(page.getByTestId("pay-state")).toHaveText("PAYMENT_FAILED");
     await expect(page.getByTestId("failed-note")).toBeVisible();
     await expect(page.getByTestId("retry-pay")).toHaveCount(0);
     await expectNoSecrets(page);
@@ -246,7 +250,7 @@ test.describe("P2-M46: stubbed-checkout E2E", () => {
     }, LAUNCH.razorpay_order_id);
     await expect(page.getByTestId("pay-state")).toHaveText("PROVIDER_UNKNOWN");
     await expect(page.getByTestId("unknown-note")).toContainText(
-      /starting a NEW payment is intentionally unavailable/i,
+      /reconciliation required|never double-charge/i,
     );
     await expect(page.getByTestId("refresh-status")).toBeVisible();
     await expect(page.getByTestId("retry-pay")).toHaveCount(0);

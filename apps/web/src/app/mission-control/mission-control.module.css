@@ -1,0 +1,105 @@
+/* Phase-5 Mission Control (M101-M113) — primary video page */
+
+.mc { padding: 24px 0 64px; }
+.mc.presenter { font-size: 1.12em; }
+.presenter .nodeLabel { font-size: 1.15em; }
+
+.header { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+.modeControls { display: flex; gap: 10px; align-items: center; margin: 10px 0; }
+.presenterBadge {
+  background: var(--rm-red, #d02020); color: #fff; font-weight: 800;
+  padding: 3px 10px; letter-spacing: 0.08em; border: 2px solid var(--rm-line, #121212);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(420px, 1.4fr) minmax(340px, 1fr);
+  gap: 20px;
+  max-width: 1400px;
+  margin: 18px auto;
+  padding: 0 20px;
+}
+@media (max-width: 1024px) { .layout { grid-template-columns: 1fr; } }
+
+.pipeline {
+  display: flex;
+  flex-direction: column;
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  box-shadow: 7px 7px 0 0 var(--rm-line, #121212);
+  padding: 22px;
+}
+.pipelineCell { display: contents; }
+
+.node {
+  border: 3px solid var(--rm-line, #121212);
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  background: var(--rm-bg, #f0f0f0);
+  min-height: 58px;
+}
+.nodeLabel { font-weight: 800; letter-spacing: 0.05em; }
+.nodeRole { grid-column: 1 / -1; font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; opacity: 0.65; }
+.nodeStatus {
+  font-weight: 800; font-variant-numeric: tabular-nums;
+  padding: 2px 10px; border: 2px solid var(--rm-line, #121212);
+  align-self: start; letter-spacing: 0.04em;
+}
+.nodeDetail { grid-column: 1 / -1; font-size: 12px; opacity: 0.85; }
+
+.nodePending { opacity: 0.55; }
+.nodeActive { background: var(--rm-yellow, #f0c020); }
+.nodePass { background: var(--rm-blue, #1040c0); }
+.nodePass .nodeLabel, .nodePass .nodeRole, .nodePass .nodeDetail { color: #fff; }
+.nodePass .nodeStatus { background: #fff; color: var(--rm-blue, #1040c0); }
+.nodeBlock { background: var(--rm-red, #d02020); }
+.nodeBlock .nodeLabel, .nodeBlock .nodeRole, .nodeBlock .nodeDetail { color: #fff; }
+.nodeBlock .nodeStatus { background: #fff; color: var(--rm-red, #d02020); }
+.nodeChallenge { background: var(--rm-yellow, #f0c020); }
+
+.connector {
+  text-align: center; font-size: 20px; padding: 6px 0; letter-spacing: 0.1em;
+}
+.connectorFlow { color: var(--rm-blue, #1040c0); animation: rm-mc-flow 900ms ease-in-out infinite; }
+.connectorBroken { color: var(--rm-red, #d02020); font-weight: 900; animation: rm-mc-stop 700ms ease-out 3; }
+@keyframes rm-mc-flow { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
+@keyframes rm-mc-stop { 0% { transform: scale(1); } 50% { transform: scale(1.6); } 100% { transform: scale(1); } }
+
+.stoppedAt {
+  background: var(--rm-red, #d02020); color: #fff; font-weight: 600;
+  padding: 12px 14px; border: 2px solid #fff; margin-top: 12px;
+}
+
+.side { display: grid; gap: 16px; align-self: start; }
+
+.evidence, .deck, .summaries {
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  box-shadow: 5px 5px 0 0 var(--rm-line, #121212);
+  padding: 16px 18px;
+}
+.evidence h2, .deck h2, .summaries h2 { margin-top: 0; }
+
+.evidence dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 8px 0; }
+.evidence dt { font-size: 10px; text-transform: uppercase; letter-spacing: 0.09em; opacity: 0.65; align-self: center; }
+.evidence dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.advanced { margin-top: 8px; }
+.advanced summary { cursor: pointer; font-size: 12px; opacity: 0.8; }
+.advanced ul { max-height: 200px; overflow-y: auto; font-size: 12px; }
+.advanced code { word-break: break-all; font-size: 11px; }
+
+.deckGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+.status { background: var(--rm-bg, #f0f0f0); border: 2px solid var(--rm-line, #121212); padding: 8px 10px; font-size: 13px; }
+
+.playback { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.speedLabel { font-size: 12px; display: inline-flex; gap: 6px; align-items: center; }
+.speedLabel select { font: inherit; border: 2px solid var(--rm-line, #121212); padding: 2px 4px; }
+
+.summaries p { font-size: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .connectorFlow, .connectorBroken { animation: none; }
+}

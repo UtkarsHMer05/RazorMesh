@@ -70,3 +70,124 @@
   font-size: 14px;
   box-shadow: var(--rm-shadow-2);
 }
+
+/* Phase-5: mission trace chip on the buyer page */
+.missionTrace {
+  background: var(--rm-yellow, #f0c020);
+  border: 2px solid var(--rm-line, #121212);
+  padding: 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Phase-5: AI Commerce Mission (M019–M034) ========================== */
+.step {
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  padding: 18px 20px;
+  margin: 16px 0;
+  box-shadow: 4px 4px 0 0 var(--rm-line, #121212);
+  position: relative;
+}
+.stepDone { border-left: 12px solid var(--rm-blue, #1040c0); }
+.stepActive { border-left-color: var(--rm-yellow, #f0c020); }
+.step h2, .step h3 { margin-top: 0; }
+
+.mandateChips { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+
+.stageChecklist {
+  list-style: none; padding: 0; margin: 8px 0;
+  display: grid; gap: 4px;
+}
+.stageChecklist li { font-size: 14px; letter-spacing: 0.02em; }
+.stageDone {
+  color: var(--rm-fg, #121212);
+  animation: rm-mission-stage 220ms ease-out;
+}
+.stagePending { opacity: 0.55; }
+@keyframes rm-mission-stage {
+  from { transform: translateX(-6px); opacity: 0.2; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.constraintGrid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 10px; margin: 12px 0;
+}
+.constraintCard {
+  border: 2px solid var(--rm-line, #121212); background: var(--rm-bg, #f0f0f0);
+  padding: 10px; display: flex; flex-direction: column; gap: 4px;
+}
+.constraintLabel { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.75; }
+.constraintValue { font-weight: 600; font-variant-numeric: tabular-nums; }
+.constraintTag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 6px; border: 2px solid var(--rm-line, #121212); align-self: flex-start; }
+.tagExplicit { background: var(--rm-yellow, #f0c020); }
+.tagInferred { background: var(--rm-blue, #1040c0); color: #fff; }
+.tagUnspecified { background: var(--rm-bg, #f0f0f0); }
+
+.semanticList { margin: 6px 0; }
+.devDrawer { margin-top: 10px; }
+.devDrawer summary { cursor: pointer; font-size: 13px; opacity: 0.8; }
+.devDrawer pre { background: var(--rm-bg, #f0f0f0); padding: 10px; overflow-x: auto; font-size: 12px; }
+
+.confirmCeremony {
+  border: 3px solid var(--rm-line, #121212); padding: 16px 20px; margin: 16px 0;
+  background: var(--rm-yellow, #f0c020);
+  box-shadow: 6px 6px 0 0 var(--rm-line, #121212);
+}
+.authorityGranted { animation: rm-mission-grant 260ms ease-out; }
+@keyframes rm-mission-grant {
+  0% { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+.confirmActions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.candidateGrid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px; margin: 10px 0;
+}
+.candidateCard {
+  text-align: left; border: 3px solid var(--rm-line, #121212); background: var(--rm-white, #fff);
+  padding: 12px; cursor: pointer; display: flex; flex-direction: column; gap: 4px;
+  font: inherit; box-shadow: 3px 3px 0 0 var(--rm-line, #121212);
+  transition: transform 180ms var(--rm-ease, ease), box-shadow 180ms var(--rm-ease, ease);
+}
+.candidateCard:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 0 var(--rm-line, #121212); }
+.candidateSelected { background: var(--rm-yellow, #f0c020); }
+.candidateRank {
+  align-self: flex-start; background: var(--rm-fg, #121212); color: #fff;
+  font-size: 11px; padding: 1px 8px; letter-spacing: 0.08em;
+}
+
+.rejectedList { margin: 8px 0; display: grid; gap: 6px; font-size: 14px; }
+
+.proposalSummary dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 8px 0; }
+.proposalSummary dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; align-self: center; }
+.proposalSummary dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.trustPipeline { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.trustStage {
+  border: 2px solid var(--rm-line, #121212); padding: 4px 10px; font-size: 13px;
+  background: var(--rm-bg, #f0f0f0);
+}
+.trustGood { background: var(--rm-blue, #1040c0); color: #fff; }
+.trustBad { background: var(--rm-red, #d02020); color: #fff; }
+.trustWarn { background: var(--rm-yellow, #f0c020); }
+.trustAbsent { opacity: 0.55; }
+
+.decision-allow { color: var(--rm-blue, #1040c0); font-weight: 700; font-size: 20px; letter-spacing: 0.06em; }
+.decision-challenge { color: var(--rm-yellow, #b8860b); font-weight: 700; font-size: 20px; letter-spacing: 0.06em; }
+.decision-block { color: var(--rm-red, #d02020); font-weight: 700; font-size: 20px; letter-spacing: 0.06em; }
+
+.handoffLinks { display: flex; flex-wrap: wrap; gap: 8px; }
+.missionTrace {
+  background: var(--rm-yellow, #f0c020);
+  border: 2px solid var(--rm-line, #121212);
+  padding: 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+.qtyInput { width: 80px; padding: 6px; border: 2px solid var(--rm-line, #121212); }
+.payState { font-weight: 600; letter-spacing: 0.04em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .stageDone, .authorityGranted, .candidateCard { animation: none; transition: none; }
+}

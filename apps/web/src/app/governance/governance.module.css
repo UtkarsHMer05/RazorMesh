@@ -1,0 +1,88 @@
+/* Phase-5 Model Governance (M091-M094) */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+.modelCard {
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  box-shadow: 5px 5px 0 0 var(--rm-line, #121212);
+  padding: 18px 20px;
+}
+.modelCard h2 { margin-top: 0; font-size: 20px; }
+.modelCard h3 { margin: 12px 0 6px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.activeCard { background: var(--rm-yellow, #f0c020); }
+.challengerCard { background: var(--rm-white, #fff); }
+
+.statusActive {
+  display: inline-block;
+  background: var(--rm-fg, #121212);
+  color: var(--rm-yellow, #f0c020);
+  font-weight: 700; padding: 4px 10px; letter-spacing: 0.05em;
+  border: 2px solid var(--rm-line, #121212);
+  margin-bottom: 10px;
+}
+.statusRejected {
+  display: inline-block;
+  background: var(--rm-red, #d02020);
+  color: #fff;
+  font-weight: 700; padding: 4px 10px; letter-spacing: 0.05em;
+  border: 2px solid var(--rm-line, #121212);
+  margin-bottom: 10px;
+}
+
+.modelCard dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 8px 0; }
+.modelCard dt { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; align-self: center; }
+.modelCard dd { margin: 0; font-size: 14px; }
+
+.metricsTable { border-collapse: collapse; width: 100%; margin: 8px 0; background: #fff; }
+.metricsTable th, .metricsTable td {
+  border: 2px solid var(--rm-line, #121212);
+  padding: 8px 10px; font-size: 13px; font-variant-numeric: tabular-nums; text-align: left;
+}
+.metricsTable th { background: var(--rm-fg, #121212); color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; }
+.worse { background: var(--rm-red, #d02020); color: #fff; font-weight: 700; }
+.better { background: var(--rm-blue, #1040c0); color: #fff; font-weight: 700; }
+
+.whyText { font-size: 14px; }
+.notAuthorized {
+  background: var(--rm-fg, #121212);
+  color: var(--rm-yellow, #f0c020);
+  font-weight: 800; letter-spacing: 0.05em;
+  padding: 10px 12px; border: 2px solid var(--rm-line, #121212);
+}
+
+.shadowSection {
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-bg, #f0f0f0);
+  box-shadow: 5px 5px 0 0 var(--rm-line, #121212);
+  padding: 16px 20px; margin: 16px 0;
+}
+.shadowSection h2 { margin-top: 0; }
+.shadowControls { display: grid; gap: 8px; max-width: 720px; }
+
+.shadowResult {
+  margin-top: 12px; border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff); padding: 12px 14px;
+}
+.disagreement {
+  background: var(--rm-yellow, #f0c020);
+  border: 2px solid var(--rm-line, #121212);
+  display: inline-block; padding: 4px 10px; font-weight: 700;
+}
+
+/* Phase-5 M116: mobile — cards and tables must fit 360px */
+.cards { grid-template-columns: 1fr; }
+.metricsTable { display: block; overflow-x: auto; max-width: 100%; }
+.modelCard { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.modelCard dl { min-width: 0; }
+.metricsTable { table-layout: auto; }
+.modelCard h2, .statusActive, .notAuthorized { overflow-wrap: anywhere; }
+@media (max-width: 480px) {
+  .cards { grid-template-columns: 1fr; }
+  .metricsTable { font-size: 12px; }
+}

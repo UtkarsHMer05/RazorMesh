@@ -1,0 +1,135 @@
+/* Phase-5 Security Lab (M063-M077) */
+
+.lab { margin: 18px 0; }
+
+.missionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  margin: 14px 0;
+}
+.missionCard {
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  box-shadow: 4px 4px 0 0 var(--rm-line, #121212);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.missionCard h3 { margin: 0; font-size: 18px; }
+.missionCard dl { display: grid; gap: 8px; margin: 0; flex: 1; }
+.missionCard dt { font-size: 10px; text-transform: uppercase; letter-spacing: 0.09em; opacity: 0.7; }
+.missionCard dd { margin: 0; font-size: 14px; }
+
+.movie {
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-fg, #121212);
+  color: var(--rm-white, #fff);
+  box-shadow: 6px 6px 0 0 var(--rm-line, #121212);
+  padding: 18px 20px;
+  margin: 16px 0;
+}
+.movie h3 { margin: 0 0 12px; color: var(--rm-yellow, #f0c020); letter-spacing: 0.06em; }
+.movieStages { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.movieRow {
+  display: grid;
+  grid-template-columns: auto minmax(150px, auto) minmax(130px, auto) 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  animation: rm-movie-rise 260ms ease-out both;
+}
+@keyframes rm-movie-rise {
+  from { transform: translateX(-10px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.movieIndex {
+  width: 22px; height: 22px;
+  background: var(--rm-yellow, #f0c020);
+  color: var(--rm-fg, #121212);
+  font-weight: 800; font-size: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.movieLabel { font-weight: 600; letter-spacing: 0.04em; }
+.movieStatus { font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.05em; }
+.movieDetail { font-size: 12px; opacity: 0.8; }
+
+/* per-state accents (color + text always together) */
+.movieRow[data-state="BLOCK"], .movieRow[data-state="WITHHELD"], .movieRow[data-state="FAILED"] {
+  border-color: var(--rm-red, #d02020);
+  background: rgba(208, 32, 32, 0.16);
+}
+.movieRow[data-state="PASS"], .movieRow[data-state="DONE"], .movieRow[data-state="PROTOCOL_PASS"], .movieRow[data-state="ALLOW"], .movieRow[data-state="ISSUED"] {
+  border-color: var(--rm-yellow, #f0c020);
+}
+.movieRow[data-state="NOT CONTACTED"] { border-color: #fff; }
+
+.providerZero {
+  background: var(--rm-red, #d02020);
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 10px 14px;
+  border: 2px solid #fff;
+  margin: 14px 0 6px;
+}
+
+.campaign {
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  box-shadow: 5px 5px 0 0 var(--rm-line, #121212);
+  padding: 18px 20px;
+  margin: 16px 0;
+}
+.campaign h3, .campaign h4 { margin-top: 0; }
+
+.campaignCounters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+.campaignCounter {
+  border: 2px solid var(--rm-line, #121212);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--rm-bg, #f0f0f0);
+}
+.counterLabel { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; }
+.counterValue { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.familiesDrawer { margin: 10px 0; }
+.familiesDrawer summary { cursor: pointer; font-weight: 600; }
+.familiesDrawer ul { max-height: 260px; overflow-y: auto; font-size: 13px; }
+
+.explorer { margin: 14px 0; }
+.caseList { list-style: none; padding: 0; display: grid; gap: 6px; }
+.caseBtn {
+  font: inherit; cursor: pointer; text-align: left;
+  border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  padding: 6px 10px;
+  box-shadow: 2px 2px 0 0 var(--rm-line, #121212);
+}
+.caseBtn:hover { background: var(--rm-yellow, #f0c020); }
+
+.replay {
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-bg, #f0f0f0);
+  padding: 14px 16px;
+  margin-top: 12px;
+}
+.replay h4 { margin-top: 0; }
+.replay .movieRow {
+  border-color: var(--rm-line, #121212);
+  color: var(--rm-fg, #121212);
+  background: var(--rm-white, #fff);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movieRow { animation: none; }
+}

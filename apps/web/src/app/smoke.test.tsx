@@ -15,7 +15,7 @@ describe("smoke: core pages render", () => {
     expect(screen.getByText("The trusted executor executes")).toBeInTheDocument();
   });
 
-  it("buyer page renders the four-step flow shell", () => {
+  it("buyer page renders the AI commerce mission shell", () => {
     render(<BuyerPage />);
     expect(screen.getByTestId("step-authorization")).toBeInTheDocument();
     expect(screen.getByTestId("bypass-note")).toBeInTheDocument();

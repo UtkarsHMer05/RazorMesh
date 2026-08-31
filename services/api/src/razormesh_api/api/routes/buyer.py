@@ -160,7 +160,18 @@ def create_fixture_intent(repos: Annotated[Repositories, Depends(_repos)]) -> di
                 updated_at=now,
             )
         )
+    _link_trace(repos, str(iid))
     return {"intent_id": str(iid), "expires_at": (now + timedelta(minutes=30)).isoformat()}
+
+
+def _link_trace(repos: Repositories, intent_id: str, **links: str | None) -> str | None:
+    """Phase-5: mint the display trace for a newly created intent (projection only)."""
+    try:
+        from razormesh_api.trace_registry import TraceRegistry
+
+        return TraceRegistry(repos).get_or_create_for_intent(intent_id, **links)
+    except Exception:  # noqa: BLE001 - trace linkage must never break the money path
+        return None
 
 
 @router.post("/buyer/propose")

@@ -1,5 +1,7 @@
 "use client";
 
+import { AuditForensics } from "./AuditForensics";
+
 import { useCallback, useEffect, useState } from "react";
 
 type AuditEventDetailValue = string | number | boolean | null;
@@ -230,10 +232,16 @@ export default function AuditPage() {
           Audit dashboard
         </h1>
       <p className="page-sub">
-        Chronological evidence timeline with hashes and reason codes, reservation/execution
-        state inspector, chain verification, and a visible tamper test. UI reflects stored
-        evidence only.
+        Transaction forensics: search any trace, inspect the visual timeline, compare
+        authorization vs current state, verify the hash chain, and replay read-only.
+        UI reflects stored evidence only.
       </p>
+
+      <AuditForensics />
+
+      <h2 className="section-heading" data-testid="raw-evidence-heading">
+        Raw evidence / developer view
+      </h2>
 
       {error && (
         <div className="card" role="alert" data-testid="audit-error">

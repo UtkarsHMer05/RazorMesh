@@ -1,0 +1,144 @@
+/* Phase-5 Protocol Playground (M046-M061) */
+
+.playground {
+  margin: 18px 0;
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  box-shadow: 6px 6px 0 0 var(--rm-line, #121212);
+  padding: 20px;
+}
+
+.thesis {
+  background: var(--rm-fg, #121212);
+  color: var(--rm-yellow, #f0c020);
+  border: 3px solid var(--rm-line, #121212);
+  padding: 14px 16px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-bottom: 18px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  align-items: flex-end;
+}
+.controlGroup h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+.protocolChips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font: inherit; font-weight: 600; cursor: pointer;
+  border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  padding: 8px 14px;
+  display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+  box-shadow: 3px 3px 0 0 var(--rm-line, #121212);
+  transition: transform 150ms var(--rm-ease, ease);
+}
+.chip:hover { transform: translate(-2px, -2px); }
+.chipSelected { background: var(--rm-yellow, #f0c020); }
+.chipVersion { font-size: 10px; font-weight: 500; opacity: 0.8; letter-spacing: 0.05em; }
+
+.mutationSelect {
+  font: inherit; padding: 8px 10px; border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff); min-width: 240px;
+}
+
+.resultPanel {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.4fr);
+  gap: 18px;
+}
+@media (max-width: 900px) { .resultPanel { grid-template-columns: 1fr; } }
+
+.packetCard {
+  border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-bg, #f0f0f0);
+  padding: 14px;
+  align-self: start;
+}
+.packetCard h3 { margin-top: 0; }
+.packetCard dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 8px 0 0; }
+.packetCard dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.75; align-self: center; }
+.packetCard dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.checksList {
+  list-style: none; padding: 0; margin: 0;
+  display: grid; gap: 10px;
+}
+.checkRow {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) minmax(110px, auto) 1fr;
+  gap: 12px;
+  border: 2px solid var(--rm-line, #121212);
+  padding: 10px 14px;
+  align-items: center;
+  animation: rm-check-reveal 220ms ease-out;
+}
+@keyframes rm-check-reveal {
+  from { transform: translateY(4px); opacity: 0.25; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.checkLabel { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; }
+.checkStatus { font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.06em; }
+.checkDetail { font-size: 12px; opacity: 0.85; word-break: break-word; }
+
+.checkPass { background: var(--rm-blue, #1040c0); color: #fff; }
+.checkFail { background: var(--rm-red, #d02020); color: #fff; }
+.checkChallenge { background: var(--rm-yellow, #f0c020); }
+.checkPending { background: var(--rm-bg, #f0f0f0); opacity: 0.65; }
+
+.authorityBridge {
+  grid-column: 1 / -1;
+  border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-yellow, #f0c020);
+  padding: 14px 16px;
+}
+.authorityBridge h4 { margin: 0 0 6px; }
+
+.crossSection { margin-top: 22px; }
+.crossControls { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
+.divergeSelected { background: var(--rm-red, #d02020); color: #fff; }
+
+.lanesWrap { border: 2px solid var(--rm-line, #121212); padding: 14px; background: var(--rm-bg, #f0f0f0); }
+.lanesGraph {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+.lane {
+  border: 2px solid var(--rm-line, #121212);
+  padding: 10px;
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+  background: var(--rm-white, #fff);
+  transition: background 240ms var(--rm-ease, ease);
+}
+.laneName { font-weight: 700; letter-spacing: 0.06em; }
+.laneArrow { letter-spacing: 0.2em; opacity: 0.6; }
+.laneStatus { font-weight: 800; font-variant-numeric: tabular-nums; padding: 2px 8px; border: 2px solid var(--rm-line, #121212); }
+.laneMatched .laneStatus { background: var(--rm-blue, #1040c0); color: #fff; }
+.laneDiverged { background: var(--rm-red, #d02020); color: #fff; }
+.laneDiverged .laneStatus { background: #fff; color: var(--rm-red, #d02020); }
+
+.commitmentNode {
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-fg, #121212);
+  color: var(--rm-yellow, #f0c020);
+  text-align: center;
+  padding: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.overallMatch { color: var(--rm-blue, #1040c0); font-weight: 700; letter-spacing: 0.05em; }
+.overallMismatch { color: var(--rm-red, #d02020); font-weight: 800; letter-spacing: 0.05em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .checkRow { animation: none; }
+  .lane { transition: none; }
+  .chip:hover { transform: none; }
+}

@@ -332,6 +332,8 @@ def _demo_response(result: Any, scenario: str) -> dict[str, Any]:
     return {
         "scenario": scenario,
         "run_id": result.run.run_id,
+        "intent_id": result.run.intent_id,
+        "checkout_id": result.run.checkout_id,
         "rejection_stage": result.rejection_stage,
         "rejection_reason": result.rejection_reason,
         "protocol_firewall": ev.protocol_firewall or "NOT_RUN",

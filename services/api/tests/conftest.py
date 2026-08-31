@@ -50,6 +50,7 @@ def wipe_business_tables(engine: Engine) -> None:
         "DELETE FROM decisions",
         "DELETE FROM authorization_spend",
         "DELETE FROM intent_drafts",
+        "DELETE FROM demo_traces",
         "DELETE FROM checkouts",
         "DELETE FROM intent_contracts",
         "DELETE FROM products",
@@ -117,6 +118,46 @@ def client(settings: Settings) -> Iterator[TestClient]:
         return settings
 
     app.dependency_overrides[api.main.get_settings] = _override
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def playground_client(settings: Settings) -> Iterator[TestClient]:
+    """Phase-5 protocol playground: pure-engine tests need no DB wipe (the
+    playground engines are stateless); only scenario-c touches the pipeline."""
+    from razormesh_api import api
+
+    api.main.get_settings.cache_clear()
+    app = api.main.app
+    app.dependency_overrides[api.main.get_settings] = lambda: settings
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def security_campaign_client(settings: Settings) -> Iterator[TestClient]:
+    """Phase-5 AgentPay-X campaign API (pure-engine benchmark; no DB)."""
+    from razormesh_api import api
+
+    api.main.get_settings.cache_clear()
+    app = api.main.app
+    app.dependency_overrides[api.main.get_settings] = lambda: settings
+    with TestClient(app) as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def governance_client(settings: Settings) -> Iterator[TestClient]:
+    """Phase-5 model governance API (read-only committed facts)."""
+    from razormesh_api import api
+
+    api.main.get_settings.cache_clear()
+    app = api.main.app
+    app.dependency_overrides[api.main.get_settings] = lambda: settings
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()

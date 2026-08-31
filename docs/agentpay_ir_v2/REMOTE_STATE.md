@@ -36,3 +36,23 @@ origin	https://github.com/UtkarsHMer05/RazorMesh.git (push)
   are superseded by this note.
 - Policy unchanged: the agent never pushes unless the human explicitly authorizes
   it in that moment.
+
+---
+
+## Dated addendum — 2026-08-30 (post-colab acceptance + release cleanup)
+
+As of the end of the post-colab acceptance and release-cleanup sessions, local
+`main` additionally contains (not yet pushed by the owner at the time of
+writing; the agent never pushes):
+
+```
+<release-cleanup commit SHA — see git log>  Pre-Phase-5 public release cleanup (secret redaction, human-gold privacy, README, status reconciliation)
+8c34349 STATUS sync: post-colab acceptance checkpoint (V2_NOT_ACTIVATED, 813 tests, AgentPay-X 191/191)
+7f3aad3 DECISIONS D-055/D-056: v2 not activated by frozen safety gate; full-evidence rejection design
+5977e85 POST-COLAB FINAL ACCEPTANCE: one-shot frozen eval (V2_NOT_ACTIVATED by safety gate), full-evidence demo scenarios B/C, M6 Razorpay Test acceptance, buildathon evidence
+93be8dc / ffc57eb / 6481344  Colab notebook install/runtime fixes (final bundle rebuilt 28ea606b)
+f7ead72 / b3bb0fe / 6196579 / 1a356bd / cbcfab9 / 3a1df5c  (already remote-synced per the 2026-08-30 human confirmation above)
+```
+
+Whether these have been pushed is decided and performed ONLY by the human
+owner. This file records local state, never remote claims.

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { TraceBadge } from '@/app/_components/trace-badge';
 
 export function SiteNav() {
   return (
@@ -19,8 +20,14 @@ export function SiteNav() {
           <Link href="/security-lab">Security</Link>
           <Link href="/audit">Audit</Link>
           <Link href="/merchant">Merchant</Link>
+          <Link href="/governance">Governance</Link>
+          <Link href="/mission-control">Mission Control</Link>
         </nav>
         <div className="site-nav__actions">
+          {/* Phase-5: the same live mission trace follows the judge everywhere (M014). */}
+          <span className="site-nav__trace">
+            <TraceBadge />
+          </span>
           <Link href="/buyer" className="site-nav__login">Log in</Link>
           <Link href="/buyer" className="site-nav__cta" data-testid="nav-cta">
             Get Started

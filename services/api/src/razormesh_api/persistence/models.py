@@ -330,3 +330,28 @@ class AuditEvent(Base):
     current_event_hash: Mapped[str] = mapped_column(String(128), nullable=False)
     metadata_json: Mapped[dict[str, Any] | None] = mapped_column("metadata", JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class DemoTrace(Base):
+    """Phase-5 (M009): display-trace registry — a pure projection/linkage table.
+
+    Maps a short public display id (RM-XXXXXX) to the existing authoritative
+    artifacts (intent/checkout). NOT a second authority store: financial truth
+    remains in intent_contracts/checkouts/decisions/tickets/attempts and the
+    audit ledger. Rows are append+update-on-link only; audit history is never
+    rewritten by this table.
+    """
+
+    __tablename__ = "demo_traces"
+    __table_args__ = (
+        UniqueConstraint("intent_id", name="uq_demo_trace_intent"),
+        Index("ix_demo_traces_updated_at", "updated_at"),
+    )
+
+    trace_id: Mapped[str] = mapped_column(String(16), primary_key=True)
+    intent_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    draft_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    checkout_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    run_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

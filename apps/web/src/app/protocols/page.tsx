@@ -20,6 +20,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ProtocolPlayground } from "./ProtocolPlayground";
 import Link from "next/link";
 import type {
   ProtocolEnvelope,
@@ -427,6 +428,9 @@ export default function ProtocolGatewayPage() {
 
   return (
     <>
+      <div className="container" style={{ paddingTop: 42 }}>
+        <ProtocolPlayground />
+      </div>
       <Section eyebrow="Phase 4" title="Protocol Gateway">
         <p className="prose" style={{ maxWidth: 720 }}>
           The RazorMesh cross-protocol gateway accepts MCP / UCP / AP2 / ACP / A2A inputs,

@@ -1,6 +1,6 @@
-# AUTHORITATIVE STATUS (PVB020 + PRE-REVIEW FINAL CORRECTION)
+# AUTHORITATIVE STATUS (current: post-colab acceptance + release cleanup)
 
-# POST_COLAB_FINAL_ACCEPTANCE_PASS / V2_EVALUATED_NOT_ACTIVATED (2026-08-30)
+# RAZORMESH_BUILDATHON_SUBMISSION_READY / V2_CANDIDATE_REJECTED_BY_SAFETY_GATE / PRE_V2_ACTIVE (2026-08-30)
 
 **CURRENT STATE (2026-08-30, post-Colab acceptance run):** the Colab artifact was
 integrity-verified (ZIP sha256 `4c933eec…`; candidate **A_2ep**; weights

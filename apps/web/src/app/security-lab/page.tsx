@@ -1,5 +1,7 @@
 "use client";
 
+import { SecurityLabMission } from "./SecurityLabMission";
+
 import { useEffect, useState } from "react";
 
 type ScenarioInfo = {
@@ -122,6 +124,8 @@ export default function SecurityLabPage() {
         authorization path; nothing here attacks Razorpay or any third party. Results are
         shown only after backend execution.
       </p>
+
+      <SecurityLabMission />
 
       {error && (
         <div className="card" role="alert" data-testid="lab-error">

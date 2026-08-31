@@ -1,13 +1,16 @@
 # RazorMesh Trust — Buildathon Final Evidence
 
 **Submission package for:** Runtime Trust Infrastructure for Agentic Commerce
-**Status:** COMPLETE — all milestones M0–M8 executed; every measured number in
-this document comes from an artifact produced in this run
-(`docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION.{md,json}`,
+
+**Final state:**
+`RAZORMESH_BUILDATHON_SUBMISSION_READY / V2_CANDIDATE_REJECTED_BY_SAFETY_GATE / PRE_V2_ACTIVE`
+
+The product is submission-ready *because* the governance system correctly
+rejected an unsafe model candidate. The model-candidate gate result
+`M2_FROZEN_EVALUATION_FAIL / V2_NOT_ACTIVATED` (§6.1) is preserved verbatim as
+the frozen evaluation outcome. Every measured number in this document comes
+from an artifact produced in this run (`docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION.{md,json}`,
 `docs/submission/RAZORPAY_TEST_ACCEPTANCE.md`, and the M4 regression records).
-The one deliberate non-activation (AgentPay-IR v2) is recorded honestly below —
-the frozen safety gate refused a better-looking but less-safe model, which is
-the governance system doing exactly what it was built to do.
 
 ---
 
@@ -40,10 +43,13 @@ executor can redeem against Razorpay.
 
 > **The AI proposes. RazorGuard authorizes. The trusted executor executes.**
 
-The semantic verifier (AgentPay-IR v2, a fine-tuned DeBERTa-v3 NLI model) can only
+The active **SemanticVerifier** is the PRE_V2 DeBERTa NLI model
+(`phase3-finetuned-v2`) under policy `semantic-thresholds-v3`. It can only
 *tighten* a decision — it can never bypass deterministic RazorGuard rules, never
 issue tickets, never contact the payment provider, and never hold financial
-authority.
+authority. (The fine-tuned **AgentPay-IR v2** model was trained and evaluated as
+a *candidate*; the frozen human-gold/OOD safety gate rejected its activation —
+see §6.1. It is evidence of model governance, not the active runtime.)
 
 ## 5. Final architecture
 
@@ -53,7 +59,8 @@ Human Intent (confirmed authorization)
   → MCP / UCP / AP2 / ACP / A2A
   → Protocol Firewall (schema, signature, replay, idempotency)
   → AgentCommerceIR (normalized commerce intent)
-  → AgentPay-IR v2 semantic verifier  +  deterministic RazorGuard
+  → deterministic RazorGuard
+  + SemanticVerifier (active: PRE_V2 DeBERTa + semantic-thresholds-v3)
   → fused decision (BLOCK > CHALLENGE > ALLOW; semantics only tighten)
   → ExecutionTicket (context-bound, short-lived, single-use)
   → trusted executor
@@ -148,11 +155,12 @@ card/payment data was used or stored by the agent.
 
 ## 7. Demo narrative
 
-1. **Valid purchase succeeds** — the human authorizes "under ₹30,000, new only,
-   no subscription"; the checkout matches; deterministic RazorGuard ALLOW; the
-   semantic verifier confirms (PASS); an ExecutionTicket is issued and the
-   trusted executor creates a Razorpay Test order — provider called exactly
-   once. (Buyer page → Pay via Razorpay Test.)
+1. **Valid purchase is authorized and executed** — the human authorizes "under
+   ₹30,000, new only, no subscription"; the checkout matches; deterministic
+   RazorGuard ALLOW; the active SemanticVerifier confirms (PASS); an
+   ExecutionTicket is issued and the trusted executor creates a Razorpay Test
+   order — provider contacted exactly once. (Buyer page → Pay via Razorpay
+   Test; the final in-modal card entry is the human sandbox step.)
 2. **A recurring term the human never authorized is blocked** — Security Lab →
    Scenario B: protocol PASS, RazorGuard BLOCK, semantic BLOCK
    p(contradiction) 0.99995, final BLOCK, no ticket, Razorpay never contacted.

@@ -2,8 +2,10 @@
 
 **Mode:** Test Mode only (`RAZORPAY_MODE=test` pinned by Settings; live mode is
 structurally impossible — `razorpay_mode: Literal["test"]`). No card or payment
-data was entered, logged, or committed anywhere. The public key id
-(`rzp_test_TTXjiE4JEFiGlO`) is Razorpay's publishable test key — safe to display.
+data was entered, logged, or committed anywhere. The provider key id used was a
+Razorpay publishable TEST key (`rzp_test_<redacted>`); publishable key ids
+identify the account's test configuration and are not secrets, but the exact
+value is redacted from this public document.
 
 **Date:** 2026-08-30 · **Backend:** local uvicorn (127.0.0.1:8000) wired to the
 real Razorpay Test API · **Semantic runtime:** the ACTIVE `deberta` backend
@@ -20,7 +22,7 @@ candidate was evaluated on frozen data and NOT activated by the safety gate.
 | Checkout proposed (Razer Mousepad, 1 unit) | `chk_01M19HMAGMHTNG8R41HDD03V2Z`, total ₹748.00 |
 | Deterministic RazorGuard | **ALLOW** (no reason codes) |
 | ExecutionTicket | **issued** (context-bound, single-use, 120 s TTL) |
-| Trusted executor → Razorpay Test | `order_TW16VWnXEVnDA6` created; state **EXECUTING**; provider public key `rzp_test_TTXjiE4JEFiGlO` |
+| Trusted executor → Razorpay Test | `order_TW16VWnXEVnDA6` created; state **EXECUTING**; provider key id `rzp_test_<redacted>` |
 | Audit chain (this intent) | `CHECKOUT_PROPOSED → DECISION_RECORDED → TICKET_ISSUED → EXECUTION_ATTEMPT_CREATED → RAZORPAY_ORDER_CREATED` — **exactly one** provider order event |
 
 ## 2. REPLAY — consumed/expired execution authorization never pays twice

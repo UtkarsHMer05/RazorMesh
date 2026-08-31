@@ -193,7 +193,6 @@ img, video { max-width: 100%; display: block; }
   box-shadow: var(--rm-shadow-1);
 }
 .site-nav__login:hover { transform: translate(-2px, -2px); box-shadow: var(--rm-shadow-2); }
-@media (min-width: 720px) { .site-nav__login { display: inline-flex; } }
 .site-nav__cta {
   background: var(--rm-red);
   color: var(--rm-white);
@@ -391,10 +390,15 @@ img, video { max-width: 100%; display: block; }
 }
 
 /* ===== Section framework ============================================== */
+/* Phase-5 M116: legacy landing/framework sections must fit narrow viewports */
+.landing-section .container { min-width: 0; max-width: 100%; }
+.landing-section .prose, .landing-section pre { max-width: 100%; overflow-wrap: anywhere; overflow-x: auto; }
 .landing-section {
   position: relative;
   padding: 96px 0;
   border-bottom: 4px solid var(--rm-line);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .landing-section--alt-red    { background: var(--rm-red);    color: var(--rm-white); }
 .landing-section--alt-blue   { background: var(--rm-blue);   color: var(--rm-white); }
@@ -1237,3 +1241,101 @@ img, video { max-width: 100%; display: block; }
 
 /* ===== Footer (red) =================================================== */
 .site-footer { background: var(--rm-red); }
+
+/* ===== Phase-5: live trace badge (M014) ================================ */
+.trace-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 2px solid var(--rm-line);
+  background: var(--rm-white, #fff);
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  position: relative;
+  box-shadow: 3px 3px 0 0 var(--rm-line);
+}
+.trace-badge--empty { box-shadow: none; opacity: 0.75; }
+.trace-badge__dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--rm-line, #999); display: inline-block;
+}
+.trace-badge__dot--live { background: var(--rm-red, #d02020); }
+.trace-badge__dot--live::after {
+  content: ""; position: absolute; margin-left: -8px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--rm-red, #d02020); opacity: 0.5;
+  animation: rm-trace-pulse 1.6s ease-out infinite;
+}
+@keyframes rm-trace-pulse {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.trace-badge__label { letter-spacing: 0.06em; text-transform: uppercase; }
+.trace-badge__id {
+  font-variant-numeric: tabular-nums;
+  margin-left: 4px;
+  background: var(--rm-yellow, #f0c020);
+  padding: 0 6px;
+  border: 2px solid var(--rm-line);
+}
+.trace-badge__btn {
+  font: inherit; font-size: 12px; cursor: pointer;
+  border: 2px solid var(--rm-line); background: var(--rm-white, #fff);
+  padding: 2px 8px; text-transform: uppercase; letter-spacing: 0.05em;
+}
+.trace-badge__btn:hover { background: var(--rm-yellow, #f0c020); }
+.trace-badge__btn--ghost { border-style: dashed; }
+.trace-badge__menu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 40;
+  background: var(--rm-white, #fff); border: 3px solid var(--rm-line);
+  box-shadow: 6px 6px 0 0 var(--rm-line);
+  display: flex; flex-direction: column; gap: 6px; padding: 10px; min-width: 220px;
+}
+.trace-badge__link {
+  font-size: 13px; text-decoration: none; color: var(--rm-fg, #121212);
+  border: 2px solid var(--rm-line); padding: 4px 8px; text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.trace-badge__link:hover { background: var(--rm-blue, #1040c0); color: #fff; }
+.trace-badge__advanced summary {
+  font-size: 11px; cursor: pointer; opacity: 0.75; margin-top: 4px;
+}
+.trace-badge__advanced code {
+  font-size: 11px; word-break: break-all; display: block; margin-top: 4px;
+  background: var(--rm-bg, #f0f0f0); padding: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .trace-badge__dot--live::after { animation: none; opacity: 0; }
+}
+.site-nav__trace { display: inline-flex; }
+/* Phase-5 M116/M117: badge visible at laptop+ (1280 and up) in a compact
+   form; hidden only on mobile where the page-level trace chip continues. */
+@media (max-width: 1560px) {
+  .site-nav__trace .trace-badge { padding: 2px 6px; font-size: 11px; gap: 5px; }
+  .site-nav__trace .trace-badge__btn--ghost { display: none; }
+  .site-nav__links {
+    overflow-x: auto;
+    scrollbar-width: none;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .site-nav__links::-webkit-scrollbar { display: none; }
+}
+@media (max-width: 900px) { .site-nav__trace { display: none; } }
+/* The login link duplicates the CTA destination; hidden everywhere so the
+   widened Phase-5 nav never overflows. */
+.site-nav__login { display: none; }
+/* Trace badge stays visible at laptop/recording widths; mobile only hides it
+   (the page-level trace chip covers continuity there). */
+/* Phase-5 M116: the widened nav (Governance + Mission Control links) must
+   never force horizontal overflow; tighten link spacing as width shrinks. */
+@media (max-width: 1520px) {
+  .site-nav__links { gap: 14px; font-size: 14px; }
+}
+@media (max-width: 1380px) {
+  .site-nav__links { gap: 10px; font-size: 13px; }
+}
+@media (max-width: 1240px) {
+  .site-nav__links { gap: 8px; font-size: 12px; }
+}

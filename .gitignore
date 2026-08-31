@@ -143,3 +143,11 @@ CLAUDE.md
 # Obsolete V2-era 700-card review artifacts (superseded by REVIEW_PACK_V3.jsonl;
 # roles/labels must never live in the public tree) — local copies retained
 data/agentpay_ir_v2/corpus/review_*
+
+# --- Row-level human-gold predictions: NEVER public (owner privacy directive) ---
+# Aggregate metrics (metrics.json, confusion matrices, counts/rates) stay public,
+# but per-record gold labels + predictions can reconstruct human judgments and
+# must never be tracked, wherever an eval harness exports them.
+docs/agentpay_ir_v2/frozen_eval/*/predictions_human_gold.jsonl
+**/predictions_human_gold*.jsonl
+README_FIRST.md

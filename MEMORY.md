@@ -29,64 +29,73 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 # Current snapshot
 
 **Project:** RazorMesh Trust
-**Active phase:** Phase 4 ACTIVE (M01–M50 AUTONOMOUS PASS, awaiting human acceptance)
-**Current milestone:** AgentPay-IR v2 PRE-REVIEW FINAL CORRECTION PASS (2026-08-29):
-review pack **V3** rebuilt (635 cards `rc2_*`, 301 gold / 334 supervised, ZERO dup
-pairs/record_ids, group-level roles incl. internal template families, canonical
-assignments-only role sha in the freeze manifest only); reviewer JSON/UI show only
-card_id/premise/hypothesis (vitest+Playwright leak tests); linkage/roles/decisions/gold
-gitignored; finalizer rewritten (group-level gold isolation, HUMAN gold labels,
-content_sha256 recompute+validate, conflict rejection, --root dry-run mode) with a full
-e2e test suite; Colab builder takes --corpus-dir/--train/--val, zip byte-deterministic
-(6292deb6…), notebook uses external EXPECTED_BUNDLE_SHA256 + requirements-frozen.txt
-(5.15.1/2.13.0/1.14.0) with version asserts, no pre-install torch import; deberta_v2
-honors semantic_model_path_v2 (temp-path tests); PVB008 re-executed with real PRE_V2
-inference (PRE_V2_TEMPLATE_ROBUSTNESS.md — prompt-injection PASSES 13/15 = recorded
-defect for v2 training); OOD expanded+refrozen 401→665 (264 RazorMesh-security rows,
-136 contradictions, entity-held-out); cross-split near-dup report (exact overlap 0;
-ContractNLI fixed-hypothesis exception documented); /reviewer gated by
-RAZORMESH_REVIEWER_ENABLED=1; agent-control docs untracked+gitignored (local copies
-kept, commit 3a1df5c). Status: **PRE_REVIEW_FINAL_CORRECTION_PASS /
-SAFE_TO_BEGIN_HUMAN_LABELING**. No training and no test/gold/OOD model evaluation.
-Remote state (2026-08-30, human-confirmed): GitHub main already contains the
-correction/privacy commits; the agent itself never pushes (see REMOTE_STATE.md).
-**Last updated:** 2026-08-30 (POST-REVIEW FINALIZATION COMPLETE). Final freeze:
-train 13,605 / val 2,261 / test 2,227 + 301 gold (human-review decisions, AI-assisted
-and owner-accepted — see STATUS.md); 96 injection rows integrated TRAIN-only; leakage
-gates PASS; FINAL bundle sha 28ea606b… (train+val only); notebook
-EXPECTED_BUNDLE_SHA256 matches; next: owner uploads the bundle to Colab and runs the
-notebook (T4/L4), then returns agentpay-ir-v2-finetuned.zip.
-**Gate (Phase 4 final M49, historical):** `services/api` ruff clean / mypy clean / pytest
-718/718 PASS; `apps/web` typecheck 0 errors / lint 0 errors / vitest 76 PASS /
-`next build` 6 static routes. AgentPay-X 191/191 with 100% safe-pass, 100%
-attack-block, 0 false-allow, 0 false-block.
-**Evidence pack (correction):** `docs/PHASE3_DATASET_AND_RUNTIME_FINAL_AUDIT.md`.
-**Autonomous flag:** `AUTONOMOUS_50_OF_50_PASS / AWAITING_FINAL_HUMAN_ACCEPTANCE`.
+**State (2026-08-30):** `POST-COLAB BUILDATHON ACCEPTANCE COMPLETE` →
+`RAZORMESH_BUILDATHON_SUBMISSION_READY / V2_CANDIDATE_REJECTED_BY_SAFETY_GATE / PRE_V2_ACTIVE`
 
-Phase-3 correction essentials (D-053):
-- frozen_v2 AgentPay-IR v0.2 = canonical orientation (premise=evidence,
-  hypothesis=authorization), 648/143/126 splits + untouched OOD 129, leakage
-  gate PASS, 35/35 families.
-- Runtime artifact `artifacts/models/incoming/phase3-finetuned-v2`
-  (sha256 163864e0…, base cross-encoder/nli-deberta-v3-base, label map
-  0=contradiction/1=entailment/2=neutral), policy `semantic-thresholds-v3`
-  (tau_block=0.05, tau_entail=0.9; calibrated on frozen_v2 val ONLY).
-- `SEMANTIC_VERIFIER_BACKEND=deberta` is the production/default backend;
-  torch 2.13.0 + transformers 5.15.1 live in the OPTIONAL uv group
-  `semantic`; no-torch envs fail CLOSED to CHALLENGE (never keyword fallback).
-  Per-process singleton load + manifest-hash enforcement; keyword verifier is
-  only the labeled `deterministic_test_stub`.
-- `make test-backend` / `make dev-api` / `make setup` use `--group semantic`.
-- Orientation diagnostic (RETRAIN_REQUIRED=YES) and v1-vs-v2 revalidation
-  numbers live in docs/PHASE3_ORIENTATION_DIAGNOSTIC.md and
-  docs/PHASE3_MODEL_REVALIDATION.md; perf in docs/PHASE3_RUNTIME_PERFORMANCE.md
-  (cold 0.61s, p50 51.9ms, p95 65.1ms, RSS 792MiB).
+- **AgentPay-IR v2: EVALUATED / NOT ACTIVATED.** Trained on the final corpus
+  (13,605/2,261/2,227 + 301 gold; 96 injection rows TRAIN-only; bundle
+  `28ea606b…`), artifact verified (candidate A_2ep, weights `f9e0007c…`), then
+  evaluated EXACTLY ONCE on frozen test/gold/OOD. Result:
+  `M2_FROZEN_EVALUATION_FAIL / V2_NOT_ACTIVATED` — unsafe C→E worsened on
+  human gold (2→7) and OOD (5→6), gold macro-F1 0.893→0.776. The frozen
+  safety gate did its job; evidence in
+  `docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION.{md,json}` (decisions
+  D-055/D-056). One-shot consumed: NEVER rerun frozen evaluation; never tune
+  from those results.
+- **Active semantic runtime:** backend `deberta` · model `phase3-finetuned-v2`
+  (PRE_V2) · policy `semantic-thresholds-v3`. The v4 policy file exists on
+  disk (val-only calibration) but is NOT wired.
+- **AgentPay-X:** 191/191 (100% safe-pass, 100% attack-block, 0 false-allow,
+  0 false-block, 0 exactly-once violations).
+- **Razorpay Test acceptance (live):** SAFE chain → provider order created
+  EXACTLY once; attack chains → 0 provider calls; replay → 0 additional
+  provider calls (403 TICKET_EXPIRED / idempotent same-attempt). Browser
+  checkout completion remains a HUMAN sandbox step — never claim a completed
+  payment. `docs/submission/RAZORPAY_TEST_ACCEPTANCE.md`.
+- **Gates (final regression):** backend 813 collected exit 0 (live DeBERTa in
+  loop); ruff/mypy clean; tsc/eslint 0 errors; vitest 18/18; next build OK;
+  security_check PASS 0 findings.
+- **Next:** submission/release activities only. **Phase 5 NOT STARTED.**
+- Remote: the agent never pushes; the human owner pushes manually
+  (see `docs/agentpay_ir_v2/REMOTE_STATE.md`).
+- Demo: Buyer (SAFE→Razorpay Test order), Security Lab (Scenario B recurring
+  term, Scenario C protocol-valid/intent-invalid — both BLOCK, provider never
+  contacted), Protocols (per-stage verdicts + semantic probabilities), Audit
+  (readable timeline, chain verify, tamper test).
 
-Historical Phase-3 re-audit facts (2026-08-27) are preserved above and
-remain valid — they describe the prior Phase-3 state and are not
-overwritten by Phase-4 completion.
+## HISTORICAL (superseded phases — kept as evidence, not current actions)
 
----
+**Phase 4 (2026-08-27, SUPERSEDED):** `AUTONOMOUS_50_OF_50_PASS /
+AWAITING_FINAL_HUMAN_ACCEPTANCE` at the time; M49 gates then: pytest 718/718,
+vitest 76 PASS, AgentPay-X 191/191. Its single final human gate (one prepared
+Razorpay Test transaction) was later executed and superseded by the post-colab
+acceptance above.
+
+**AgentPay-IR v2 PRE-REVIEW FINAL CORRECTION (2026-08-29, SUPERSEDED):**
+`PRE_REVIEW_FINALIZATION_PASS / SAFE_TO_BEGIN_HUMAN_LABELING` — V3 review pack
+(635 cards `rc2_*`, 301 gold / 334 supervised, group-level roles, vitest+
+Playwright leak tests), finalizer with group-level gold isolation, byte-
+deterministic Colab bundle + external-hash notebook, OOD expanded 401→665,
+PVB008 template robustness (prompt-injection 13/15 = recorded defect for v2
+training), deberta_v2 honors semantic_model_path_v2, /reviewer gated by
+RAZORMESH_REVIEWER_ENABLED=1, agent-control docs untracked+gitignored. Human
+review then completed (AI-assisted, owner-accepted — provenance disclosed in
+docs/agentpay_ir_v2/STATUS.md) and the final freeze was produced.
+
+**Phase-3 correction (D-053, 2026-08-28, SUPERSEDED):** frozen_v2 corpus,
+canonical orientation (premise=evidence, hypothesis=authorization), runtime
+artifact `phase3-finetuned-v2` (sha `163864e0…`, label map 0=C/1=E/2=N), policy
+`semantic-thresholds-v3` (tau 0.05/0.9, frozen_v2 val ONLY), backend `deberta`
+production default; torch 2.13.0 + transformers 5.15.1 in the OPTIONAL uv group
+`semantic`; no-torch envs fail CLOSED to CHALLENGE (never keyword fallback);
+per-process singleton load + manifest-hash enforcement; keyword verifier only
+as the labeled `deterministic_test_stub`; `make` targets use `--group semantic`.
+Orientation diagnostic RETRAIN_REQUIRED=YES; perf: cold 0.61s, p50 51.9ms,
+p95 65.1ms, RSS 792MiB.
+
+**Phase-3 re-audit (2026-08-27, SUPERSEDED):** implementation/evidence defects
+were found and repaired (M15); the prior-state numbers further below remain
+historical evidence, not current claims.
 
 # Environment facts (verified M01/M02)
 
@@ -176,10 +185,11 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 
 # Active blockers
 
-Phase 4: none remaining. All M01–M50 gates green at the time of the final
-M49 re-run; awaiting human acceptance per `docs/PHASE4_FINAL_COMPLETION_REPORT.md`.
+None. The post-colab buildathon acceptance is complete; all gates green
+(backend 813 exit 0, AgentPay-X 191/191, security scan PASS). Next actions are
+submission/release only; Phase 5 NOT STARTED.
 
-Carried forward (out of Phase-4 scope, unchanged from prior audit):
+Carried forward (historical observations, unchanged from prior audit):
 - `services/api/scripts/*` and `services/api/training/phase3/*` ruff drifts.
 - 4 pre-existing E2E failures in `e2e/gold-reviewer.spec.ts` (unchanged;
   2026-08-28 additionally repaired the stale checkout E2E locators for the

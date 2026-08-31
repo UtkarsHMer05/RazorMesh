@@ -1,0 +1,108 @@
+/* Phase-5 Audit Forensics (M079-M089) */
+
+.forensics { margin: 18px 0; }
+
+.searchRow { margin-bottom: 14px; }
+.searchBar { display: flex; flex-wrap: wrap; gap: 8px; }
+.searchInput {
+  flex: 1; min-width: 260px;
+  font: inherit; padding: 10px 12px;
+  border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  font-variant-numeric: tabular-nums;
+}
+
+.chainValid, .chainBroken {
+  display: inline-block; margin-top: 8px; padding: 4px 10px;
+  font-weight: 700; letter-spacing: 0.05em; border: 2px solid var(--rm-line, #121212);
+}
+.chainValid { background: var(--rm-blue, #1040c0); color: #fff; }
+.chainBroken { background: var(--rm-red, #d02020); color: #fff; }
+
+.recentSection h3, .dossier h3, .dossier h4 { margin-top: 0; }
+.recentGrid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px; margin: 10px 0;
+}
+.recentCard {
+  font: inherit; cursor: pointer; text-align: left;
+  border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+  box-shadow: 3px 3px 0 0 var(--rm-line, #121212);
+}
+.recentSelected { background: var(--rm-yellow, #f0c020); }
+.recentId { font-variant-numeric: tabular-nums; letter-spacing: 0.06em; }
+.recentState {
+  align-self: flex-start;
+  padding: 1px 8px; font-size: 12px; font-weight: 800;
+  border: 2px solid var(--rm-line, #121212);
+}
+
+.badgeAllow { background: var(--rm-blue, #1040c0); color: #fff; }
+.badgeBlock { background: var(--rm-red, #d02020); color: #fff; }
+.badgeNeutral { background: var(--rm-bg, #f0f0f0); }
+
+.dossier {
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  box-shadow: 6px 6px 0 0 var(--rm-line, #121212);
+  padding: 18px 20px; margin: 16px 0;
+}
+.dossierGrid {
+  display: grid; grid-template-columns: minmax(320px, 1.3fr) minmax(280px, 1fr);
+  gap: 16px; margin-top: 12px;
+}
+@media (max-width: 950px) { .dossierGrid { grid-template-columns: 1fr; } }
+
+.timelineCard, .diffCard, .providerCard, .handoffCard {
+  border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-bg, #f0f0f0);
+  padding: 12px 14px;
+}
+.sideCards { display: grid; gap: 12px; align-self: start; }
+
+.timeline { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 10px; }
+.timelineRow {
+  display: grid;
+  grid-template-columns: 64px 22px minmax(130px, auto) minmax(96px, auto);
+  gap: 8px; align-items: center;
+  padding: 7px 10px;
+  border-left: 4px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  position: relative;
+}
+.timelineRow[data-state="BLOCK"], .timelineRow[data-state="WITHHELD"], .timelineRow[data-state="FAILED"] {
+  border-left-color: var(--rm-red, #d02020);
+}
+.timelineRow[data-state="ALLOW"], .timelineRow[data-state="DONE"], .timelineRow[data-state="PASS"], .timelineRow[data-state="ISSUED"] {
+  border-left-color: var(--rm-blue, #1040c0);
+}
+.tlTime { font-size: 11px; font-variant-numeric: tabular-nums; opacity: 0.7; }
+.tlIcon { font-size: 14px; }
+.tlTitle { font-weight: 600; font-size: 13px; }
+.tlStatus {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.04em;
+  padding: 1px 6px; border: 2px solid var(--rm-line, #121212);
+  justify-self: start;
+}
+.tlDetail { grid-column: 2 / -1; font-size: 12px; opacity: 0.8; }
+
+.diffTable { border-collapse: collapse; width: 100%; background: var(--rm-white, #fff); margin-top: 8px; }
+.diffTable th, .diffTable td { border: 2px solid var(--rm-line, #121212); padding: 6px 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.diffTable th { background: var(--rm-fg, #121212); color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+.diffTable td:last-child { background: var(--rm-red, #d02020); color: #fff; font-weight: 700; }
+
+.providerCard dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 8px 0; }
+.providerCard dt { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; }
+.providerCard dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.handoffLinks { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.replayDrawer { margin-top: 14px; }
+.replayDrawer summary { cursor: pointer; font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  .timelineRow { animation: none; }
+}

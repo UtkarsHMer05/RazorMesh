@@ -1,0 +1,79 @@
+/* Phase-5 Merchant Sandbox (M036-M045) */
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.2fr) minmax(280px, 1fr);
+  gap: 18px;
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  box-shadow: 5px 5px 0 0 var(--rm-line, #121212);
+  padding: 18px 20px;
+  margin: 16px 0;
+}
+@media (max-width: 900px) {
+  .workspace { grid-template-columns: 1fr; }
+}
+
+.productPane h2, .offerPane h2 { margin-top: 0; }
+
+.productList {
+  list-style: none; padding: 0; margin: 0 0 12px;
+  max-height: 420px; overflow-y: auto;
+  display: grid; gap: 6px;
+}
+.productRow {
+  width: 100%; text-align: left; font: inherit; cursor: pointer;
+  border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff); padding: 8px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+  transition: transform 160ms var(--rm-ease, ease);
+}
+.productRow:hover { transform: translate(-2px, -2px); }
+.productSelected { background: var(--rm-yellow, #f0c020); }
+
+.offerCard {
+  border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-bg, #f0f0f0); padding: 12px;
+}
+.offerCard dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 8px 0 0; }
+.offerCard dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.75; }
+.offerCard dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.presetSection {
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-yellow, #f0c020);
+  box-shadow: 5px 5px 0 0 var(--rm-line, #121212);
+  padding: 16px 20px; margin: 16px 0;
+}
+.presetSection h2 { margin-top: 0; }
+.presetGrid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.presetBtn {
+  font: inherit; font-weight: 600; cursor: pointer;
+  border: 2px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff); color: var(--rm-fg, #121212);
+  padding: 8px 14px;
+  box-shadow: 3px 3px 0 0 var(--rm-line, #121212);
+  transition: transform 160ms var(--rm-ease, ease), box-shadow 160ms var(--rm-ease, ease);
+}
+.presetBtn:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 0 var(--rm-line, #121212); }
+.presetBtn:disabled { opacity: 0.5; cursor: wait; }
+.revertBtn { background: var(--rm-blue, #1040c0); color: #fff; }
+
+.diffSection {
+  border: 3px solid var(--rm-line, #121212);
+  background: var(--rm-white, #fff);
+  box-shadow: 5px 5px 0 0 var(--rm-line, #121212);
+  padding: 16px 20px; margin: 16px 0;
+}
+.diffSection h2 { margin-top: 0; }
+.diffTable { border-collapse: collapse; width: 100%; margin: 10px 0; background: var(--rm-white, #fff); }
+.diffTable th, .diffTable td {
+  border: 2px solid var(--rm-line, #121212); padding: 8px 10px; text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.diffTable th { background: var(--rm-fg, #121212); color: #fff; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+.diffChanged td:last-child { background: var(--rm-red, #d02020); color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  .productRow, .presetBtn { transition: none; }
+}

@@ -24,6 +24,7 @@ from razormesh_api.intent_compilation_service import IntentCompilationService
 from razormesh_api.intent_compiler import build_tokenrouter_client
 from razormesh_api.intent_compiler_prompt import TrustedHumanAuthorization
 from razormesh_api.ledger import EvidenceLedger
+from razormesh_api.persistence.repositories import Repositories
 from razormesh_api.settings import Settings, get_settings
 
 router = APIRouter(prefix="/buyer/intent-drafts", tags=["buyer-intent-drafts"])
@@ -132,6 +133,16 @@ def confirm_draft(
         )
     except ConfirmationError as exc:
         raise _http_from(exc) from exc
+    # Phase-5: link the display trace (projection only; failure never blocks confirmation).
+    try:
+        from razormesh_api.persistence.db import create_db_engine, create_session_factory
+        from razormesh_api.trace_registry import TraceRegistry
+
+        TraceRegistry(
+            Repositories(create_session_factory(create_db_engine(get_settings().database_url)))
+        ).get_or_create_for_intent(str(result.intent_id), draft_id=str(result.draft_id))
+    except Exception:  # noqa: BLE001, S110 - projection linkage is best-effort, never authoritative
+        pass
     return {
         "draft_id": str(result.draft_id),
         "intent_id": str(result.intent_id),

@@ -1,7 +1,22 @@
 # RazorMesh Trust — Phase 4 Status
 
+> ## ⚠️ HISTORICAL / SUPERSEDED (2026-08-30)
+>
+> This file is the **Phase-4 execution record (2026-08-27/28/29)**, preserved
+> as evidence. It is NOT the current state. The authoritative current state is:
+> **`POST-COLAB BUILDATHON ACCEPTANCE COMPLETE →
+> RAZORMESH_BUILDATHON_SUBMISSION_READY / V2_CANDIDATE_REJECTED_BY_SAFETY_GATE /
+> PRE_V2_ACTIVE`** — see `MEMORY.md` and
+> `docs/submission/BUILDATHON_FINAL_EVIDENCE.md`. In particular:
+> - AgentPay-IR v2 was trained, evaluated EXACTLY ONCE on frozen data, and
+>   **NOT activated** (`M2_FROZEN_EVALUATION_FAIL / V2_NOT_ACTIVATED`) — the
+>   earlier "blocked until AgentPay-IR v2" state below is resolved history.
+> - The active runtime remains `deberta` / `phase3-finetuned-v2` /
+>   `semantic-thresholds-v3`.
+> - Phase 5 has NOT started.
+
 **Active phase:** Phase 4 — Cross-Protocol Agentic Commerce Gateway + Zero-Trust Protocol Firewall.
-**Status:** `AUTONOMOUS_50_OF_50_PASS / AWAITING_FINAL_HUMAN_ACCEPTANCE`.
+**Status (at completion, 2026-08-27):** `AUTONOMOUS_50_OF_50_PASS / AWAITING_FINAL_HUMAN_ACCEPTANCE`.
 **Mode:** Autonomous M01..M50 completed locally; no human gate before M50. The single final human gate is OUTSIDE the milestone count (one prepared Razorpay Test-mode transaction, per master prompt §22 and §28).
 
 > **2026-08-28 update (Phase-3 correction):** the acceptance path's semantic

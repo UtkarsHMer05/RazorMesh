@@ -11,13 +11,21 @@ from redis import Redis
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
+from razormesh_api.api.routes.agent_search import router as agent_search_router
 from razormesh_api.api.routes.audit import router as audit_router
 from razormesh_api.api.routes.buyer import router as buyer_router
 from razormesh_api.api.routes.buyer_drafts import router as buyer_drafts_router
 from razormesh_api.api.routes.catalog import router as catalog_router
+from razormesh_api.api.routes.forensics import router as forensics_router
+from razormesh_api.api.routes.merchant_sandbox import router as merchant_sandbox_router
+from razormesh_api.api.routes.mission_control import router as mission_control_router
+from razormesh_api.api.routes.model_governance import router as model_governance_router
 from razormesh_api.api.routes.ops import router as ops_router
 from razormesh_api.api.routes.phase4_acceptance import router as phase4_acceptance_router
+from razormesh_api.api.routes.protocol_playground import router as protocol_playground_router
+from razormesh_api.api.routes.security_campaign import router as security_campaign_router
 from razormesh_api.api.routes.security_lab import router as security_lab_router
+from razormesh_api.api.routes.trace import router as trace_router
 from razormesh_api.api.routes.webhooks import router as webhooks_router
 from razormesh_api.protocol.ap2_verifier import (
     AP2_TARGET_VERSION,
@@ -49,6 +57,14 @@ app.include_router(audit_router)
 app.include_router(security_lab_router)
 app.include_router(ops_router)
 app.include_router(phase4_acceptance_router)
+app.include_router(trace_router)
+app.include_router(agent_search_router)
+app.include_router(merchant_sandbox_router)
+app.include_router(protocol_playground_router)
+app.include_router(security_campaign_router)
+app.include_router(forensics_router)
+app.include_router(model_governance_router)
+app.include_router(mission_control_router)
 
 settings_dep = Annotated[Settings, Depends(get_settings)]
 
