@@ -85,7 +85,18 @@ def governance_summary() -> dict[str, Any]:
         "shadow": shadow_status(),
         "frozen_rules": _FROZEN_RULES,
         "runtime_backend": settings.semantic_verifier_backend,
-        "shadow_mode_available": True,  # demo-only, non-frozen inputs, real v2 artifact
+        # Truthful availability (F014): the shadow lane runs only when the real
+        # v2 artifact actually loaded (hash+manifest verified). A fresh clone
+        # without the 738 MB artifact reports CHALLENGER_UNAVAILABLE honestly
+        # — never a hardcoded True.
+        "shadow_mode_available": get_challenger_shadow().available,
+        "shadow_unavailable_reason": (
+            "Verified v2 model artifact not present at the configured path "
+            "— shadow lane unavailable."
+            if not get_challenger_shadow().available
+            else None
+        ),
+        "shadow_artifact_dir": settings.semantic_model_path_v2,
         "disclosed_limitation": (
             "A recurring term hidden ONLY in untrusted listing text is invisible "
             "to the structured evidence builder — the gap the v2 corpus targeted, "
@@ -94,31 +105,45 @@ def governance_summary() -> dict[str, Any]:
     }
 
 
-# Demo premise for the active-vs-challenger comparison. This is NEW text
-# authored for the demo — never a row from frozen test/gold/OOD data.
+# Canonical NLI orientation (F002, matches semantic_evidence.py + the frozen
+# corpus): PREMISE = the CURRENT sanitized commerce/checkout evidence,
+# HYPOTHESIS = the human-confirmed authorization. This is NEW demo text authored
+# for the demo — never a row from frozen test/gold/OOD data.
 _DEFAULT_DEMO_PREMISE = (
-    "The buyer authorized a one-time purchase of wireless headphones for at "
-    "most 5000 rupees with no subscription of any kind."
+    "The current checkout contains a one-time purchase of wireless headphones "
+    "with a total of 4799 rupees and no renewal after purchase."
+)
+_DEFAULT_DEMO_AUTHORIZATION = (
+    "The human authorized a one-time purchase of headphones for at most "
+    "5000 rupees with no subscription of any kind."
 )
 
 
-def shadow_verdict(hypothesis: str, *, premise: str | None = None) -> dict[str, Any]:
+def shadow_verdict(
+    commerce_evidence: str | None = None, *, authorization: str | None = None
+) -> dict[str, Any]:
     """Challenger shadow (G003): the REAL v2 checkpoint, NON-AUTHORITATIVE.
 
     Runs the actual fine-tuned AgentPay-IR v2 artifact (candidate A_2ep) on
-    new demo text only. If the artifact cannot load or inference fails, the
-    result is CHALLENGER_UNAVAILABLE with the honest reason — the keyword
-    verifier is NEVER substituted for the challenger. The active PRE_V2 model
-    runs the same pair so the panel can show real agreement/disagreement;
-    authority always comes from the active model alone.
+    new demo text only, in the CANONICAL orientation used by both the frozen
+    corpus and the production evidence builder:
+
+        premise     = current commerce/checkout EVIDENCE  (what the cart says)
+        hypothesis  = human-confirmed AUTHORIZATION        (what the human said)
+
+    If the artifact cannot load or inference fails, the result is
+    CHALLENGER_UNAVAILABLE with the honest reason — the keyword verifier is
+    NEVER substituted for the challenger. The active PRE_V2 model runs the
+    same pair so the panel can show real agreement/disagreement; authority
+    always comes from the active model alone.
     """
-    text = hypothesis.strip()[:400]
-    if not text:
-        return {"error": "empty hypothesis"}
-    prem = (premise or _DEFAULT_DEMO_PREMISE).strip()[:512]
+    premise = (commerce_evidence or _DEFAULT_DEMO_PREMISE).strip()[:512]
+    hypothesis = (authorization or _DEFAULT_DEMO_AUTHORIZATION).strip()[:400]
+    if not premise or not hypothesis:
+        return {"error": "empty commerce evidence or authorization text"}
 
     shadow: ChallengerShadowVerifier = get_challenger_shadow()
-    challenger = shadow.assess_pair(prem, text)
+    challenger = shadow.assess_pair(premise, hypothesis)
 
     # Active model on the same pair: the live PRE_V2 runtime decision lane.
     active: dict[str, Any]
@@ -133,7 +158,7 @@ def shadow_verdict(hypothesis: str, *, premise: str | None = None) -> dict[str, 
         verifier = get_semantic_verifier(
             model_dir=resolve_repo_path(MODEL_DIR), policy_path=resolve_repo_path(POLICY_PATH)
         )
-        verdict = verifier.verify(premise=prem, hypothesis=text)
+        verdict = verifier.verify(premise=premise, hypothesis=hypothesis)
         active = {
             "action": str(verdict.action.value),
             "p_contradiction": verdict.p_contradiction,
@@ -152,7 +177,10 @@ def shadow_verdict(hypothesis: str, *, premise: str | None = None) -> dict[str, 
     )
     return {
         "mode": "SHADOW — NON-AUTHORITATIVE",
-        "input": text,
+        "orientation": "premise=commerce evidence · hypothesis=human authorization",
+        "premise": premise,
+        "hypothesis": hypothesis,
+        "input": hypothesis,  # convenience for legacy UI
         "challenger": challenger.to_dict(),
         "active": active,
         "disagreement": bool(disagree),

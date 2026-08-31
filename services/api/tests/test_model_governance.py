@@ -48,7 +48,11 @@ def test_frozen_rules_are_present(governance_client: TestClient) -> None:
 def test_shadow_is_non_authoritative_and_isolated(governance_client: TestClient) -> None:
     res = governance_client.post(
         "/model-governance/shadow",
-        json={"hypothesis": "This membership automatically renews every quarter."},
+        json={
+            "commerce_evidence": "The checkout contains only the headphones "
+            "with no renewal or recurring fee after purchase.",
+            "authorization": "The human authorized a one-time purchase with no subscription.",
+        },
     )
     assert res.status_code == 200
     body = res.json()
@@ -56,6 +60,9 @@ def test_shadow_is_non_authoritative_and_isolated(governance_client: TestClient)
     assert body["is_frozen_evaluation"] is False
     assert set(body["never_enters"]) == {"fusion", "ticket", "provider"}
     assert "ACTIVE MODEL ONLY" in body["authoritative_action"]
+    # Canonical orientation is echoed in the response (F002).
+    assert body["premise"].startswith("The checkout contains")
+    assert body["hypothesis"].startswith("The human authorized")
 
     # The REAL v2 challenger lane (G003): a semantic verdict from the actual
     # checkpoint, never the keyword stub's "UNSAFE". The unsafe recurring
@@ -63,8 +70,8 @@ def test_shadow_is_non_authoritative_and_isolated(governance_client: TestClient)
     unsafe = governance_client.post(
         "/model-governance/shadow",
         json={
-            "hypothesis": "The checkout includes a membership that renews every month.",
-            "premise": "The human authorized a one-time purchase with no subscription.",
+            "commerce_evidence": "The current checkout contains a monthly recurring membership.",
+            "authorization": "This purchase must not include a recurring subscription.",
         },
     ).json()
     challenger = unsafe["challenger"]
@@ -72,6 +79,32 @@ def test_shadow_is_non_authoritative_and_isolated(governance_client: TestClient)
     assert challenger["shadow_action"] in ("PASS", "CHALLENGE", "BLOCK")
     assert challenger["shadow_action"] == "BLOCK"
     assert "challenger is IGNORED" in unsafe["disagreement_note"]
+
+
+def test_shadow_orientation_is_canonical_not_reversed(governance_client: TestClient) -> None:
+    """F002 critical test: premise MUST be commerce evidence, hypothesis MUST
+    be the human authorization — for BOTH the active and challenger lanes.
+
+    Uses the exact required pair from the correction brief; asserts the echoed
+    orientation fields and that the recurring contradiction still BLOCKs.
+    A transposed implementation (authorization as premise, evidence as
+    hypothesis) fails these assertions.
+    """
+    evidence = "The current checkout contains a monthly recurring membership."
+    authorization = "This purchase must not include a recurring subscription."
+    body = governance_client.post(
+        "/model-governance/shadow",
+        json={"commerce_evidence": evidence, "authorization": authorization},
+    ).json()
+    assert body["premise"] == evidence
+    assert body["hypothesis"] == authorization
+    # The challenger (real v2 artifact) receives the canonical orientation and
+    # BLOCKs the contradiction.
+    assert body["challenger"]["available"] is True, body["challenger"].get("reason")
+    assert body["challenger"]["shadow_action"] == "BLOCK"
+    # The ACTIVE PRE_V2 model receives the SAME canonical orientation.
+    assert body["active"]["action"] in ("PASS", "CHALLENGE", "BLOCK")
+    assert body["active"]["action"] == "BLOCK"
 
 
 def test_committed_evidence_served_without_private_text(governance_client: TestClient) -> None:

@@ -33,10 +33,19 @@ def evidence() -> dict[str, Any]:
 
 
 class ShadowRequest(BaseModel):
-    hypothesis: str = Field(min_length=4, max_length=400)
+    """Canonical NLI orientation (F002): premise = CURRENT COMMERCE EVIDENCE,
+    hypothesis = HUMAN-CONFIRMED AUTHORIZATION. The legacy field pair keeps
+    working for existing callers, but new callers should send
+    commerce_evidence/authorization which cannot be transposed by accident."""
+
+    commerce_evidence: str | None = Field(default=None, min_length=4, max_length=512)
+    authorization: str | None = Field(default=None, min_length=4, max_length=400)
     premise: str | None = Field(default=None, min_length=4, max_length=512)
+    hypothesis: str | None = Field(default=None, min_length=4, max_length=400)
 
 
 @router.post("/shadow")
 def shadow(body: ShadowRequest) -> dict[str, Any]:
-    return shadow_verdict(body.hypothesis, premise=body.premise)
+    evidence = body.commerce_evidence if body.commerce_evidence is not None else body.premise
+    authorization = body.authorization if body.authorization is not None else body.hypothesis
+    return shadow_verdict(evidence, authorization=authorization)

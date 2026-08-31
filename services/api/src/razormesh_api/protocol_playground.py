@@ -189,6 +189,143 @@ def build_mutated_ir(spec: PacketSpec) -> AgentCommerceIR:
 
 
 # ---------------------------------------------------------------------------
+# F004: REAL cryptographic signing/verification where the repo implements it.
+#
+# UCP: a real RFC 9421 HTTP Message Signature (ES256/P-256) over a real RFC
+#      9530 Content-Digest of the packet body — signed with the repo's own
+#      UCP signing path, verified with the repo's own UCP verifier.
+# AP2: a real ES256 JWS/JWT with checkout-hash binding — signed and verified
+#      with the repo's own AP2 merchant-JWT path.
+# mcp/acp/a2a: NO equivalent cryptographic verification exists in this repo,
+#      so those lanes report the honest, weaker claim (SIGNATURE EVIDENCE
+#      PRESENT / COMMITMENT MATCH), never "cryptographic signature verified".
+# ---------------------------------------------------------------------------
+
+
+def _ir_body_bytes(ir: AgentCommerceIR) -> bytes:
+    """The canonical JSON bytes of the packet IR — what a real UCP body carries."""
+    from razormesh_api.protocol.ir import compute_commitment
+
+    return compute_commitment(ir).encode("utf-8")
+
+
+def _run_ucp_real_crypto(body: bytes, *, corrupt_body: bool) -> dict[str, Any]:
+    """Sign the packet body with the repo's real UCP path, then verify.
+
+    ``corrupt_body`` flips the body AFTER signing (an in-transit tamper) so
+    the failure comes from the REAL RFC 9530 digest + RFC 9421 signature
+    verification over genuinely different bytes — never from the mutation name.
+    """
+    from razormesh_api.protocol.ucp_signatures import (
+        UCP_COVERED_COMPONENTS,
+        export_ucp_public_jwk,
+        generate_ucp_signing_key,
+        sign_ucp_request,
+        verify_ucp_request,
+    )
+
+    key = generate_ucp_signing_key()
+    kid = "playground-ucp-key"
+    jwk = export_ucp_public_jwk(key, kid=kid, agent="razormesh-buyer-agent")
+    sig_headers = sign_ucp_request(
+        body=body,
+        method="POST",
+        path="/orders",
+        authority="merchant.example",
+        ucp_agent="razormesh-buyer-agent",
+        ucp_profile="ucp-2026-04-08",
+        key=key,
+        keyid=kid,
+        idempotency_key="idem-playground-ucp",
+        components=UCP_COVERED_COMPONENTS,
+    )
+    verified_body = body + b"\x00tampered" if corrupt_body else body
+    result = verify_ucp_request(
+        body=verified_body,
+        method="POST",
+        path="/orders",
+        authority="merchant.example",
+        headers=sig_headers.to_headers(),
+        known_jwks={kid: jwk},
+    )
+    return {
+        "scheme": "ES256/P-256 — RFC 9421 HTTP Message Signature + RFC 9530 Content-Digest",
+        "verified": bool(result.ok),
+        "reason": result.reason,
+        "covered_components": list(UCP_COVERED_COMPONENTS),
+    }
+
+
+def _run_ap2_real_crypto(ir: AgentCommerceIR, *, corrupt_claim: bool) -> dict[str, Any]:
+    """Sign a real AP2 ES256 merchant JWT binding the checkout hash, then verify.
+
+    ``corrupt_claim`` modifies the SIGNED claim bytes after signing so the
+    failure comes from the REAL ES256 verifier over genuinely tampered bytes.
+    """
+    import base64
+    import json as _json
+
+    from razormesh_api.protocol.ap2_verifier import (
+        compute_ap2_checkout_hash,
+        export_ap2_test_merchant_pub_jwk,
+        generate_ap2_test_merchant_key,
+        sign_ap2_merchant_jwt_es256,
+        verify_ap2_merchant_jwt_es256,
+    )
+
+    key = generate_ap2_test_merchant_key()
+    kid = "playground-ap2-merchant"
+    checkout_hash = compute_ap2_checkout_hash(ir)
+    payload = {
+        "vct": "ap2-checkout-authorization",
+        "checkout_hash": checkout_hash,
+        "merchant": ir.merchant.merchant_id,
+        "total_minor": ir.totals.total_minor,
+    }
+    jwt = sign_ap2_merchant_jwt_es256(key=key, kid=kid, payload=payload)
+    pub_jwk = export_ap2_test_merchant_pub_jwk(key, kid)
+
+    if corrupt_claim:
+        # Tamper the signed payload segment (an in-transit claim mutation).
+        header_b64, payload_b64, sig_b64 = jwt.split(".")
+        pad = "=" * (-len(payload_b64) % 4)
+        claims = _json.loads(base64.urlsafe_b64decode(payload_b64 + pad))
+        claims["total_minor"] = int(claims["total_minor"]) + 1
+        tampered_payload = base64.urlsafe_b64encode(
+            _json.dumps(claims, sort_keys=True, separators=(",", ":")).encode()
+        ).rstrip(b"=")
+        jwt = f"{header_b64}.{tampered_payload.decode('ascii')}.{sig_b64}"
+
+    ok, reason = verify_ap2_merchant_jwt_es256(
+        jwt=jwt,
+        public_jwk=pub_jwk,
+        expected_vct="ap2-checkout-authorization",
+    )
+    checkout_ok = payload["checkout_hash"] == compute_ap2_checkout_hash(ir)
+    return {
+        "scheme": "ES256/P-256 — JWS/JWT + checkout-hash key binding",
+        "verified": bool(ok and checkout_ok),
+        "reason": reason if not ok else ("ok" if checkout_ok else "checkout_hash_mismatch"),
+        "checkout_hash_bound": bool(checkout_ok),
+    }
+
+
+def _run_packet_crypto(spec: PacketSpec, ir: AgentCommerceIR) -> dict[str, Any] | None:
+    """Real cryptographic verification for protocols the repo actually implements.
+
+    Returns None for protocols without a real crypto implementation (mcp, acp,
+    a2a) so their lane keeps the honest commitment-evidence label instead.
+    """
+    if spec.protocol == "ucp":
+        return _run_ucp_real_crypto(
+            _ir_body_bytes(ir), corrupt_body=spec.mutation == "corrupt_signature"
+        )
+    if spec.protocol == "ap2":
+        return _run_ap2_real_crypto(ir, corrupt_claim=spec.mutation == "corrupt_signature")
+    return None
+
+
+# ---------------------------------------------------------------------------
 # G007: real signature/digest corruption + the real UCP verifier.
 # ---------------------------------------------------------------------------
 
@@ -310,6 +447,11 @@ def run_packet(spec: PacketSpec) -> dict[str, Any]:
 
     # REAL identity/signature verification over the envelope's signed bytes.
     sig = _verify_signature_evidence(ir, env)
+    # F004: REAL cryptographic verification where the repo implements it
+    # (UCP: RFC 9421 + RFC 9530; AP2: ES256 JWS + checkout-hash binding).
+    # For mcp/acp/a2a this returns None — those lanes keep the honest
+    # commitment-evidence label, never a crypto-verification claim.
+    crypto = _run_packet_crypto(spec, ir)
     # REAL IR commitment + cross-protocol consistency vs the packet.
     commitment = compute_commitment(ir)
     consistency = compare_ir_to_envelope(ir, env)
@@ -356,7 +498,41 @@ def run_packet(spec: PacketSpec) -> dict[str, Any]:
                 if sig_fail
                 else f"verifier: {sig['reason']} (no key material exposed)"
             ),
-            "engine": "commitment re-derivation vs envelope signature evidence",
+            # F004 truthful label: this check is a COMMITMENT re-derivation
+            # (binding consistency), not a cryptographic signature
+            # verification. The real crypto lane is `packet_crypto`.
+            "engine": (
+                "commitment re-derivation vs envelope signature evidence "
+                "(COMMITMENT MATCH — not a cryptographic signature)"
+            ),
+            "crypto_kind": "commitment_match",
+        },
+        "packet_crypto": {
+            "status": (
+                # Real verifier verdict — PASS/FAIL derived from the real
+                # crypto verification over real bytes, never the name.
+                ("PASS" if crypto["verified"] else "FAIL")
+                if crypto is not None
+                else "N/A — not implemented for this protocol"
+            ),
+            "detail": (
+                (
+                    f"real {crypto['scheme']}: verifier returned '{crypto['reason']}'"
+                    if crypto is not None
+                    else "No cryptographic signature verification is implemented for this "
+                    "protocol in this repository — the identity check above is a "
+                    "commitment/binding comparison only (SIGNATURE EVIDENCE PRESENT)."
+                )
+            ),
+            "engine": (
+                (
+                    "real cryptographic verification "
+                    f"({crypto['scheme']}, repo's own signer+verifier)"
+                )
+                if crypto is not None
+                else "not implemented — honest absence"
+            ),
+            "crypto_kind": "real_signature_verification" if crypto is not None else "none",
         },
         "replay_idempotency": {
             "status": mark(replay_fail, fw_ok),

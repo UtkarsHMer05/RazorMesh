@@ -65,9 +65,12 @@ def build_orchestrator() -> Phase4AcceptanceOrchestrator:
     keys_obj = _keys(settings=settings)
     return Phase4AcceptanceOrchestrator(
         checkout_service=_service(repos=repos_obj, keys=keys_obj),
-        semantic_model_dir=FilePath(settings.semantic_model_path),
-        semantic_model_dir_v2=FilePath(settings.semantic_model_path_v2),
-        semantic_policy_path=FilePath(settings.semantic_policy_path),
+        # F005: repo-root-anchored so a CWD change cannot misresolve the
+        # artifacts (run_semantic_runtime would resolve_repo_path these too,
+        # but the orchestrator records the paths it was given).
+        semantic_model_dir=FilePath(settings.repo_path(settings.semantic_model_path)),
+        semantic_model_dir_v2=FilePath(settings.repo_path(settings.semantic_model_path_v2)),
+        semantic_policy_path=FilePath(settings.repo_path(settings.semantic_policy_path)),
         semantic_backend=settings.semantic_verifier_backend,
     )
 

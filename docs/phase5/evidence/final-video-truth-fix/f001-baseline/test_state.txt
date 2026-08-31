@@ -1,0 +1,9 @@
+F001 BASELINE TEST STATE (2026-08-31, collected-only — no execution; full gates run at F015)
+Backend:  pytest --collect-only: 945 tests across 108 test files (exit 0)
+Frontend: vitest list: 25 tests; Playwright --list: 55 tests across 12 spec files
+Servers at capture: backend 127.0.0.1:8000 (health ok), web :3000 (all 7 demo pages 200)
+Postgres 127.0.0.1:15432 healthy, Redis 127.0.0.1:16379 healthy (docker ps)
+Semantic runtime: deberta PRE_V2 phase3-finetuned-v2 / semantic-thresholds-v3 (active)
+AgentPay-IR v2 challenger: NOT_ACTIVATED, SHADOW-ONLY, artifact on disk at
+  artifacts/models/incoming/agentpay-ir-v2-finetuned (present, verified at load)
+Baseline screenshots: buyer/mission-control/governance/protocols/security-lab/audit/merchant .png

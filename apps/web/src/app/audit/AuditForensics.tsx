@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { formatTransactionValue } from "@/lib/formatTransactionValue";
 import styles from "./forensics.module.css";
 
 type TraceSummary = {
@@ -339,10 +340,9 @@ export function AuditForensics() {
                       {dossier.diff.map((d) => (
                         <tr key={d.field}>
                           <td>{d.field}</td>
-                          <td>{fmtINR(d.authorized) === "—" ? "—" : fmtINR(d.authorized)}</td>
+                          <td>{formatTransactionValue(d.field, d.authorized)}</td>
                           <td>
-                            <strong>{fmtINR(d.current) === "—" ? JSON.stringify(d.current) : fmtINR(d.current)}</strong>{" "}
-                            ← CHANGED
+                            <strong>{formatTransactionValue(d.field, d.current)}</strong> ← CHANGED
                           </td>
                         </tr>
                       ))}

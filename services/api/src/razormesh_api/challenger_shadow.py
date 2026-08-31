@@ -32,13 +32,18 @@ from razormesh_api.semantic_runtime import resolve_repo_path
 from razormesh_api.semantic_verifier import apply_threshold_policy
 from razormesh_api.settings import get_settings
 
-# The exact rejected candidate artifact (D-055: ZIP sha256 4c933eec…,
-# candidate A_2ep, model.safetensors sha256 f9e0007c…).
-_V2_DIR = Path("artifacts/models/incoming/agentpay-ir-v2-finetuned")
-
 # v2's documented runtime policy (FINAL_FROZEN_EVALUATION provenance table).
 # Committed pre-freeze calibration; read-only here, never recalibrated.
 _V2_POLICY = Path("data/phase3/policy/semantic_thresholds_v4.json")
+
+
+def _v2_dir() -> Path:
+    """The configured v2 artifact dir (F014: settings are the single source).
+
+    Read lazily so settings overrides (tests, env) are honored — never a
+    module-import-time snapshot of the configuration.
+    """
+    return Path(get_settings().semantic_model_path_v2)
 
 NON_AUTHORITATIVE = True
 NEVER_ENTERS = ("fusion", "ticket", "provider")
@@ -86,7 +91,7 @@ class ChallengerShadowVerifier:
     """
 
     def __init__(self, model_dir: Path | None = None, policy_path: Path | None = None) -> None:
-        self._dir = resolve_repo_path(model_dir or _V2_DIR)
+        self._dir = resolve_repo_path(model_dir or _v2_dir())
         self._policy_file = resolve_repo_path(policy_path or _V2_POLICY)
         self._model: Any = None
         self._tokenizer: Any = None
@@ -271,7 +276,7 @@ def shadow_status() -> dict[str, Any]:
         "never_enters": list(NEVER_ENTERS),
         "available": shadow.available,
         "reason": shadow.reason,
-        "artifact_dir": str(_V2_DIR),
+        "artifact_dir": str(_v2_dir()),
         "artifact_hash": shadow._artifact_hash,
         "selected_candidate": shadow._candidate or "A_2ep",
         "model_id": "agentpay-ir-v2-finetuned (candidate A_2ep)",

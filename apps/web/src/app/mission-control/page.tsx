@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLiveTrace } from "@/lib/live-trace";
+import { formatTransactionValue } from "@/lib/formatTransactionValue";
 import styles from "./mission-control.module.css";
 
 type StageNode = {
@@ -398,14 +399,9 @@ export default function MissionControlPage() {
                       {txDiff.diff.map((d) => (
                         <tr key={d.field}>
                           <td>{d.field}</td>
-                          <td>{fmtINR(d.authorized as number) === "—" ? "—" : fmtINR(d.authorized as number)}</td>
+                          <td>{formatTransactionValue(d.field, d.authorized)}</td>
                           <td>
-                            <strong>
-                              {fmtINR(d.current as number) === "—"
-                                ? JSON.stringify(d.current)
-                                : fmtINR(d.current as number)}
-                            </strong>{" "}
-                            ← CHANGED
+                            <strong>{formatTransactionValue(d.field, d.current)}</strong> ← CHANGED
                           </td>
                         </tr>
                       ))}

@@ -50,14 +50,15 @@ def governance_shadow_client(settings):  # type: ignore[no-untyped-def]
 @pytest.mark.parametrize(
     ("premise", "hypothesis"),
     [
+        # Canonical orientation (F002): premise = commerce/checkout evidence,
+        # hypothesis = human-confirmed authorization.
         (
-            "The buyer authorized a one-time purchase of headphones for at most "
-            "5000 rupees with no subscription of any kind.",
-            "The checkout includes a membership that renews every month at 499 rupees.",
+            "The current checkout contains a monthly recurring membership.",
+            "This purchase must not include a recurring subscription.",
         ),
         (
-            "The buyer authorized spending up to 5000 rupees on headphones.",
             "The checkout total is 4799 rupees for the headphones.",
+            "The human authorized spending up to 5000 rupees on headphones.",
         ),
     ],
 )
@@ -79,9 +80,36 @@ def test_real_v2_artifact_identity_and_inference(premise: str, hypothesis: str) 
     total = result.p_contradiction + result.p_entailment + result.p_neutral
     assert 0.99 <= total <= 1.01
     assert total > 0.99 and result.p_contradiction + result.p_entailment > 0.0
-    # The recurring contradiction must BLOCK under the committed v4 thresholds.
-    if "renews every month" in hypothesis:
+    # The recurring contradiction must BLOCK under the committed v4 thresholds
+    # in the CANONICAL orientation (evidence premise / authorization hypothesis).
+    if "recurring membership" in premise:
         assert result.shadow_action == "BLOCK"
+
+
+def test_canonical_orientation_is_enforced_not_transposed() -> None:
+    """F002: reversed orientation must produce a DIFFERENT (and for the
+    transposed pair, non-authoritative-failing) model output — proving the
+    model actually distinguishes premise from hypothesis and that the shadow
+    lane feeds them canonically. A transposition bug would make both orders
+    produce identical probabilities.
+    """
+    if not (_V2_DIR / "model.safetensors").exists():
+        pytest.skip("v2 artifact not present in this environment")
+    shadow = ChallengerShadowVerifier()
+    evidence = "The current checkout contains a monthly recurring membership."
+    authorization = "This purchase must not include a recurring subscription."
+    canonical = shadow.assess_pair(evidence, authorization)
+    transposed = shadow.assess_pair(authorization, evidence)
+    assert canonical.available and transposed.available
+    # The unsafe pair must BLOCK canonically...
+    assert canonical.shadow_action == "BLOCK"
+    # ...and the two orders are genuinely different model inputs (the
+    # tokenizer concatenates premise/hypothesis in order).
+    assert (
+        canonical.p_contradiction,
+        canonical.p_entailment,
+        canonical.p_neutral,
+    ) != (transposed.p_contradiction, transposed.p_entailment, transposed.p_neutral)
 
 
 def test_shadow_is_not_the_keyword_verifier_or_active_model() -> None:
@@ -180,8 +208,8 @@ def test_active_block_stays_block_when_challenger_passes(
     shadow = get_challenger_shadow()
     if shadow.available:
         r = shadow.assess_pair(
-            "The buyer authorized a one-time purchase with no subscription of any kind.",
-            "The checkout includes a membership that renews every month.",
+            "The current checkout contains a monthly recurring membership.",
+            "The human authorized a one-time purchase with no subscription of any kind.",
         )
         assert r.shadow_action in ("PASS", "CHALLENGE", "BLOCK")  # real model output
         # The rejection evidence is UNCHANGED by the challenger's opinion:
@@ -268,15 +296,19 @@ def test_shadow_endpoint_returns_real_challenger_output(
     res = governance_shadow_client.post(
         "/model-governance/shadow",
         json={
-            "hypothesis": (
-                "The checkout includes a membership that renews every month at 499 rupees."
-            )
+            "commerce_evidence": (
+                "The current checkout contains a monthly recurring membership at 499 rupees."
+            ),
+            "authorization": "The human authorized a one-time purchase with no subscription.",
         },
     )
     assert res.status_code == 200
     body = res.json()
     assert body["is_frozen_evaluation"] is False
     assert set(body["never_enters"]) == {"fusion", "ticket", "provider"}
+    # Canonical orientation echoed (F002).
+    assert body["premise"].startswith("The current checkout")
+    assert body["hypothesis"].startswith("The human authorized")
     challenger = body["challenger"]
     assert challenger["available"] is True, challenger.get("reason")
     assert challenger["artifact_hash"] == _V2_HASH
@@ -328,3 +360,8 @@ def test_shadow_verdict_helper_never_uses_keyword_fallback(
     # authority wording intact
     assert "ACTIVE MODEL ONLY" in result["authoritative_action"]
     assert "challenger is IGNORED" in result["disagreement_note"]
+    # Canonical orientation (F002): positional first arg is the COMMERCE
+    # EVIDENCE premise; the omitted authorization falls back to the
+    # human-authorization default for the hypothesis.
+    assert result["premise"] == "The order ships in two business days."
+    assert "human authorized" in result["hypothesis"].lower()

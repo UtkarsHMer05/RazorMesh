@@ -1,0 +1,13 @@
+....................                                                     [100%]
+=============================== warnings summary ===============================
+tests/test_model_governance.py::test_shadow_is_non_authoritative_and_isolated
+tests/test_model_governance.py::test_shadow_is_non_authoritative_and_isolated
+tests/test_model_governance.py::test_shadow_is_non_authoritative_and_isolated
+tests/test_model_governance.py::test_shadow_is_non_authoritative_and_isolated
+tests/test_model_governance.py::test_shadow_is_non_authoritative_and_isolated
+tests/test_model_governance.py::test_shadow_is_non_authoritative_and_isolated
+tests/test_model_governance.py::test_shadow_is_non_authoritative_and_isolated
+  /Users/utkarshkhajuria/Desktop/RazorMesh/services/api/.venv/lib/python3.13/site-packages/torch/jit/_script.py:1488: DeprecationWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html

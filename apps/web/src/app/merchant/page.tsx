@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLiveTrace } from "@/lib/live-trace";
+import { formatTransactionValue } from "@/lib/formatTransactionValue";
 import styles from "./merchant.module.css";
 
 type Product = {
@@ -173,12 +174,10 @@ export default function MerchantPage() {
     [checkout, refreshDiff],
   );
 
-  const fmtValue = useCallback((field: string, value: unknown): string => {
-    if (value === null || value === undefined) return "—";
-    if (field.includes("minor")) return fmtINR(Number(value));
-    if (typeof value === "object") return JSON.stringify(value);
-    return String(value);
-  }, []);
+  const fmtValue = useCallback(
+    (field: string, value: unknown): string => formatTransactionValue(field, value),
+    [],
+  );
 
   const mutationEvents = useMemo(
     () =>

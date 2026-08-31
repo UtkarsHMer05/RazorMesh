@@ -204,7 +204,11 @@ def write_report(path: Path, report: BenchmarkReport) -> None:
 if __name__ == "__main__":
     paired = PairedBenchmark()
     final_report = paired.run()
-    out_path = Path("docs/PHASE1_BENCHMARK.json")
+    # F005: repo-root-anchored so the report lands in the repo regardless of
+    # the CWD the script was invoked from.
+    from razormesh_api.semantic_runtime import REPO_ROOT
+
+    out_path = REPO_ROOT / "docs/PHASE1_BENCHMARK.json"
     write_report(out_path, final_report)
     print(final_report.to_json())
     print(f"artifact written: {out_path}")

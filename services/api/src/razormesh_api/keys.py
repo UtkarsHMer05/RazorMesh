@@ -90,9 +90,17 @@ def _load_pair(private_path: Path, public_path: Path) -> tuple[Ed25519PrivateKey
 class DevSigningKeys:
     """Loads-or-generates a local Ed25519 pair at fixed paths."""
 
-    def __init__(self, private_path: str, public_path: str) -> None:
-        self._private_path = Path(private_path)
-        self._public_path = Path(public_path)
+    def __init__(self, private_path: str | Path, public_path: str | Path) -> None:
+        # F005: a RELATIVE key path (e.g. the legacy ./infra/keys/... values
+        # still present in some .env files) resolves against the canonical
+        # repo root, never the process CWD — otherwise launching the backend
+        # from another directory would silently load (or worse, generate) a
+        # DIFFERENT keypair. Absolute paths pass through untouched.
+        from razormesh_api.settings import REPO_ROOT
+
+        p, q = Path(private_path), Path(public_path)
+        self._private_path = p if p.is_absolute() else REPO_ROOT / p
+        self._public_path = q if q.is_absolute() else REPO_ROOT / q
 
     @property
     def both_present(self) -> bool:
@@ -138,8 +146,8 @@ def default_from_settings() -> DevSigningKeys:
 
     s = get_settings()
     return DevSigningKeys(
-        private_path=s.dev_ticket_private_key_path,
-        public_path=s.dev_ticket_public_key_path,
+        private_path=Path(s.dev_ticket_private_key_path),
+        public_path=Path(s.dev_ticket_public_key_path),
     )
 
 

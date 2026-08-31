@@ -1,14 +1,40 @@
 """Typed application settings (local-first; Razorpay Test Mode in Phase 2)."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# One canonical repository root derived from THIS file's source location
+# (services/api/src/razormesh_api/settings.py → parents[4] = repo root), so
+# repo-relative configuration (.env, dev signing keys, semantic model/policy
+# artifacts) resolves identically no matter which CWD the backend process was
+# started from (F005). Mirrors semantic_runtime.REPO_ROOT; both derive from
+# the same package layout, never from process.cwd().
+REPO_ROOT = Path(__file__).resolve().parents[4]
+
+
+def _env_file_path() -> str:
+    """Repo-root .env, but the process CWD keeps its historical precedence.
+
+    pydantic-settings resolves ``env_file`` relative to the process CWD. When
+    the backend is started from the repo root (the documented dev path) that
+    is already correct; starting it from elsewhere (services/api, /tmp) must
+    NOT silently lose the AI-compiler configuration. An explicit .env in the
+    CWD wins (compatibility); otherwise the repo-root .env is used.
+    """
+    cwd_env = Path.cwd() / ".env"
+    if cwd_env.is_file():
+        return str(cwd_env)
+    return str(REPO_ROOT / ".env")
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=_env_file_path(), env_file_encoding="utf-8", extra="ignore"
+    )
 
     database_url: str = (
         "postgresql+psycopg://razormesh:razormesh_local_dev@127.0.0.1:15432/razormesh"
@@ -17,8 +43,8 @@ class Settings(BaseSettings):
     web_origin: str = "http://localhost:3000"
     policy_version: str = "phase1-policy-v1"
     mock_payment_provider: bool = True
-    dev_ticket_private_key_path: str = "./infra/keys/dev_ticket_ed25519_private.pem"
-    dev_ticket_public_key_path: str = "./infra/keys/dev_ticket_ed25519_public.pem"
+    dev_ticket_private_key_path: str = str(REPO_ROOT / "infra/keys/dev_ticket_ed25519_private.pem")
+    dev_ticket_public_key_path: str = str(REPO_ROOT / "infra/keys/dev_ticket_ed25519_public.pem")
 
     # ------------------------------------------------------------------
     # Payment provider selection (Phase 2)
@@ -68,6 +94,16 @@ class Settings(BaseSettings):
     @property
     def razorpay_credentials_present(self) -> bool:
         return bool(self.razorpay_key_id) and bool(self.razorpay_key_secret.get_secret_value())
+
+    def repo_path(self, path: str | Path) -> Path:
+        """Resolve a configured repo-relative path against REPO_ROOT (F005).
+
+        Absolute paths (including env overrides) pass through untouched, so
+        overrides keep working; relative defaults resolve against the repo
+        root instead of the process CWD.
+        """
+        p = Path(path)
+        return p if p.is_absolute() else REPO_ROOT / p
 
 
 class ProviderConfigError(Exception):

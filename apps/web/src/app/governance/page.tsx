@@ -54,6 +54,9 @@ type Governance = {
 
 type Shadow = {
   mode: string;
+  orientation: string;
+  premise: string;
+  hypothesis: string;
   input: string;
   challenger: {
     available: boolean;
@@ -77,11 +80,14 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 export default function GovernancePage() {
   const [data, setData] = useState<Governance | null>(null);
+  // Canonical NLI orientation (F002): PREMISE = current commerce/checkout
+  // evidence; HYPOTHESIS = human-confirmed authorization. Matches the frozen
+  // corpus and the production evidence builder.
   const [shadowPremise, setShadowPremise] = useState(
-    "The human authorized delivery only to the registered home address.",
+    "The current checkout contains a monthly recurring membership.",
   );
   const [shadowInput, setShadowInput] = useState(
-    "The parcel will be routed through a local pickup point.",
+    "This purchase must not include a recurring subscription.",
   );
   const [shadow, setShadow] = useState<Shadow | null>(null);
   const [busy, setBusy] = useState(false);
@@ -109,7 +115,10 @@ export default function GovernancePage() {
       const res = await fetch(`${API}/model-governance/shadow`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ premise: shadowPremise, hypothesis: shadowInput }),
+        body: JSON.stringify({
+          commerce_evidence: shadowPremise,
+          authorization: shadowInput,
+        }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error("shadow failed");
@@ -249,9 +258,14 @@ export default function GovernancePage() {
               same pair. Even when the challenger disagrees, authority comes from the active
               model alone — the challenger is IGNORED for fusion, tickets, and provider calls.
             </p>
+            <p className="page-sub">
+              Canonical NLI orientation:{" "}
+              <strong>premise = current commerce evidence · hypothesis = human authorization</strong>{" "}
+              — the same orientation the models were trained and calibrated on.
+            </p>
             <div className={styles.shadowControls}>
               <label className="field-label" htmlFor="shadow-premise">
-                Demo premise — the authorization text (non-frozen)
+                Premise — CURRENT COMMERCE EVIDENCE (what the checkout says, non-frozen)
               </label>
               <textarea
                 id="shadow-premise"
@@ -261,7 +275,7 @@ export default function GovernancePage() {
                 onChange={(e) => setShadowPremise(e.target.value)}
               />
               <label className="field-label" htmlFor="shadow-input">
-                Demo hypothesis — the checkout evidence (non-frozen)
+                Hypothesis — HUMAN AUTHORIZATION (what the human confirmed, non-frozen)
               </label>
               <textarea
                 id="shadow-input"
