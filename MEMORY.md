@@ -29,8 +29,8 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 # Current snapshot
 
 **Project:** RazorMesh Trust
-**State (2026-08-30):** `POST-COLAB BUILDATHON ACCEPTANCE COMPLETE` →
-`RAZORMESH_BUILDATHON_SUBMISSION_READY / V2_CANDIDATE_REJECTED_BY_SAFETY_GATE / PRE_V2_ACTIVE`
+**State (2026-08-31):** `PHASE-5 DEEP ENGINE CORRECTION COMPLETE` →
+`PHASE5_DEEP_ENGINE_CORRECTION_PASS / VIDEO_TRUTHFUL_AND_INTERACTIVE / PRE_V2_ACTIVE / V2_REAL_SHADOW_NON_AUTHORITATIVE`
 
 - **AgentPay-IR v2: EVALUATED / NOT ACTIVATED.** Trained on the final corpus
   (13,605/2,261/2,227 + 301 gold; 96 injection rows TRAIN-only; bundle
@@ -45,8 +45,11 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 - **Active semantic runtime:** backend `deberta` · model `phase3-finetuned-v2`
   (PRE_V2) · policy `semantic-thresholds-v3`. The v4 policy file exists on
   disk (val-only calibration) but is NOT wired.
-- **AgentPay-X:** 191/191 (100% safe-pass, 100% attack-block, 0 false-allow,
-  0 false-block, 0 exactly-once violations).
+- **AgentPay-X:** 191-scenario adversarial policy benchmark — 37 safe @100%
+  pass, 154 attacks @100% block (BLOCK+CHALLENGE), 0 false-allow/block, 0
+  exactly-once violations; per-case `passed` count is 156/191 (documented
+  firewall-granularity differences on 35 cases). Exactly-once/provider
+  execution is proven by SEPARATE acceptance tests, not by this benchmark.
 - **Razorpay Test acceptance (live):** SAFE chain → provider order created
   EXACTLY once; attack chains → 0 provider calls; replay → 0 additional
   provider calls (403 TICKET_EXPIRED / idempotent same-attempt). Browser
@@ -55,7 +58,16 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 - **Gates (final regression):** backend 813 collected exit 0 (live DeBERTa in
   loop); ruff/mypy clean; tsc/eslint 0 errors; vitest 18/18; next build OK;
   security_check PASS 0 findings.
-- **Next:** submission/release activities only. **Phase 5 NOT STARTED.**
+- **Phase-5 deep-engine correction (G001-G030):** COMPLETE 2026-08-31, all 30 gates
+  PASS with per-gate evidence (docs/phase5/DEEP_ENGINE_CORRECTION_STATUS.md).
+  Real v2 challenger shadow (hash-verified A_2ep) now runs NON-AUTHORITATIVE
+  in the governance panel; protocol/merchant/security/mission-control/audit
+  surfaces all engine-truthful now. New modules: challenger_shadow.py,
+  security_missions.py + TransactionBaseline table (migration
+  a1b2c3d4e5f6). Storyboard Scenario-B wording corrected to protocol-PASS →
+  intent-BLOCK. Evidence: PROVENANCE_INVENTORY.md + docs/evidence/
+  PROTOCOL_TRUTH_TABLE.md. D-057 records the decision.
+- **Next:** video recording + submission only.
 - Remote: the agent never pushes; the human owner pushes manually
   (see `docs/agentpay_ir_v2/REMOTE_STATE.md`).
 - Demo: Buyer (SAFE→Razorpay Test order), Security Lab (Scenario B recurring
@@ -67,7 +79,7 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 
 **Phase 4 (2026-08-27, SUPERSEDED):** `AUTONOMOUS_50_OF_50_PASS /
 AWAITING_FINAL_HUMAN_ACCEPTANCE` at the time; M49 gates then: pytest 718/718,
-vitest 76 PASS, AgentPay-X 191/191. Its single final human gate (one prepared
+vitest 76 PASS, AgentPay-X canonical gate green. Its single final human gate (one prepared
 Razorpay Test transaction) was later executed and superseded by the post-colab
 acceptance above.
 
@@ -186,7 +198,8 @@ RazorMesh Trust verifies that a proposed agentic-commerce transaction still matc
 # Active blockers
 
 None. The post-colab buildathon acceptance is complete; all gates green
-(backend 813 exit 0, AgentPay-X 191/191, security scan PASS). Next actions are
+(backend 813 exit 0, AgentPay-X canonical gate green, security scan PASS). Next
+actions are
 submission/release only; Phase 5 NOT STARTED.
 
 Carried forward (historical observations, unchanged from prior audit):

@@ -140,3 +140,135 @@ def test_no_key_material_in_any_response(playground_client: TestClient) -> None:
         if "commitment" in blob:
             heads = [p for p in blob.split('"') if len(p) == 16]
             assert all(len(h) == 16 for h in heads)
+
+
+# ---------------------------------------------------------------------------
+# Deep-engine correction G006-G011: real artifacts, real verifiers, real pairs
+# ---------------------------------------------------------------------------
+
+
+def test_quantity_mutation_changes_quantity_field_not_total_proxy(
+    playground_client: TestClient,
+) -> None:
+    """G009: quantity 1→2 must change the QUANTITY; total recomputes as a
+    consequence (unit price unchanged), never a bare totalx2 proxy."""
+    res = playground_client.post(
+        "/protocol-playground/run", json={"protocol": "ucp", "mutation": "quantity_plus_one"}
+    )
+    body = res.json()
+    ir = body["ir"]
+    assert ir["quantity"] == 2, "the quantity field itself must change"
+    assert body["packet"]["quantity"] == 2
+    assert ir["total_minor"] == 189_900 * 2  # consequence of qty 2 at the same unit price
+    assert body["consistency"] == "MISMATCH"
+
+
+def test_recurring_mutation_changes_recurring_field(playground_client: TestClient) -> None:
+    """G008: recurring insertion must set the actual recurring mode/terms."""
+    res = playground_client.post(
+        "/protocol-playground/run", json={"protocol": "ucp", "mutation": "recurring_inserted"}
+    )
+    body = res.json()
+    assert body["ir"]["recurring"] == "monthly"
+    assert body["packet"]["recurring"] == "monthly"
+    safe = playground_client.post(
+        "/protocol-playground/run", json={"protocol": "ucp", "mutation": "none"}
+    ).json()
+    assert safe["ir"]["recurring"] == "none"
+    assert body["consistency"] == "MISMATCH"
+
+
+def test_merchant_swap_changes_merchant_field(playground_client: TestClient) -> None:
+    """G006: merchant substitution must change the actual merchant identity."""
+    res = playground_client.post(
+        "/protocol-playground/run", json={"protocol": "ucp", "mutation": "merchant_swap"}
+    )
+    body = res.json()
+    assert body["ir"]["merchant"] == "merch_b"
+    assert body["consistency"] == "MISMATCH"
+
+
+def test_corrupt_signature_really_corrupts_and_verifier_rejects(
+    playground_client: TestClient,
+) -> None:
+    """G007: the corruption must change actual signed material and the REAL
+    verifier must fail because of it."""
+    res = playground_client.post(
+        "/protocol-playground/run", json={"protocol": "ucp", "mutation": "corrupt_signature"}
+    )
+    body = res.json()
+    check = body["checks"]["identity_signature"]
+    assert check["status"] == "FAIL"
+    assert "verifier:" in check["detail"]
+    assert "corrupted" in check["detail"] or "no longer covers" in check["detail"]
+
+
+def test_removing_corruption_makes_verifier_pass() -> None:
+    """G007 PASS-condition: without corruption the same verifier returns PASS.
+
+    Mutation-causality proof: removing the corruption step flips the verdict.
+    """
+    from razormesh_api.protocol.agentpay_x import _base_ir
+    from razormesh_api.protocol_playground import (
+        PacketSpec,
+        _corrupt_signature_evidence,
+        _packet_envelope,
+        _verify_signature_evidence,
+    )
+
+    spec = PacketSpec(protocol="ucp", mutation="corrupt_signature")
+    authorized = _base_ir()
+    env, _ = _packet_envelope(spec, authorized)
+    clean = _verify_signature_evidence(authorized, env)
+    assert clean["verified"] is True
+    corrupted_env = _corrupt_signature_evidence(env)
+    dirty = _verify_signature_evidence(authorized, corrupted_env)
+    assert dirty["verified"] is False
+    assert dirty["reason"] == "signature_covers_corrupted_commitment"
+    assert (
+        corrupted_env.signature_evidence["commerce_commitment_hash"]
+        != env.signature_evidence["commerce_commitment_hash"]
+    )
+
+
+def test_replay_fail_is_engine_derived(playground_client: TestClient) -> None:
+    """G006: the replay FAIL must come from the real idempotency engine
+    (REPLAY reason on the second evaluation), not the mutation name."""
+    res = playground_client.post(
+        "/protocol-playground/run", json={"protocol": "ucp", "mutation": "replay_same_packet"}
+    )
+    body = res.json()
+    assert body["checks"]["replay_idempotency"]["status"] == "FAIL"
+    assert "duplicate key rejected" in body["checks"]["replay_idempotency"]["detail"]
+    assert body["checks"]["protocol_firewall"]["status"] == "PROTOCOL_CHALLENGE"
+
+
+def test_downgrade_fail_is_engine_derived(playground_client: TestClient) -> None:
+    """G006: the downgrade FAIL must be the firewall's own version verdict."""
+    res = playground_client.post(
+        "/protocol-playground/run", json={"protocol": "mcp", "mutation": "protocol_downgrade"}
+    )
+    body = res.json()
+    assert body["checks"]["schema_version"]["status"] == "FAIL"
+    assert "firewall rejected" in body["checks"]["schema_version"]["detail"]
+    assert body["protocol_version"] == "2025-12-01"
+    fw = body["checks"]["protocol_firewall"]
+    assert fw["status"] == "PROTOCOL_BLOCK"
+    assert "unsupported_version" in fw["detail"] and "downgrade" in fw["detail"]
+
+
+def test_cross_protocol_never_compares_base_to_base(playground_client: TestClient) -> None:
+    """G010: per-lane pairs must be (lane_ir, lane_envelope).
+
+    Diverging ONE lane must MISMATCH only that lane; a base/base comparison
+    would MATCH every lane and this test would fail.
+    """
+    diverged = playground_client.get("/protocol-playground/cross", params={"diverge": "ap2"}).json()
+    by_proto = {lane["protocol"]: lane["consistency"] for lane in diverged["lanes"]}
+    assert by_proto["ap2"] == "MISMATCH"
+    assert all(v == "MATCH" for k, v in by_proto.items() if k != "ap2")
+    assert diverged["overall"] == "MISMATCH"
+    assert diverged["envelope_consistency"]["ap2"] == "MISMATCH"
+    assert all(v == "MATCH" for k, v in diverged["envelope_consistency"].items() if k != "ap2")
+    heads = {lane["commitment_head"] for lane in diverged["lanes"]}
+    assert len(heads) == 2

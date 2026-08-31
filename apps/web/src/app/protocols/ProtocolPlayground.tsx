@@ -27,6 +27,7 @@ type RunResult = {
     currency: string;
     recurring: string;
     item_count: number;
+    quantity: number;
   };
   checks: Record<
     string,
@@ -39,6 +40,7 @@ type RunResult = {
     total_minor: number;
     currency: string;
     recurring: string;
+    quantity: number;
   };
   commitment_head: string;
   consistency: string;
@@ -245,6 +247,10 @@ export function ProtocolPlayground() {
               <div>
                 <dt>Recurring</dt>
                 <dd>{result.packet.recurring}</dd>
+              </div>
+              <div>
+                <dt>Quantity</dt>
+                <dd>{result.packet.quantity}</dd>
               </div>
               <div>
                 <dt>Commitment</dt>

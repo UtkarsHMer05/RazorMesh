@@ -106,3 +106,91 @@
 @media (prefers-reduced-motion: reduce) {
   .timelineRow { animation: none; }
 }
+
+/* G022: read-only playback player */
+.replayPlayer {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 2px solid #e5e5e5;
+}
+.replayPlayer h4 {
+  margin: 0 0 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.9rem;
+}
+.playbackControls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.speedLabel {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.85rem;
+}
+.playPosition {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: #444;
+}
+.currentEvent {
+  margin: 0.6rem 0 0;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.6rem;
+  background: #f5f5f5;
+  border-left: 4px solid #0057d8;
+}
+
+/* G023: selected-trace hash chain */
+.chainView {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 2px solid #e5e5e5;
+}
+.chainView h4 {
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.9rem;
+}
+.chainNodes {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.78rem;
+}
+.chainNode {
+  display: flex;
+  gap: 0.6rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  padding: 0.22rem 0.4rem;
+  border-left: 3px solid #bbb;
+  margin-left: 0.4rem;
+}
+.chainNodeCurrent {
+  background: #eef4ff;
+  border-left-color: #0057d8;
+}
+.chainEventType {
+  font-weight: 700;
+  min-width: 18ch;
+}
+.chainHash {
+  color: #0057d8;
+}
+.chainLink {
+  color: #2e7d32;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chainNode,
+  .currentEvent {
+    transition: none !important;
+    animation: none !important;
+  }
+}

@@ -1,6 +1,32 @@
 # PHASE1_STATUS.md — Execution Evidence
 
-## Post-Colab final acceptance checkpoint — 2026-08-30 (latest)
+## Phase-5 deep-engine correction checkpoint — 2026-08-31 (latest)
+
+Owner master prompt `~/Downloads/RazorMesh_Phase5_Deep_Engine_Correction_Master_Prompt.md`
+(G001–G030). All 30 gates PASS with per-gate evidence in
+`docs/phase5/DEEP_ENGINE_CORRECTION_STATUS.md`: the governance shadow now runs
+the ACTUAL rejected AgentPay-IR v2 checkpoint (hash-verified, NON-AUTHORITATIVE,
+never fusion/ticket/provider); protocol playground verdicts are engine-derived
+from real mutated artifacts; merchant sandbox uses an immutable
+TransactionBaseline (checkout-local mutations, exact revert); security missions
+run one shared orchestration with dedicated per-attack endpoints and an
+event-driven movie; Mission Control acts on the CURRENT transaction (mutate/
+revert/execute via the real revalidation contract) with a comprehensive diff;
+Audit has real read-only timeline playback + per-trace hash-chain nodes.
+Regression: backend 932/932 exit 0 (live-ingress trio 13/13 in isolation —
+pre-existing flake), phase-4 189/189, ruff/mypy clean (114 files), tsc/eslint
+0 errors, vitest 25/25, next build 22/22 pages, Playwright 46–47 passed (3
+reviewer-gate failures are environmental — the running dev server lacks
+RAZORMESH_REVIEWER_ENABLED=1 — plus order-dependent flakes that pass 100% in
+isolation), payment-FSM 4/4, `make security-check` PASS (one pre-existing
+synthetic-key finding resolved via the scan's documented allowlist mechanism).
+Frozen truths unchanged: PRE_V2 active; v2 NOT activated; frozen evaluation
+NOT rerun; no retraining; thresholds untouched; no push. Gate token:
+`PHASE5_DEEP_ENGINE_CORRECTION_PASS / VIDEO_TRUTHFUL_AND_INTERACTIVE /
+PRE_V2_ACTIVE / V2_REAL_SHADOW_NON_AUTHORITATIVE`.
+
+## Post-Colab final acceptance checkpoint — 2026-08-30
+## Post-Colab final acceptance checkpoint — 2026-08-30 (superseded as latest; retained as evidence)
 
 Commit `5977e85` (+ `7f3aad3` docs): the full backend suite exited 0 with **813
 collected** tests (live DeBERTa semantic runtime in the loop) after proving 3

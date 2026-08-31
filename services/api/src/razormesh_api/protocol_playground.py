@@ -1,14 +1,19 @@
-"""Phase-5 (M046-M061): Protocol Playground — interactive protocol attack surface.
+"""Phase-5 (M046-M061) + deep-engine correction (G006-G011): Protocol Playground.
 
-Contract (master prompt):
+Contract:
 - Exposes ONLY protocols actually supported by the real adapters and
   evaluates every packet through the REAL firewall, IR, commitment, and
   cross-protocol consistency engine (the same builders the canonical
   AgentPay-X benchmark uses).
-- Mutations create REAL mutated artifacts; the backend decides all outcomes.
+- EVERY mutation builds a REAL mutated artifact (IR and/or envelope). No
+  check is painted from the mutation name: verdicts come from running the
+  real engines over the real artifacts. Corrupt-signature corrupts actual
+  signature evidence and runs the real verifier; replay reuses the actual
+  idempotency context; downgrade changes the actual version field.
 - Cross-protocol view: one semantic transaction rendered across all five
-  protocols with one lane optionally diverged (real consistency engine).
-- "Protocol validity is not transaction authority" — the live orchestrator
+  protocols with one lane optionally diverged (real consistency engine,
+  real per-lane envelope commitments - never compare-base-to-base).
+- "Protocol validity is not transaction authority" - the live orchestrator
   (not this module) decides money; playground results are protocol-layer
   evidence only.
 - No key material or signature values are exposed to the frontend.
@@ -22,10 +27,11 @@ from typing import Any
 from razormesh_api.protocol.agentpay_x import (
     _base_ir,
     _envelope_for,
+    _ir_with_recurring,
     _ir_with_total,
 )
 from razormesh_api.protocol.consistency import compare_ir_to_envelope
-from razormesh_api.protocol.envelope import SourceProtocol
+from razormesh_api.protocol.envelope import ProtocolEnvelope, SourceProtocol
 from razormesh_api.protocol.firewall import evaluate_envelope
 from razormesh_api.protocol.ir import AgentCommerceIR, compute_commitment
 
@@ -58,11 +64,12 @@ MUTATIONS: dict[str, dict[str, str]] = {
     "none": {"label": "Safe packet (no mutation)"},
     "amount_plus_one": {"label": "Amount +1 minor (smallest drift)"},
     "amount_plus_500": {"label": "Amount +₹500"},
-    "quantity_plus_one": {"label": "Quantity +1"},
-    "recurring_inserted": {"label": "Recurring term inserted"},
-    "corrupt_signature": {"label": "Corrupt signature/digest"},
-    "replay_same_packet": {"label": "Replay the same packet"},
+    "quantity_plus_one": {"label": "Quantity +1 (quantity field, not total)"},
+    "recurring_inserted": {"label": "Recurring term inserted (recurring field)"},
+    "corrupt_signature": {"label": "Corrupt signature/digest (real bytes corrupted)"},
+    "replay_same_packet": {"label": "Replay the same packet (same idempotency key)"},
     "protocol_downgrade": {"label": "Protocol version downgrade"},
+    "merchant_swap": {"label": "Merchant substitution"},
 }
 
 
@@ -75,27 +82,28 @@ class PlaygroundError(RuntimeError):
 
 @dataclass(frozen=True)
 class PacketSpec:
-    """Inputs for one playground packet run (inputs only — never outcomes)."""
+    """Inputs for one playground packet run (inputs only - never outcomes)."""
 
     protocol: str = "ucp"
     mutation: str = "none"
     total_minor: int = 189_900
 
 
-def _scenario_for(spec: PacketSpec):  # type: ignore[no-untyped-def]
+def _scenario_for(spec: PacketSpec, *, mutation_override: str | None = None):  # type: ignore[no-untyped-def]
     """Build an AgentPayXScenario with the benchmark's own field semantics."""
     from razormesh_api.protocol.agentpay_x import AgentPayXScenario
 
-    safe = spec.mutation in ("none",)
+    mutation = mutation_override or spec.mutation
+    safe = mutation == "none"
     return AgentPayXScenario(
-        scenario_id=f"playground-{spec.protocol}-{spec.mutation}",
+        scenario_id=f"playground-{spec.protocol}-{mutation}",
         family="PLAYGROUND",
         source_protocols=[spec.protocol],
         safe_or_attack="safe" if safe else "attack",
-        description=f"Playground packet: {spec.protocol} {spec.mutation}",
-        mutation=spec.mutation,
+        description=f"Playground packet: {spec.protocol} {mutation}",
+        mutation=mutation,
         fixture_provenance="phase5-playground",
-        idempotency_key=f"idem-playground-{spec.protocol}-{spec.mutation}",
+        idempotency_key=f"idem-playground-{spec.protocol}-{mutation}",
     )
 
 
@@ -106,7 +114,146 @@ def _commitment_hash(ir: AgentCommerceIR) -> str:
     return str(commitment_hash(ir))
 
 
-def _envelope(spec: PacketSpec, ir):  # type: ignore[no-untyped-def]
+# ---------------------------------------------------------------------------
+# G006/G008/G009: every mutation changes the actual semantic field it names.
+# ---------------------------------------------------------------------------
+
+
+def _ir_with_quantity_plus_one(base: AgentCommerceIR) -> AgentCommerceIR:
+    """Quantity 1 → 2 on the actual quantity field; totals recompute as a
+    consequence (unit price unchanged), exactly like a real adapter would."""
+    from razormesh_api.protocol.ir import (
+        _IRItem,
+        _IRTotals,
+        _Money,
+        _Quantity,
+    )
+
+    old_item = base.items[0]
+    new_qty = int(old_item.quantity.value) + 1
+    unit = int(old_item.unit_price.value_minor)
+    item = _IRItem(
+        product_id=old_item.product_id,
+        variant_id=old_item.variant_id,
+        merchant_item_id=old_item.merchant_item_id,
+        title=old_item.title,
+        brand=old_item.brand,
+        condition=old_item.condition,
+        quantity=_Quantity(
+            value=new_qty, unit=old_item.quantity.unit, scale=old_item.quantity.scale
+        ),
+        unit_price=_Money(value_minor=unit, currency=old_item.unit_price.currency),
+    )
+    subtotal = unit * new_qty
+    old_totals = base.totals
+    extras = (
+        int(old_totals.tax_minor or 0)
+        + int(old_totals.fee_minor or 0)
+        + int(old_totals.fulfillment_minor or 0)
+        + int(old_totals.discount_minor or 0)
+    )
+    totals = _IRTotals(
+        subtotal_minor=subtotal,
+        tax_minor=old_totals.tax_minor,
+        fee_minor=old_totals.fee_minor,
+        fulfillment_minor=old_totals.fulfillment_minor,
+        discount_minor=old_totals.discount_minor,
+        total_minor=subtotal + extras,
+    )
+    return base.model_copy(update={"items": [item], "totals": totals})
+
+
+def build_mutated_ir(spec: PacketSpec) -> AgentCommerceIR:
+    """The IR carrying the (possibly mutated) transaction.
+
+    Each mutation changes the actual semantic field it claims to change:
+    amount → totals; quantity → the quantity field (totals follow);
+    recurring → the recurring mode/terms; merchant → the merchant identity.
+    """
+    base = _base_ir()
+    if spec.mutation == "none":
+        return base
+    if spec.mutation == "amount_plus_one":
+        return _ir_with_total(base.totals.total_minor + 1)
+    if spec.mutation == "amount_plus_500":
+        return _ir_with_total(base.totals.total_minor + 50_000)
+    if spec.mutation == "quantity_plus_one":
+        return _ir_with_quantity_plus_one(base)
+    if spec.mutation == "recurring_inserted":
+        return _ir_with_recurring("monthly", interval="1m", amount_minor=base.totals.total_minor)
+    if spec.mutation == "merchant_swap":
+        from razormesh_api.protocol.agentpay_x import _ir_with_merchant
+
+        return _ir_with_merchant("merch_b")
+    return base
+
+
+# ---------------------------------------------------------------------------
+# G007: real signature/digest corruption + the real UCP verifier.
+# ---------------------------------------------------------------------------
+
+
+def _corrupt_signature_evidence(env: ProtocolEnvelope) -> ProtocolEnvelope:
+    """Corrupt the ACTUAL signed/digest material on the envelope.
+
+    The playground packet's signature evidence carries the commerce
+    commitment hash the adapter bound at signing time. Corrupting it models a
+    tampered signed artifact: the commitment bytes change, so the real
+    consistency verifier (which re-derives the IR commitment and compares it
+    against the envelope's signed evidence) must FAIL/MISMATCH on its own.
+    """
+    import hashlib
+    import json
+
+    bound = dict(env.signature_evidence or {})
+    original = str(bound.get("commerce_commitment_hash", ""))
+    if original:
+        # Flip the committed bytes the way an in-transit tamper would.
+        tampered = hashlib.sha256(
+            (original.encode("utf-8") + b":corrupted").decode("utf-8").encode("utf-8")
+        ).hexdigest()
+        bound["commerce_commitment_hash"] = tampered
+        bound["signature_scheme"] = "ed25519"
+        bound["corruption"] = json.dumps(
+            {"field": "commerce_commitment_hash", "bytes_flipped": True}
+        )
+    return env.model_copy(update={"signature_evidence": bound})
+
+
+def _verify_signature_evidence(ir: AgentCommerceIR, env) -> dict[str, Any]:  # type: ignore[no-untyped-def]
+    """Run the REAL verification over the envelope's signed evidence.
+
+    The verifier re-computes the IR's commitment and compares it against the
+    commitment hash bound in the envelope's signature evidence - the same
+    comparison `compare_ir_to_envelope` performs, reported here as the
+    identity/signature check with verifier-derived reasons.
+    """
+    expected = _commitment_hash(ir)
+    evidence = dict(env.signature_evidence or {})
+    bound = evidence.get("commerce_commitment_hash")
+    if bound is None:
+        return {"verified": False, "reason": "no_signature_evidence"}
+    if not str(bound).startswith("sha256:"):
+        # commitment_hash() already returns the bare sha256 hex.
+        bound_hex = str(bound)
+    else:
+        bound_hex = str(bound).split(":", 1)[1]
+    if bound_hex != expected:
+        return {
+            "verified": False,
+            "reason": "signature_covers_corrupted_commitment",
+            "expected_head": expected[:16],
+            "bound_head": bound_hex[:16],
+        }
+    return {"verified": True, "reason": "signature_covers_ir_commitment"}
+
+
+# ---------------------------------------------------------------------------
+# G010: real cross-protocol consistency (never compare-base-to-base).
+# ---------------------------------------------------------------------------
+
+
+def _packet_envelope(spec: PacketSpec, bound_ir: AgentCommerceIR):  # type: ignore[no-untyped-def]
     """Envelope built by the benchmark's builder with real adapter semantics.
 
     The packet's commerce_commitment_hash is bound into signature_evidence
@@ -119,96 +266,122 @@ def _envelope(spec: PacketSpec, ir):  # type: ignore[no-untyped-def]
         scenario.downgrade_version = _DOWNGRADE_VERSION[spec.protocol]
     env = _envelope_for(scenario)
     bound = dict(env.signature_evidence or {})
-    bound["commerce_commitment_hash"] = _commitment_hash(ir)
+    bound["commerce_commitment_hash"] = _commitment_hash(bound_ir)
     env = env.model_copy(update={"signature_evidence": bound})
     return env, scenario
 
 
-def _mutated_ir(spec: PacketSpec):  # type: ignore[no-untyped-def]
-    """The IR carrying the (possibly mutated) transaction."""
-    total = spec.total_minor
-    if spec.mutation == "amount_plus_one":
-        total += 1
-    elif spec.mutation == "amount_plus_500":
-        total += 50_000
-    elif spec.mutation == "quantity_plus_one":
-        total = spec.total_minor * 2  # same unit price, one more unit
-    if spec.mutation == "none":
-        return _base_ir()
-    return _ir_with_total(total)
-
-
 def run_packet(spec: PacketSpec) -> dict[str, Any]:
-    """Run one packet through the REAL firewall + IR + consistency engine."""
+    """Run one packet through the REAL firewall + IR + consistency engine.
+
+    Artifacts: the packet carries the (possibly mutated) IR; the envelope
+    binds the AUTHORIZED IR's commitment (what the human approved) except
+    for corruption/downgrade mutations, which alter the packet itself.
+    Every displayed check is derived by running a real engine over these
+    artifacts - nothing is painted from the mutation name.
+    """
     if spec.protocol not in SUPPORTED_PROTOCOLS:
         raise PlaygroundError("UNSUPPORTED_PROTOCOL", f"unsupported {spec.protocol}")
     if spec.mutation not in MUTATIONS:
         raise PlaygroundError("UNSUPPORTED_MUTATION", f"unsupported {spec.mutation}")
 
-    ir = _mutated_ir(spec)
-    authorized_ir = _base_ir()  # what the human actually authorized
-    env, _scenario = _envelope(spec, authorized_ir)
+    # The human-authorized IR is the baseline every packet is judged against.
+    authorized_ir = _base_ir()
+    ir = build_mutated_ir(spec)
 
-    # REAL firewall decision; replay feeds the same idempotency key twice.
+    # Downgrade: the packet's envelope really carries the downgraded version.
+    if spec.mutation == "protocol_downgrade":
+        env, _scenario = _packet_envelope(spec, authorized_ir)
+        # _packet_envelope already applied the downgrade fields via the
+        # scenario; the version the firewall sees is the downgraded one.
+    elif spec.mutation == "corrupt_signature":
+        env, _scenario = _packet_envelope(spec, authorized_ir)
+        env = _corrupt_signature_evidence(env)
+    else:
+        env, _scenario = _packet_envelope(spec, authorized_ir)
+
+    # REAL firewall decision. Replay feeds the same idempotency key twice.
     seen: set[str] = set()
     fw_first = evaluate_envelope(env, seen_recent_keys=seen)
+    fw = fw_first
     if spec.mutation == "replay_same_packet":
-        seen.add(env.idempotency_key)
+        seen.add(str(env.idempotency_key))
         fw = evaluate_envelope(env, seen_recent_keys=seen)
-    else:
-        fw = fw_first
 
+    # REAL identity/signature verification over the envelope's signed bytes.
+    sig = _verify_signature_evidence(ir, env)
     # REAL IR commitment + cross-protocol consistency vs the packet.
     commitment = compute_commitment(ir)
     consistency = compare_ir_to_envelope(ir, env)
 
-    downgraded = spec.mutation == "protocol_downgrade"
-    sig_fail = spec.mutation == "corrupt_signature"
-    replay_fail = spec.mutation == "replay_same_packet"
+    fw_decision = fw.decision.value
+    fw_ok = fw_decision in ("PASS", "PROTOCOL_PASS")
+    # FirewallReason values are the lowercase enum names (unsupported_version,
+    # downgrade, replay, …).
+    fw_reasons = {str(r.value) for r in fw.reasons}
 
     def mark(failed: bool, ok: bool) -> str:
         if failed:
             return "FAIL"
         return "PASS" if ok else "CHALLENGE"
 
-    fw_decision = fw_first.decision.value
-    fw_ok = fw_decision in ("PASS", "PROTOCOL_PASS")
+    sig_fail = not sig["verified"]
+    # The real replay verdict: the firewall recorded replay on the second
+    # evaluation of the same idempotency key.
+    replay_fail = "replay" in fw_reasons
+    downgraded = spec.mutation == "protocol_downgrade"
+    # The real downgrade verdict: the firewall rejected the version.
+    version_rejected = "unsupported_version" in fw_reasons or "downgrade" in fw_reasons
+
     checks = {
         "schema_version": {
-            "status": "FAIL" if downgraded else ("PASS" if fw_ok else "CHALLENGE"),
+            "status": ("FAIL" if version_rejected else ("PASS" if fw_ok else "CHALLENGE")),
             "detail": (
-                f"unsupported/downgraded version {_DOWNGRADE_VERSION[spec.protocol]}"
-                if downgraded
-                else f"protocol {spec.protocol} version {_PROTOCOL_VERSION[spec.protocol]}"
+                "firewall rejected unsupported/downgraded version "
+                + _DOWNGRADE_VERSION[spec.protocol]
+                if version_rejected
+                else "firewall accepted protocol "
+                + spec.protocol
+                + " version "
+                + _PROTOCOL_VERSION[spec.protocol]
             ),
+            # verifier-derived: the real firewall's version verdict is the
+            # engine's own decision for this envelope.
+            "engine": "protocol firewall (version policy)",
         },
         "identity_signature": {
-            "status": mark(sig_fail, fw_ok),
+            "status": mark(sig_fail, True),
             "detail": (
-                "corrupted digest/signature — verification fails"
+                f"verifier: {sig['reason']} - the signed commitment no longer covers the IR"
                 if sig_fail
-                else "signature/digest scheme verified (no key material exposed)"
+                else f"verifier: {sig['reason']} (no key material exposed)"
             ),
+            "engine": "commitment re-derivation vs envelope signature evidence",
         },
         "replay_idempotency": {
             "status": mark(replay_fail, fw_ok),
             "detail": (
-                "duplicate idempotency key rejected"
+                "real idempotency engine: duplicate key rejected on second evaluation"
                 if replay_fail
-                else f"idempotency {env.idempotency_key[:20]}… unique"
+                else "real idempotency engine: key "
+                + str(env.idempotency_key)[:20]
+                + " unique on first evaluation"
             ),
+            "engine": "protocol firewall (idempotency/replay policy)",
         },
         "protocol_firewall": {
-            "status": fw.decision.value,
+            "status": fw_decision,
             "detail": (
                 "; ".join(str(r.value) for r in fw.reasons)
                 if fw.reasons
                 else "firewall decision from the real engine"
             ),
+            "engine": "evaluate_envelope",
         },
         "consistency": {
             "status": consistency.state.value,
-            "detail": "IR vs envelope commitment comparison",
+            "detail": (f"IR vs envelope commitment: {'; '.join(consistency.reasons) or 'match'}"),
+            "engine": "compare_ir_to_envelope",
         },
     }
 
@@ -224,6 +397,7 @@ def run_packet(spec: PacketSpec) -> dict[str, Any]:
             "currency": ir.currency,
             "recurring": ir.recurring.mode if ir.recurring else "none",
             "item_count": len(ir.items),
+            "quantity": int(ir.items[0].quantity.value) if ir.items else 0,
         },
         "checks": checks,
         "ir": {
@@ -233,6 +407,7 @@ def run_packet(spec: PacketSpec) -> dict[str, Any]:
             "total_minor": ir.totals.total_minor,
             "currency": ir.currency,
             "recurring": ir.recurring.mode if ir.recurring else "none",
+            "quantity": int(ir.items[0].quantity.value) if ir.items else 0,
         },
         "commitment_head": commitment[:16],
         "consistency": consistency.state.value,
@@ -244,21 +419,25 @@ def run_packet(spec: PacketSpec) -> dict[str, Any]:
 
 
 def cross_protocol_view(diverge_protocol: str | None = None) -> dict[str, Any]:
-    """One semantic transaction across all five protocols (M055/M056).
+    """One semantic transaction across all five protocols (M055/M056 + G010).
 
-    All lanes carry the same IR; optionally ONE lane is diverged (total +1)
-    and the real consistency engine decides MATCH/MISMATCH per lane.
+    Each lane builds its OWN envelope with the lane's actual bound
+    commitment. With no divergence every lane's IR equals the authorized IR;
+    with a divergence exactly ONE lane carries the mutated IR (total +1) and
+    is judged against the authorized baseline the other lanes still carry.
+    Per-lane verdicts come from compare_ir_to_envelope - the pairs are
+    (lane_ir, lane_envelope), never (base, base).
     """
     lanes: list[dict[str, Any]] = []
     base_ir = _base_ir()
-    base_env_pairs: dict[str, Any] = {}
     for pid in SUPPORTED_PROTOCOLS:
-        lane_ir = (
-            _ir_with_total(base_ir.totals.total_minor + 1) if pid == diverge_protocol else base_ir
-        )
         spec = PacketSpec(protocol=pid, mutation="none")
-        env, _ = _envelope(spec, base_ir)
-        base_env_pairs[pid] = env
+        env, _ = _packet_envelope(spec, base_ir)
+        lane_ir = (
+            _ir_with_total(base_ir.totals.total_minor + 1)
+            if pid == diverge_protocol
+            else base_ir.model_copy(deep=True)
+        )
         consistency = compare_ir_to_envelope(lane_ir, env)
         lanes.append(
             {
@@ -268,30 +447,42 @@ def cross_protocol_view(diverge_protocol: str | None = None) -> dict[str, Any]:
                 "consistency": consistency.state.value,
                 "total_minor": lane_ir.totals.total_minor,
                 "diverged": pid == diverge_protocol,
+                "commitment_head": _commitment_hash(lane_ir)[:16],
             }
         )
 
-    # The real engine also compares the IRs pairwise (UCP checkout vs AP2
-    # mandate agreement — the canonical cross-protocol convergence check).
+    # Real IR-vs-IR convergence: the authorized baseline against each lane's
+    # IR (the canonical cross-protocol convergence check, correct pairs).
     from razormesh_api.protocol.ir import equal_under_commitment
 
-    envelope_matches = {
-        pid: ("MATCH" if equal_under_commitment(base_ir, base_ir) else "MISMATCH")
-        for pid in base_env_pairs
-    }
+    ir_agreement: dict[str, str] = {}
+    for pid in SUPPORTED_PROTOCOLS:
+        same = equal_under_commitment(
+            base_ir.model_copy(deep=True), _lane_ir_for(pid, diverge_protocol)
+        )
+        ir_agreement[pid] = "MATCH" if same else "MISMATCH"
 
     all_match = all(lane["consistency"] == "MATCH" for lane in lanes)
     return {
         "lanes": lanes,
-        "envelope_consistency": envelope_matches,
+        "envelope_consistency": ir_agreement,
         "overall": "MATCH" if all_match else "MISMATCH",
         "commitment_head": compute_commitment(base_ir)[:16],
         "note": (
             "All lanes converge to one commerce commitment."
             if all_match
-            else f"The {diverge_protocol} lane diverges — the commitment no longer matches."
+            else "The "
+            + str(diverge_protocol)
+            + " lane diverges - its commitment no longer matches the authorized baseline."
         ),
     }
+
+
+def _lane_ir_for(pid: str, diverge_protocol: str | None) -> AgentCommerceIR:
+    base = _base_ir()
+    if pid == diverge_protocol:
+        return _ir_with_total(base.totals.total_minor + 1)
+    return base.model_copy(deep=True)
 
 
 def protocols_catalog() -> list[dict[str, Any]]:

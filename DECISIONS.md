@@ -1662,3 +1662,88 @@ Consequences: The semantic model is never shown as financial authority; the
 stricten-only fusion and fail-closed invariants are unchanged (pinned by
 tests/phase4/test_demo_scenarios.py: BLOCK never loosens, no provider call, no
 raw text in payloads).
+
+## D-057 — Phase-5 deep-engine correction: real-engine truth guarantees for every judge-visible feature (2026-08-31)
+Date: 2026-08-31
+Milestone: PHASE-5 DEEP ENGINE CORRECTION (G001-G030)
+Status: Accepted
+Supersedes: none (hardens the Phase-5 M009-M120 layer; no prior decision reversed)
+
+Context: A post-implementation audit of the Phase-5 rework found 12 gaps where
+the UI could present something as engine output that was not produced by the
+real engine: the governance "shadow" ran the deterministic keyword verifier
+(next to v2 framing), protocol playground painted verdicts from mutation
+names (no artifact corruption, quantity/recurring proxy mutations,
+compare-base-to-base cross-protocol), the merchant sandbox mutated the shared
+catalog Product row and forced condition="new" on revert, three security
+mission cards silently ran the whole 22-scenario suite, the attack movie
+hardcoded Human/Agent/Merchant DONE, Mission Control actions were
+navigation-only, the forensic diff covered only total/subscription, and
+"Replay" was explanatory text.
+
+Decision:
+1. G003: the challenger shadow now runs the ACTUAL fine-tuned AgentPay-IR v2
+   checkpoint (candidate A_2ep, weights sha256 f9e0007c…, manifest+policy hash
+   enforced before inference) in an isolated lane. Any load/inference failure
+   surfaces CHALLENGER_UNAVAILABLE honestly; the keyword verifier is never
+   substituted. The shadow holds no repositories/ledger/provider refs and
+   never enters fusion, ticket issuance, or provider decisions (G004:
+   money-path equivalence proven with the shadow on/off/failed).
+2. G006-G011: every protocol mutation now builds a real mutated artifact and
+   every check is verifier-derived (identity/signature = commitment
+   re-derivation vs envelope evidence; replay/downgrade = firewall reasons;
+   consistency = compare_ir_to_envelope on (lane_ir, lane_envelope) pairs).
+3. G012-G014: a TransactionBaseline table is captured INSERT-only at checkout
+   proposal time (proposal facts + the authorization hashes). It is the
+   authorized side of every diff and the restore target of every revert;
+   mutations are checkout-local (the shared catalog is never mutated);
+   revert restores the exact baseline (property-tested across 9 combos).
+4. G015: merchant sandbox checkouts bind to the CURRENT mission intent; the
+   D-056 demo runs link their checkout to their trace; one trace across all
+   surfaces.
+5. G016-G018: one mission orchestration (create → mutate → execute → observe)
+   with data recipes; dedicated per-attack endpoints; the full suite is a
+   separate explicit action; the attack movie renders from trace events only
+   (absent events render PENDING, never fabricated DONE).
+6. G019-G020: Mission Control actions act on the CURRENT trace's transaction
+   (mutate/revert/execute-current via the real revalidation contract with the
+   baseline-captured hashes); the evidence sidebar shows the current
+   authorization-vs-current diff. No deck action mints money authority.
+7. G021-G023: the forensic diff covers every modeled auth-relevant dimension
+   from the immutable baseline; real read-only timeline playback (provider/
+   event counts proven unchanged); per-trace hash-chain node visualization.
+8. G024-G026: benchmark claims use "191-scenario adversarial policy
+   benchmark + separate exactly-once/provider acceptance tests" wording with
+   the honest per-case number (156/191); the storyboard's hidden-recurring
+   beat corrected to the REAL behavior (protocol PASS → intent BLOCK); the
+   grouped-milestone evidence granularity is disclosed.
+
+Rationale: "The AI proposes. RazorGuard authorizes. The trusted executor
+executes." is only demonstrable if every judge-visible state is genuinely
+produced by the real engine; a painted verdict is a trust claim the system
+did not make.
+
+Alternatives considered: keeping the stub shadow with a disclaimer (rejected:
+the master prompt forbids presenting a stub as v2); reverting to the
+pre-Phase-5 UI (rejected: the rework is valuable); per-attack hardcoded
+endpoints (rejected: recipes-as-data keeps one auditable orchestration).
+
+Security/product consequences: the ACTIVE runtime remains PRE_V2
+(phase3-finetuned-v2, semantic-thresholds-v3); the challenger stays
+NON-AUTHORITATIVE; the frozen evaluation was NOT rerun; nothing was
+retrained or recalibrated; BLOCKED still never executes; no deck action can
+mint money authority or contact the provider; the security scan allowlist
+gained one documented entry (the payment-FSM e2e's synthetic key-shaped
+string).
+
+Validation/evidence: docs/phase5/DEEP_ENGINE_CORRECTION_STATUS.md (G001-G030,
+each with commands/tests/browser proof); docs/phase5/PROVENANCE_INVENTORY.md;
+docs/evidence/PROTOCOL_TRUTH_TABLE.md; backend 932/932 + phase-4 189/189
+exit 0; ruff/mypy clean (114 files); tsc/eslint/vitest 25/25; next build
+22/22 pages; Playwright 46-47 passed (3 environmental reviewer-gate
+failures + order-dependent flakes documented, all green in isolation);
+payment-FSM 4/4; security-check PASS.
+
+Follow-up: none required for Phase 5. The v2 challenger remains available for
+shadow comparison only; any future activation still requires the frozen
+safety gate.

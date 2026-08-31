@@ -55,17 +55,33 @@ type Governance = {
 type Shadow = {
   mode: string;
   input: string;
-  shadow_action: string;
+  challenger: {
+    available: boolean;
+    shadow_action: string;
+    probabilities: { contradiction: number; entailment: number; neutral: number };
+    artifact_hash: string;
+    selected_candidate: string;
+    model_id: string;
+    reason: string | null;
+  };
+  active: { action: string; p_entailment?: number; p_contradiction?: number; p_neutral?: number; reason?: string };
+  disagreement: boolean;
   authoritative_action: string;
   disagreement_note: string;
+  is_frozen_evaluation: boolean;
+  never_enters: string[];
+  reason?: string | null;
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 export default function GovernancePage() {
   const [data, setData] = useState<Governance | null>(null);
+  const [shadowPremise, setShadowPremise] = useState(
+    "The human authorized delivery only to the registered home address.",
+  );
   const [shadowInput, setShadowInput] = useState(
-    "This membership automatically renews every quarter.",
+    "The parcel will be routed through a local pickup point.",
   );
   const [shadow, setShadow] = useState<Shadow | null>(null);
   const [busy, setBusy] = useState(false);
@@ -93,17 +109,16 @@ export default function GovernancePage() {
       const res = await fetch(`${API}/model-governance/shadow`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hypothesis: shadowInput }),
+        body: JSON.stringify({ premise: shadowPremise, hypothesis: shadowInput }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error("shadow failed");
       setShadow(body as Shadow);
-    } catch (e) {
-      setError(String(e));
+    } catch (e) {      setError(String(e));
     } finally {
       setBusy(false);
     }
-  }, [shadowInput]);
+  }, [shadowInput, shadowPremise]);
 
   if (error && !data) {
     return (
@@ -224,17 +239,29 @@ export default function GovernancePage() {
             <p className="page-sub">{data.disclosed_limitation}</p>
           </section>
 
-          {/* Shadow mode (M093/M094) */}
+          {/* Shadow mode (M093/M094 + G003/G004): the REAL v2 challenger */}
           <section className={styles.shadowSection} data-testid="shadow-mode">
-            <h2>Optional challenger shadow — NON-AUTHORITATIVE</h2>
+            <h2>Challenger shadow — the real AgentPay-IR v2, NON-AUTHORITATIVE</h2>
             <p className="page-sub">
-              Type any NEW demo text (never frozen evaluation data) and run it through the
-              shadow lane. Even when the shadow disagrees with the active model, authority
-              comes from the active model alone — the challenger is IGNORED.
+              Type any NEW demo text (never frozen evaluation data). The <em>actual</em>{" "}
+              fine-tuned v2 checkpoint (candidate A_2ep — the one the frozen safety gate
+              REJECTED) runs it in an isolated shadow lane, next to the active model on the
+              same pair. Even when the challenger disagrees, authority comes from the active
+              model alone — the challenger is IGNORED for fusion, tickets, and provider calls.
             </p>
             <div className={styles.shadowControls}>
+              <label className="field-label" htmlFor="shadow-premise">
+                Demo premise — the authorization text (non-frozen)
+              </label>
+              <textarea
+                id="shadow-premise"
+                className="text-area"
+                rows={2}
+                value={shadowPremise}
+                onChange={(e) => setShadowPremise(e.target.value)}
+              />
               <label className="field-label" htmlFor="shadow-input">
-                Demo hypothesis (non-frozen)
+                Demo hypothesis — the checkout evidence (non-frozen)
               </label>
               <textarea
                 id="shadow-input"
@@ -255,13 +282,59 @@ export default function GovernancePage() {
             </div>
             {shadow && (
               <div className={styles.shadowResult} data-testid="shadow-result">
-                <p>
-                  <strong>SHADOW verdict: {shadow.shadow_action}</strong> — {shadow.mode}
-                </p>
+                {shadow.challenger.available ? (
+                  <table className={styles.metricsTable} data-testid="shadow-comparison">
+                    <thead>
+                      <tr>
+                        <th>Lane</th>
+                        <th>Verdict</th>
+                        <th>p(contradiction)</th>
+                        <th>p(entailment)</th>
+                        <th>p(neutral)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>ACTIVE — {data?.active.model} (authoritative)</td>
+                        <td><strong>{shadow.active.action}</strong></td>
+                        <td>{shadow.active.p_contradiction?.toFixed(4) ?? "—"}</td>
+                        <td>{shadow.active.p_entailment?.toFixed(4) ?? "—"}</td>
+                        <td>{shadow.active.p_neutral?.toFixed(4) ?? "—"}</td>
+                      </tr>
+                      <tr>
+                        <td>CHALLENGER — actual fine-tuned v2 (shadow only)</td>
+                        <td><strong>{shadow.challenger.shadow_action}</strong></td>
+                        <td>{shadow.challenger.probabilities.contradiction.toFixed(4)}</td>
+                        <td>{shadow.challenger.probabilities.entailment.toFixed(4)}</td>
+                        <td>{shadow.challenger.probabilities.neutral.toFixed(4)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                ) : (
+                  <p data-testid="shadow-unavailable">
+                    <strong>CHALLENGER UNAVAILABLE</strong> — {shadow.challenger.reason}. The
+                    shadow lane never substitutes another verifier; authority is unchanged.
+                  </p>
+                )}
+                {shadow.disagreement && (
+                  <p className={styles.disagreement} data-testid="shadow-disagreement">
+                    The challenger and the active model DISAGREE here — and the challenger is
+                    still IGNORED for authority.
+                  </p>
+                )}
                 <p className={styles.disagreement}>
-                  Authority: {shadow.authoritative_action} · CHALLENGER IGNORED
+                  Authority: {shadow.authoritative_action} · CHALLENGER IGNORED · never enters{" "}
+                  {shadow.never_enters.join(" / ")}
                 </p>
-                <p className="page-sub">{shadow.disagreement_note}</p>
+                <p className="page-sub">
+                  {shadow.challenger.available && (
+                    <>
+                      Artifact hash <code>{shadow.challenger.artifact_hash.slice(0, 16)}…</code>{" "}
+                      · candidate <code>{shadow.challenger.selected_candidate}</code> ·{" "}
+                    </>
+                  )}
+                  {shadow.disagreement_note}
+                </p>
               </div>
             )}
           </section>

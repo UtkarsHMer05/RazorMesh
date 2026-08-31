@@ -25,6 +25,7 @@ from razormesh_api.api.routes.phase4_acceptance import router as phase4_acceptan
 from razormesh_api.api.routes.protocol_playground import router as protocol_playground_router
 from razormesh_api.api.routes.security_campaign import router as security_campaign_router
 from razormesh_api.api.routes.security_lab import router as security_lab_router
+from razormesh_api.api.routes.security_missions import router as security_missions_router
 from razormesh_api.api.routes.trace import router as trace_router
 from razormesh_api.api.routes.webhooks import router as webhooks_router
 from razormesh_api.protocol.ap2_verifier import (
@@ -62,6 +63,7 @@ app.include_router(agent_search_router)
 app.include_router(merchant_sandbox_router)
 app.include_router(protocol_playground_router)
 app.include_router(security_campaign_router)
+app.include_router(security_missions_router)
 app.include_router(forensics_router)
 app.include_router(model_governance_router)
 app.include_router(mission_control_router)

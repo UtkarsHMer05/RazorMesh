@@ -20,8 +20,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 
 from razormesh_api.persistence.db import create_db_engine, create_session_factory
+from razormesh_api.persistence.models import (
+    AuditEvent,
+    ExecutionAttempt,
+    IntentContract,
+    TransactionBaseline,
+)
 from razormesh_api.persistence.models import Checkout as RowCheckout
-from razormesh_api.persistence.models import ExecutionAttempt, IntentContract, Product
 from razormesh_api.persistence.repositories import Repositories, session_scope
 from razormesh_api.settings import Settings, get_settings
 from razormesh_api.trace_registry import (
@@ -123,7 +128,8 @@ def forensic_trace(
     repos: Annotated[Repositories, Depends(_repos)],
     registry: Annotated[TraceRegistry, Depends(_registry)],
 ) -> dict[str, Any]:
-    """One trace's dossier (M082-M085): timeline + diff + provider card."""
+    """One trace's dossier (M082-M085 + G021/G023): timeline + comprehensive
+    diff + provider card + selected-trace chain anchors."""
     if not _DISPLAY_RE.match(trace_id):
         raise HTTPException(status_code=404, detail="Unknown trace")
     trace = registry.by_trace(trace_id)
@@ -133,61 +139,68 @@ def forensic_trace(
     summary = summarize_trace(repos, trace)
     events = project_events(repos, trace.intent_id)
 
-    # Authorization-vs-current diff (M084): durable truth vs the mandate.
+    # G021: COMPREHENSIVE authorization-vs-current diff. The authorized side
+    # is the immutable TransactionBaseline captured at proposal time (G012) —
+    # never the current product row. Every modeled auth-relevant dimension:
+    # merchant, product, condition, quantity, unit price, fees, shipping,
+    # tax, total, currency, recurring terms, display text.
     diff: list[dict[str, Any]] = []
     if trace.checkout_id:
         with session_scope(repos.factory) as session:
             row = session.get(RowCheckout, trace.checkout_id)
-            intent = session.get(IntentContract, trace.intent_id)
-            if row is not None and intent is not None:
+            baseline = session.execute(
+                select(TransactionBaseline).where(
+                    TransactionBaseline.checkout_id == trace.checkout_id
+                )
+            ).scalar_one_or_none()
+            if row is not None and baseline is not None:
                 lines = list(row.line_items or [])
                 first = dict(lines[0]) if lines and isinstance(lines[0], dict) else {}
-                pid = str(first.get("product_id", ""))
-                product = session.get(Product, pid)
-                authorized_total = (
-                    product.price_minor * int(first.get("quantity", 1) or 1)
-                    + product.shipping_minor
-                    if product
-                    else None
-                )
-                # Recompute the CURRENT total the way the envelope would:
-                # mutated line items + current fees/shipping — never the
-                # stale stored total, which a drift may not have updated.
+                authorized: dict[str, Any] = {
+                    "merchant_id": baseline.merchant_id,
+                    "product_id": baseline.product_id,
+                    "condition": baseline.condition,
+                    "quantity": baseline.quantity,
+                    "unit_price_minor": baseline.unit_price_minor,
+                    "fees_minor": baseline.fees_minor,
+                    "shipping_minor": baseline.shipping_minor,
+                    "tax_minor": baseline.tax_minor,
+                    "total_minor": baseline.total_minor,
+                    "currency": baseline.currency,
+                    "recurring": bool(baseline.recurring),
+                    "subscription_terms": (
+                        {"recurring": True, "frequency": baseline.recurring_frequency}
+                        if baseline.recurring
+                        else None
+                    ),
+                }
                 current_total = (
                     int(first.get("unit_price_minor", 0)) * int(first.get("quantity", 1) or 1)
                     + int(row.fees_minor or 0)
                     + int(row.shipping_minor or 0)
+                    + int(row.tax_minor or 0)
                 )
-                if authorized_total is not None and authorized_total != current_total:
-                    diff.append(
-                        {
-                            "field": "total_minor",
-                            "authorized": authorized_total,
-                            "current": current_total,
-                        }
-                    )
-                if row.subscription_terms and not intent.recurring_allowed:
-                    diff.append(
-                        {
-                            "field": "subscription_terms",
-                            "authorized": None,
-                            "current": row.subscription_terms,
-                        }
-                    )
-                if (
-                    intent.max_total_minor
-                    and current_total
-                    and current_total > intent.max_total_minor
-                ):
-                    already = any(d["field"] == "total_minor" for d in diff)
-                    if not already:
-                        diff.append(
-                            {
-                                "field": "total_vs_max_total",
-                                "authorized": intent.max_total_minor,
-                                "current": current_total,
-                            }
-                        )
+                current: dict[str, Any] = {
+                    "merchant_id": row.merchant_id,
+                    "product_id": first.get("product_id"),
+                    "condition": first.get("condition"),
+                    "quantity": first.get("quantity"),
+                    "unit_price_minor": first.get("unit_price_minor"),
+                    "fees_minor": int(row.fees_minor or 0),
+                    "shipping_minor": int(row.shipping_minor or 0),
+                    "tax_minor": int(row.tax_minor or 0),
+                    "total_minor": current_total,
+                    "currency": row.currency,
+                    "recurring": bool(row.subscription_terms),
+                    "subscription_terms": dict(row.subscription_terms)
+                    if row.subscription_terms
+                    else None,
+                }
+                diff = [
+                    {"field": f, "authorized": authorized.get(f), "current": current.get(f)}
+                    for f in authorized
+                    if f in current and authorized.get(f) != current.get(f)
+                ]
 
     # Provider-contact card (M085): audit evidence only.
     provider = {
@@ -210,12 +223,51 @@ def forensic_trace(
             provider["attempt_state"] = attempt.state
             provider["reconcile_state"] = attempt.reconcile_state
 
+    # G023: the SELECTED trace's own hash-chain nodes (event hash heads +
+    # prev-hash links, read-only) so the judge can see exactly where tamper
+    # would break THIS trace's chain. Global ledger verify stays at /audit/verify.
+    with session_scope(repos.factory) as session:
+        chain_rows = (
+            session.execute(
+                select(AuditEvent)
+                .where(AuditEvent.intent_id == trace.intent_id)
+                .order_by(AuditEvent.seq.asc())
+                .limit(200)
+            )
+            .scalars()
+            .all()
+        )
+    chain_nodes = [
+        {
+            "seq": e.seq,
+            "event_type": e.event_type,
+            "prev_head": (e.previous_event_hash or "")[:16],
+            "hash_head": e.current_event_hash[:16],
+        }
+        for e in chain_rows
+    ]
+    chain_linked = all(
+        chain_nodes[i]["prev_head"] == chain_nodes[i - 1]["hash_head"]
+        or not chain_nodes[i]["prev_head"]
+        for i in range(1, len(chain_nodes))
+    )
+
     # Chain anchors (M086): heads of the trace's own events.
     return {
         "trace": summary,
         "events": [e.__dict__ for e in events],
         "diff": diff,
         "provider": provider,
+        "chain": {
+            "nodes": chain_nodes,
+            "linked": chain_linked,
+            "node_count": len(chain_nodes),
+            "note": (
+                "This trace's own hash-chain nodes: each event's hash covers the "
+                "previous. Tamper simulation is non-mutating; the global ledger "
+                "verifier lives at /audit/verify."
+            ),
+        },
         "raw_view": "/audit/timeline",
     }
 

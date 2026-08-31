@@ -103,3 +103,29 @@
 @media (prefers-reduced-motion: reduce) {
   .connectorFlow, .connectorBroken { animation: none; }
 }
+
+/* G019/G020: current-transaction diff in the evidence sidebar */
+.txDiff {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 2px solid var(--ink-10, #e5e5e5);
+}
+.txDiff h3 {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.diffTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.diffTable th,
+.diffTable td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--ink-10, #eee);
+  text-align: left;
+}
+.diffTable td strong {
+  color: #b00020;
+}

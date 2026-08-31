@@ -1,8 +1,8 @@
-"""Phase-5 (M091-M094): Model Governance API.
+"""Phase-5 (M091-M094) + correction G003: Model Governance API.
 
 - GET /model-governance          → active vs challenger summary (committed facts)
 - GET /model-governance/evidence → committed frozen evaluation (redacted-safe)
-- POST /model-governance/shadow  → NON-AUTHORITATIVE demo shadow (test stub)
+- POST /model-governance/shadow  → REAL v2 challenger shadow (NON-AUTHORITATIVE)
 
 Read-only, never reruns frozen evaluation, never recalibrates, never feeds
 fusion/tickets/provider.
@@ -34,8 +34,9 @@ def evidence() -> dict[str, Any]:
 
 class ShadowRequest(BaseModel):
     hypothesis: str = Field(min_length=4, max_length=400)
+    premise: str | None = Field(default=None, min_length=4, max_length=512)
 
 
 @router.post("/shadow")
 def shadow(body: ShadowRequest) -> dict[str, Any]:
-    return shadow_verdict(body.hypothesis)
+    return shadow_verdict(body.hypothesis, premise=body.premise)

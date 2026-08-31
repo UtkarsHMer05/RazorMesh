@@ -522,6 +522,36 @@ Deployment, hardening, demo/submission and final evidence.
 
 See `PHASES.md`.
 
+### Phase-5 Live Trust Lab surfaces (M009–M120 + deep-engine correction G001–G030)
+
+Judge-facing demo layer over the unchanged trust core. All state is derived
+from the durable authority (PostgreSQL + audit ledger); the frontend is
+never an authorization boundary.
+
+Modules (services/api/src/razormesh_api/):
+- `trace_registry.py` — display-trace (RM-XXXXXX) registry + privacy-safe
+  event projection from audit rows (read-only projection, linkage only).
+- `merchant_sandbox.py` — bounded post-authorization offer mutations.
+  **G012:** every proposal captures an IMMUTABLE `TransactionBaseline`
+  (proposal-time facts + the authorization hashes) — the diff/revert
+  baseline, never the mutable checkout or catalog rows. **G013:** mutations
+  are checkout-local; **G014:** revert restores the exact baseline.
+- `protocol_playground.py` — interactive protocol attacks. **G006–G011:**
+  every mutation builds a real mutated artifact (IR quantity/recurring/
+  merchant fields, envelope version, signature-evidence corruption); every
+  displayed check comes from the real firewall/verifier/consistency engine.
+- `security_missions.py` — **G016–G018:** ONE mission orchestration
+  (create → mutate → execute → observe) with data recipes; dedicated
+  per-attack missions; the movie renders from trace events only (no
+  fabricated stage states).
+- `challenger_shadow.py` — **G003:** isolated inference lane over the ACTUAL
+  rejected AgentPay-IR v2 checkpoint (hash-verified; honest
+  CHALLENGER_UNAVAILABLE on any failure; never fusion/tickets/provider).
+- Routes: `trace.py`, `merchant_sandbox.py`, `protocol_playground.py`,
+  `security_missions.py`, `security_campaign.py`, `forensics.py`,
+  `model_governance.py`, `mission_control.py` (mutate/revert/execute-current
+  act on the CURRENT trace's transaction, **G019/G020**).
+
 ---
 
 # 14. Phase-2 provider architecture (Razorpay Test Mode)

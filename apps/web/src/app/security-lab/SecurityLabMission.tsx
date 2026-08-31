@@ -14,33 +14,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./lab.module.css";
 
-type Scenario = {
-  scenario_id: string;
-  family: string;
-  description: string;
-  safe_or_unsafe: string;
-  expected_outcome: string;
-  expected_reason_codes: string[];
-};
-
-type DemoResult = {
-  scenario: string;
-  run_id?: string;
-  rejection_stage?: string | null;
-  rejection_reason?: string | null;
-  protocol_firewall?: string;
-  razorguard_decision?: string;
-  semantic_verifier?: string;
-  semantic_probabilities?: {
-    contradiction: number;
-    entailment: number;
-    neutral: number;
-  };
-  final_decision?: string;
-  ticket_issued?: boolean;
-  provider_contacted?: boolean;
-};
-
 type CampaignSummary = {
   total: number;
   safe_total: number;
@@ -71,9 +44,45 @@ type CaseReplay = {
   read_only: boolean;
 };
 
+type MissionEvent = {
+  seq: number;
+  stage: string;
+  kind: string;
+  title: string;
+  status: string;
+  detail: string | null;
+};
+
+type MissionResult = {
+  mission_id: string;
+  title: string;
+  attack: boolean;
+  trace_id: string;
+  intent_id: string;
+  checkout_id: string;
+  mutations_applied: { kind: string; changed_fields: string[] }[];
+  pipeline: string;
+  final_decision: string;
+  ticket_issued: boolean;
+  provider_contacted: boolean;
+  stages: { stage: string; status: string; detail: string }[];
+  events: MissionEvent[];
+  movie_note: string;
+};
+
+type MissionCard = {
+  mission_id: string;
+  title: string;
+  description: string;
+  attack: boolean;
+  pipeline: string;
+};
+
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
-// The attack movie: fixed real stage order the movie renders from.
+// The attack movie stage ORDER the movie renders in. Stage STATE is derived
+// per-stage from the mission's REAL trace events below - a stage with no
+// event is rendered pending, never a fabricated DONE (G017).
 const MOVIE_STAGES = [
   ["human", "Human authorization"],
   ["agent", "Initial checkout"],
@@ -87,11 +96,13 @@ const MOVIE_STAGES = [
 ] as const;
 
 export function SecurityLabMission() {
-  const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [demo, setDemo] = useState<DemoResult | null>(null);
-  const [demoBusy, setDemoBusy] = useState(false);
   const [suiteRan, setSuiteRan] = useState(false);
   const [suiteBusy, setSuiteBusy] = useState(false);
+
+  // G016/G017: dedicated missions + event-driven movie
+  const [missionCards, setMissionCards] = useState<MissionCard[]>([]);
+  const [mission, setMission] = useState<MissionResult | null>(null);
+  const [missionBusy, setMissionBusy] = useState<string | null>(null);
 
   const [campaign, setCampaign] = useState<CampaignSummary | null>(null);
   const [families, setFamilies] = useState<Family[]>([]);
@@ -104,8 +115,8 @@ export function SecurityLabMission() {
     let ignore = false;
     (async () => {
       try {
-        const res = await fetch(`${API}/security-lab/scenarios`);
-        if (!ignore) setScenarios((await res.json()).scenarios ?? []);
+        const missionRes = await fetch(`${API}/security-missions`);
+        if (!ignore) setMissionCards((await missionRes.json()).missions ?? []);
       } catch (e) {
         if (!ignore) setError(String(e));
       }
@@ -115,39 +126,22 @@ export function SecurityLabMission() {
     };
   }, []);
 
-  const runScenarioB = useCallback(async () => {
-    setDemoBusy(true);
+  const runMission = useCallback(async (missionId: string) => {
+    setMissionBusy(missionId);
     setError(null);
     try {
-      const res = await fetch(
-        `${API}/phase4/acceptance/demo/scenario-b-semantic-violation`,
-        { method: "POST" },
-      );
+      const res = await fetch(`${API}/security-missions/${missionId}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
       const body = await res.json();
-      if (!res.ok) throw new Error("scenario failed");
-      setDemo({ scenario: "B_hidden_recurring", ...body });
+      if (!res.ok) throw new Error(body.detail?.detail ?? "mission failed");
+      setMission(body as MissionResult);
     } catch (e) {
       setError(String(e));
     } finally {
-      setDemoBusy(false);
-    }
-  }, []);
-
-  const runScenarioC = useCallback(async () => {
-    setDemoBusy(true);
-    setError(null);
-    try {
-      const res = await fetch(
-        `${API}/phase4/acceptance/demo/scenario-c-protocol-valid-intent-invalid`,
-        { method: "POST" },
-      );
-      const body = await res.json();
-      if (!res.ok) throw new Error("scenario failed");
-      setDemo({ scenario: "C_protocol_valid_intent_invalid", ...body });
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setDemoBusy(false);
+      setMissionBusy(null);
     }
   }, []);
 
@@ -196,119 +190,36 @@ export function SecurityLabMission() {
     }
   }, []);
 
-  // The attack movie derives every stage state from the real demo evidence.
+  // G017: the attack movie derives EVERY stage from the mission's REAL trace
+  // events. A stage with no backend event renders PENDING - never a
+  // fabricated DONE. The old hardcoded "Human DONE / Agent DONE / Merchant
+  // DONE" narrative constants are gone.
   const movie = useMemo(() => {
-    if (!demo) return [];
-    const probs = demo.semantic_probabilities;
-    const states: Record<string, { status: string; detail: string }> = {
-      human: {
-        status: "DONE",
-        detail: "Mandate confirmed: no subscription, within budget",
-      },
-      agent: { status: "DONE", detail: "Initial checkout proposed within authority" },
-      merchant: {
-        status: "DONE",
-        detail: demo.scenario.startsWith("B_")
-          ? "Hidden recurring membership inserted after authorization"
-          : "Unauthorized transaction carried inside a protocol-valid packet",
-      },
-      protocol: {
-        status: demo.protocol_firewall ?? "—",
-        detail: "schema/signature/replay checks (real gateway)",
-      },
-      razorguard: {
-        status: demo.razorguard_decision ?? "—",
-        detail: demo.rejection_reason ?? "deterministic rules",
-      },
-      semantic: {
-        status: demo.semantic_verifier ?? "—",
-        detail: probs
-          ? `contradiction ${(probs.contradiction * 100).toFixed(2)}% · entailment ${(
-              probs.entailment * 100
-            ).toFixed(2)}% · neutral ${(probs.neutral * 100).toFixed(2)}%`
-          : "semantic probabilities from the live run",
-      },
-      fusion: {
-        status: demo.final_decision ?? "—",
-        detail: "semantic can only tighten",
-      },
-      ticket: {
-        status: demo.ticket_issued ? "ISSUED" : "WITHHELD",
-        detail: demo.ticket_issued ? "ticket minted after ALLOW" : "no authority to execute",
-      },
-      provider: {
-        status: demo.provider_contacted ? "CONTACTED" : "NOT CONTACTED",
-        detail: "audit-backed provider evidence",
-      },
-    };
-    return MOVIE_STAGES.map(([stage, label]) => ({
-      stage,
-      label,
-      ...(states[stage] ?? { status: "—", detail: "" }),
-    }));
-  }, [demo]);
-
-  const missionCards = useMemo(() => {
-    const cards = [
-      {
-        id: "b",
-        title: "Hidden recurring membership",
-        action: "Merchant inserts a ₹499/month subscription after you authorized a one-time purchase.",
-        asset: "Your confirmed mandate (no-subscription)",
-        detection: "Deterministic RazorGuard + Semantic Trust Check",
-        run: runScenarioB,
-        key: "b",
-      },
-      {
-        id: "c",
-        title: "Protocol-valid, intent-invalid",
-        action: "A perfectly signed protocol packet carries 2 units when you authorized 1 (≤ ₹3,000).",
-        asset: "Intent-to-execution integrity",
-        detection: "RazorGuard budget/quantity rules (after protocol PASS)",
-        run: runScenarioC,
-        key: "c",
-      },
-    ];
-    if (scenarios.length > 0) {
-      const priceDrift = scenarios.find((s) => s.scenario_id === "price-drift-after-allow");
-      const replay = scenarios.find((s) => s.scenario_id === "replay-same-ticket-five-times");
-      const forged = scenarios.find((s) => s.scenario_id === "forged-checkout-callback");
-      if (priceDrift) {
-        cards.push({
-          id: "price",
-          title: "Price drift after ALLOW",
-          action: priceDrift.description,
-          asset: "The signed checkout binding",
-          detection: "Revalidation before execution",
-          run: runSuite,
-          key: "price",
-        });
-      }
-      if (replay) {
-        cards.push({
-          id: "replay",
-          title: "Ticket replay (5 attempts)",
-          action: replay.description,
-          asset: "Single-use ticket nonce",
-          detection: "Idempotency + nonce registry",
-          run: runSuite,
-          key: "replay",
-        });
-      }
-      if (forged) {
-        cards.push({
-          id: "forged",
-          title: "Forged payment callback",
-          action: forged.description,
-          asset: "Provider signature verification",
-          detection: "Callback signature verification",
-          run: runSuite,
-          key: "forged",
-        });
-      }
+    if (!mission) return [];
+    const byStage = new Map<string, MissionEvent>();
+    for (const e of mission.events) {
+      byStage.set(e.stage, e); // last event per stage wins
     }
-    return cards;
-  }, [scenarios, runScenarioB, runScenarioC, runSuite]);
+    return MOVIE_STAGES.map(([stage, label]) => {
+      const ev = byStage.get(stage);
+      if (!ev) {
+        return {
+          stage,
+          label,
+          status: "—",
+          detail: "no backend event for this stage",
+          pending: true,
+        };
+      }
+      return {
+        stage,
+        label,
+        status: ev.status,
+        detail: ev.detail ?? ev.kind,
+        pending: false,
+      };
+    });
+  }, [mission]);
 
   return (
     <section className={styles.lab} data-testid="security-lab-missions">
@@ -330,66 +241,98 @@ export function SecurityLabMission() {
         </p>
       )}
 
-      {/* Attack mission cards (M063/M065) */}
+      {/* Dedicated attack missions (G016): every card runs THAT mission only */}
       <div className={styles.missionGrid} data-testid="attack-mission-cards">
-        {missionCards.map((card) => (
-          <div key={card.key} className={styles.missionCard} data-testid={`mission-${card.key}`}>
-            <h3>{card.title}</h3>
-            <dl>
-              <div>
-                <dt>Attacker action</dt>
-                <dd>{card.action}</dd>
-              </div>
-              <div>
-                <dt>Protected asset</dt>
-                <dd>{card.asset}</dd>
-              </div>
-              <div>
-                <dt>Detection stage</dt>
-                <dd>{card.detection}</dd>
-              </div>
-            </dl>
-            <button type="button" className="btn btn-primary btn-sm" onClick={card.run} disabled={demoBusy || suiteBusy}>
-              Run mission
-            </button>
-          </div>
-        ))}
+        {missionCards
+          .filter((m) => m.attack)
+          .map((card) => (
+            <div
+              key={card.mission_id}
+              className={styles.missionCard}
+              data-testid={`mission-${card.mission_id}`}
+            >
+              <h3>{card.title}</h3>
+              <p>{card.description}</p>
+              <dl>
+                <div>
+                  <dt>Pipeline</dt>
+                  <dd>{card.pipeline === "acceptance" ? "Live orchestrator (D-056)" : "RazorGuard revalidation"}</dd>
+                </div>
+              </dl>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => void runMission(card.mission_id)}
+                disabled={missionBusy !== null}
+                data-testid={`run-mission-${card.mission_id}`}
+              >
+                {missionBusy === card.mission_id ? "Running…" : "Run this mission"}
+              </button>
+            </div>
+          ))}
+        <div className={styles.missionCard} data-testid="mission-safe">
+          <h3>Safe mission</h3>
+          <p>
+            A one-time purchase inside the authorization — the control case: the pipeline ALLOWs
+            and the demo still never touches the provider.
+          </p>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => void runMission("safe")}
+            disabled={missionBusy !== null}
+            data-testid="run-mission-safe"
+          >
+            {missionBusy === "safe" ? "Running…" : "Run safe mission"}
+          </button>
+        </div>
       </div>
 
-      {/* Full-pipeline attack movie (M066–M072) */}
-      {demo && (
+      {/* The full suite is a SEPARATE explicit action (G016) */}
+      <div className={styles.campaign} data-testid="full-suite-action">
+        <button
+          type="button"
+          className="btn btn-secondary btn-sm"
+          onClick={() => void runSuite()}
+          disabled={suiteBusy}
+          data-testid="run-full-suite"
+        >
+          {suiteBusy ? "Running full suite…" : "RUN FULL RED-TEAM SUITE (22 scenarios)"}
+        </button>
+      </div>
+
+      {/* Full-pipeline attack movie (G017): rendered ONLY from real trace events */}
+      {mission && (
         <div className={styles.movie} data-testid="attack-movie">
           <h3>
-            ATTACK —{" "}
-            {demo.scenario.startsWith("B_")
-              ? "hidden recurring membership"
-              : "protocol-valid, intent-invalid"}
+            {mission.attack ? "ATTACK" : "CONTROL"} — {mission.title}{" "}
+            {mission.trace_id && <code>{mission.trace_id}</code>}
           </h3>
           <ol className={styles.movieStages}>
             {movie.map((m, i) => (
               <li
                 key={m.stage}
-                className={styles.movieRow}
+                className={`${styles.movieRow} ${m.pending ? styles.moviePending : ""}`}
                 data-stage={m.stage}
                 data-state={m.status}
+                data-pending={m.pending ? "true" : undefined}
                 style={{ animationDelay: `${i * 140}ms` }}
               >
                 <span className={styles.movieIndex}>{i + 1}</span>
                 <span className={styles.movieLabel}>{m.label}</span>
-                <span className={styles.movieStatus}>{m.status}</span>
+                <span className={styles.movieStatus}>{m.pending ? "PENDING" : m.status}</span>
                 <span className={styles.movieDetail}>{m.detail}</span>
               </li>
             ))}
           </ol>
-          {demo.provider_contacted === false && (
+          {mission.provider_contacted === false && (
             <p className={styles.providerZero} data-testid="provider-zero">
               PROVIDER NOT CONTACTED — RAZORPAY CALLS = 0 (audit evidence)
             </p>
           )}
-          <p className="page-sub">
-            The AI proposes. RazorGuard authorizes. The trusted executor executes — the semantic
-            model can only tighten a decision; it never issues tickets and never contacts the
-            provider.
+          <p className="page-sub" data-testid="movie-note">
+            {mission.movie_note} Final: <strong>{mission.final_decision}</strong> · ticket{" "}
+            {mission.ticket_issued ? "issued" : "withheld"}.
           </p>
         </div>
       )}
@@ -398,8 +341,10 @@ export function SecurityLabMission() {
       <div className={styles.campaign} data-testid="agentpay-campaign">
         <h3>AgentPay-X red-team campaign</h3>
         <p className="page-sub">
-          The canonical {campaign?.total ?? 191}-case benchmark engine, live. Counters are the
-          benchmark&apos;s own — never a fabricated badge.
+          The canonical {campaign?.total ?? 191}-scenario adversarial policy benchmark,
+          live. Counters are the benchmark&apos;s own — never a fabricated badge.
+          (Exactly-once and provider execution are proven by separate acceptance
+          tests; this benchmark is a policy engine, not live provider traffic.)
         </p>
         <button
           type="button"

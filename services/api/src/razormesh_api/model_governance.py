@@ -1,6 +1,6 @@
-"""Phase-5 (M091-M094): Model Governance API — active vs challenger truth.
+"""Phase-5 (M091-M094) + deep-engine correction (G003-G005): Model Governance.
 
-Contract (D-055/D-056, master prompt §13.9):
+Contract (D-055/D-056, master prompt §13.9 + correction G003/G004/G005):
 - The ACTIVE semantic runtime is the PRE_V2 verifier (backend deberta,
   phase3-finetuned-v2, semantic-thresholds-v3). It stays active.
 - The v2 candidate was evaluated ONCE on frozen data and NOT ACTIVATED by the
@@ -8,8 +8,11 @@ Contract (D-055/D-056, master prompt §13.9):
 - All metrics below are committed evidence values (DECISIONS.md D-055 +
   docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION). This API projects them
   read-only; it never reruns frozen evaluation and never recalibrates.
-- Optional shadow mode (M093) runs the challenger on NEW NON-FROZEN demo text
-  only, marked NON-AUTHORITATIVE, and never enters fusion.
+- Shadow mode (G003) runs the ACTUAL fine-tuned v2 checkpoint
+  (ChallengerShadowVerifier) on NEW NON-FROZEN demo text only, marked
+  NON-AUTHORITATIVE, and never enters fusion/tickets/provider. If the real
+  artifact cannot load, the shadow reports CHALLENGER_UNAVAILABLE honestly —
+  the keyword verifier is never substituted for the challenger.
 """
 
 from __future__ import annotations
@@ -17,6 +20,11 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from razormesh_api.challenger_shadow import (
+    ChallengerShadowVerifier,
+    get_challenger_shadow,
+    shadow_status,
+)
 from razormesh_api.settings import get_settings
 
 # Committed evidence (D-055, 2026-08-30). These are frozen facts, not live
@@ -37,6 +45,7 @@ _CHALLENGER = {
     "status": "REJECTED — frozen safety gate FAILED",
     "verdict": "M2_FROZEN_EVALUATION_FAIL / V2_NOT_ACTIVATED",
     "trained_on": "Colab fine-tune of the AgentPay-IR v2 corpus (candidate A_2ep)",
+    "shadow_runs": "the ACTUAL fine-tuned v2 checkpoint (candidate A_2ep)",
     "normal_test_macro_f1": {"before": 0.7367, "after": 0.9752, "verdict": "improved"},
     "human_gold": {
         "unsafe_contradiction_to_entailment": {"before": 2, "after": 7},
@@ -52,7 +61,9 @@ _CHALLENGER = {
         "and fresh OOD. A model that lets more gold contradictions reach a "
         "provider-call PASS must not ship, whatever its macro-F1."
     ),
+    "shadow_only": "shadow only — can never authorize payment",
     "can_authorize_payment": False,
+    "cannot_authorize_payment": True,
     "is_activated": False,
     "evidence": "docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION.{md,json}; DECISIONS.md D-055",
 }
@@ -66,14 +77,15 @@ _FROZEN_RULES = [
 
 
 def governance_summary() -> dict[str, Any]:
-    """Aggregate, judge-facing governance truth (M091/M092)."""
+    """Aggregate, judge-facing governance truth (M091/M092 + G005)."""
     settings = get_settings()
     return {
         "active": _ACTIVE,
         "challenger": _CHALLENGER,
+        "shadow": shadow_status(),
         "frozen_rules": _FROZEN_RULES,
         "runtime_backend": settings.semantic_verifier_backend,
-        "shadow_mode_available": True,  # demo-only, non-frozen inputs
+        "shadow_mode_available": True,  # demo-only, non-frozen inputs, real v2 artifact
         "disclosed_limitation": (
             "A recurring term hidden ONLY in untrusted listing text is invisible "
             "to the structured evidence builder — the gap the v2 corpus targeted, "
@@ -82,31 +94,75 @@ def governance_summary() -> dict[str, Any]:
     }
 
 
-def shadow_verdict(hypothesis: str) -> dict[str, Any]:
-    """Optional challenger shadow (M093): NON-FROZEN demo inputs only.
+# Demo premise for the active-vs-challenger comparison. This is NEW text
+# authored for the demo — never a row from frozen test/gold/OOD data.
+_DEFAULT_DEMO_PREMISE = (
+    "The buyer authorized a one-time purchase of wireless headphones for at "
+    "most 5000 rupees with no subscription of any kind."
+)
 
-    Runs the deterministic keyword verifier explicitly as a TEST STUB
-    (never the production model, never v2 weights) on new demo text the
-    owner types. The result is labeled NON-AUTHORITATIVE and never reaches
-    fusion. This exists to visualize disagreement mechanics (M094); it does
-    not evaluate the challenger model itself.
+
+def shadow_verdict(hypothesis: str, *, premise: str | None = None) -> dict[str, Any]:
+    """Challenger shadow (G003): the REAL v2 checkpoint, NON-AUTHORITATIVE.
+
+    Runs the actual fine-tuned AgentPay-IR v2 artifact (candidate A_2ep) on
+    new demo text only. If the artifact cannot load or inference fails, the
+    result is CHALLENGER_UNAVAILABLE with the honest reason — the keyword
+    verifier is NEVER substituted for the challenger. The active PRE_V2 model
+    runs the same pair so the panel can show real agreement/disagreement;
+    authority always comes from the active model alone.
     """
     text = hypothesis.strip()[:400]
     if not text:
         return {"error": "empty hypothesis"}
-    from razormesh_api.semantic import DeterministicKeywordVerifier
+    prem = (premise or _DEFAULT_DEMO_PREMISE).strip()[:512]
 
-    verifier = DeterministicKeywordVerifier()
-    result = verifier.assess((text,))
-    verdict = getattr(result, "verdict", None)
-    shadow_action = str(getattr(verdict, "value", "UNSAFE")).upper()
+    shadow: ChallengerShadowVerifier = get_challenger_shadow()
+    challenger = shadow.assess_pair(prem, text)
+
+    # Active model on the same pair: the live PRE_V2 runtime decision lane.
+    active: dict[str, Any]
+    try:
+        from razormesh_api.semantic_runtime import (
+            MODEL_DIR,
+            POLICY_PATH,
+            get_semantic_verifier,
+            resolve_repo_path,
+        )
+
+        verifier = get_semantic_verifier(
+            model_dir=resolve_repo_path(MODEL_DIR), policy_path=resolve_repo_path(POLICY_PATH)
+        )
+        verdict = verifier.verify(premise=prem, hypothesis=text)
+        active = {
+            "action": str(verdict.action.value),
+            "p_contradiction": verdict.p_contradiction,
+            "p_entailment": verdict.p_entailment,
+            "p_neutral": verdict.p_neutral,
+            "model_id": verdict.model_id,
+            "policy_version": verdict.policy_version,
+        }
+    except Exception as exc:  # noqa: BLE001 - active lane status is report-only
+        active = {"action": "UNAVAILABLE", "reason": f"{type(exc).__name__}: {exc}"}
+
+    disagree = (
+        challenger.available
+        and active.get("action") not in (None, "UNAVAILABLE")
+        and challenger.shadow_action != active.get("action")
+    )
     return {
         "mode": "SHADOW — NON-AUTHORITATIVE",
         "input": text,
-        "shadow_action": shadow_action,
+        "challenger": challenger.to_dict(),
+        "active": active,
+        "disagreement": bool(disagree),
+        "shadow_action": challenger.shadow_action,  # convenience for legacy UI
         "authoritative_action": "ACTIVE MODEL ONLY (this shadow never decides)",
         "disagreement_note": (
-            "If this shadow disagreed with the active model, authority would still "
+            "The challenger and the active model disagree here. Authority still "
+            "comes from the ACTIVE model alone — the challenger is IGNORED."
+            if disagree
+            else "If the shadow disagreed with the active model, authority would still "
             "come from the ACTIVE model alone — the challenger is IGNORED."
         ),
         "never_enters": ["fusion", "ticket", "provider"],

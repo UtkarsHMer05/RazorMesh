@@ -12,7 +12,7 @@
  * backend verifier; tamper simulation is the non-mutating one.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import styles from "./forensics.module.css";
 
@@ -49,6 +49,12 @@ type Dossier = {
     attempt_state: string | null;
     reconcile_state: string | null;
   };
+  chain?: {
+    nodes: { seq: number; event_type: string; prev_head: string; hash_head: string }[];
+    linked: boolean;
+    node_count: number;
+    note: string;
+  };
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
@@ -79,6 +85,46 @@ export function AuditForensics() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // G022: real read-only timeline playback. The player re-renders the
+  // ALREADY-FETCHED events with pacing — it never re-executes anything,
+  // never creates tickets/provider calls, and never appends audit rows
+  // (proven by the G022 e2e count checks).
+  const [playIndex, setPlayIndex] = useState<number | null>(null);
+  const [playSpeed, setPlaySpeed] = useState(1);
+  const timerRef = useRef<number | null>(null);
+
+  const startPlayback = useCallback(() => {
+    if (!dossier || dossier.events.length === 0) return;
+    setPlayIndex(0);
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    timerRef.current = window.setInterval(() => {
+      setPlayIndex((idx) => {
+        if (idx === null) return null;
+        if (idx >= dossier.events.length - 1) {
+          if (timerRef.current) window.clearInterval(timerRef.current);
+          return idx;
+        }
+        return idx + 1;
+      });
+    }, Math.max(250, 900 / playSpeed));
+  }, [dossier, playSpeed]);
+
+  const pausePlayback = useCallback(() => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
+  }, []);
+
+  const resetPlayback = useCallback(() => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    setPlayIndex(null);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) window.clearInterval(timerRef.current);
+    },
+    [],
+  );
+
   useEffect(() => {
     let ignore = false;
     (async () => {
@@ -102,6 +148,8 @@ export function AuditForensics() {
       const res = await fetch(`${API}/forensics/trace/${traceId}`);
       const body = await res.json();
       if (!res.ok) throw new Error(body.detail ?? "trace lookup failed");
+      if (timerRef.current) window.clearInterval(timerRef.current);
+      setPlayIndex(null);
       setDossier(body as Dossier);
       setSelectedTrace(traceId);
     } catch (e) {
@@ -159,7 +207,15 @@ export function AuditForensics() {
         ? styles.badgeAllow
         : styles.badgeNeutral;
 
-  const timeline = useMemo(() => dossier?.events ?? [], [dossier]);
+  const timeline = useMemo(
+    () =>
+      playIndex === null
+        ? (dossier?.events ?? [])
+        : (dossier?.events ?? []).slice(0, playIndex + 1),
+    [dossier, playIndex],
+  );
+  const currentEvent =
+    playIndex !== null && dossier ? dossier.events[playIndex] : null;
 
   return (
     <div className={styles.forensics} data-testid="audit-forensics">
@@ -350,14 +406,108 @@ export function AuditForensics() {
             </div>
           </div>
 
-          {/* Read-only replay */}
-          <details className={styles.replayDrawer} data-testid="forensic-replay">
-            <summary>Replay this trace (read-only)</summary>
+          {/* G022: REAL read-only timeline playback over the stored events */}
+          <div className={styles.replayPlayer} data-testid="forensic-replay">
+            <h4>Replay this transaction (read-only playback)</h4>
+            <div className={styles.playbackControls}>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={startPlayback}
+                disabled={dossier.events.length === 0}
+                data-testid="replay-play"
+              >
+                ▶ Play
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={pausePlayback}
+                disabled={playIndex === null}
+                data-testid="replay-pause"
+              >
+                ⏸ Pause
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={resetPlayback}
+                disabled={playIndex === null}
+                data-testid="replay-reset"
+              >
+                ⟲ Reset
+              </button>
+              <label className={styles.speedLabel}>
+                Speed
+                <select
+                  value={playSpeed}
+                  onChange={(e) => setPlaySpeed(Number(e.target.value))}
+                  aria-label="Playback speed"
+                  data-testid="replay-speed"
+                >
+                  <option value={0.5}>0.5×</option>
+                  <option value={1}>1×</option>
+                  <option value={2}>2×</option>
+                </select>
+              </label>
+              <span className={styles.playPosition} data-testid="replay-position">
+                {playIndex === null
+                  ? `${dossier.events.length} events`
+                  : `${playIndex + 1} / ${dossier.events.length}`}
+              </span>
+            </div>
+            {currentEvent && (
+              <p className={styles.currentEvent} data-testid="replay-current">
+                <strong>
+                  #{currentEvent.seq} {currentEvent.title}
+                </strong>{" "}
+                — {currentEvent.status}
+              </p>
+            )}
             <p className="page-sub">
-              The timeline above replays visually from recorded audit events — replaying cannot
-              create tickets, provider calls, or new audit entries.
+              Playback re-renders the stored audit events only. It never re-executes the
+              pipeline: no new tickets, no provider calls, no new audit entries — the
+              provider-call count and event count are unchanged after any replay.
             </p>
-          </details>
+          </div>
+
+          {/* G023: the SELECTED trace's own hash-chain nodes */}
+          {dossier.chain && dossier.chain.nodes.length > 0 && (
+            <div className={styles.chainView} data-testid="trace-chain">
+              <h4>
+                This trace&apos;s hash chain ({dossier.chain.node_count} events{" "}
+                {dossier.chain.linked ? "· LINKED" : "· LINK BROKEN"})
+              </h4>
+              <p className="page-sub">
+                Each event&apos;s hash covers the previous event. Change any row and every
+                later link in THIS trace breaks — that is where tamper would be caught.
+                Global ledger verification is a separate action above.
+              </p>
+              <ol className={styles.chainNodes} data-testid="chain-nodes">
+                {dossier.chain.nodes.map((n, i) => (
+                  <li
+                    key={n.seq}
+                    className={`${styles.chainNode} ${
+                      currentEvent && currentEvent.seq === n.seq ? styles.chainNodeCurrent : ""
+                    }`}
+                    data-seq={n.seq}
+                    data-testid={`chain-node-${n.seq}`}
+                  >
+                    <code>#{n.seq}</code>{" "}
+                    <span className={styles.chainEventType}>{n.event_type}</span>
+                    <span className={styles.chainHash} title="hash head">
+                      {n.hash_head}…
+                    </span>
+                    {i > 0 && (
+                      <span className={styles.chainLink} title="linked to previous">
+                        ← {n.prev_head}…
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
         </section>
       )}
     </div>

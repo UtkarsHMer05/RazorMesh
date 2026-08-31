@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import secrets
 import uuid
 from dataclasses import dataclass
@@ -95,6 +96,9 @@ from .ucp_signatures import (
 ACCEPTANCE_PROTOCOL_VERSION = "phase4-acceptance-v1"
 COMMERCE_COMMITMENT_VERSION = "commerce-commitment-v1"
 UCP_TEST_HMAC_SECRET = b"razormesh-ucp-test-secret-v1"
+
+
+logger = logging.getLogger(__name__)
 
 
 def _hash_canonical(data: Any) -> str:
@@ -585,6 +589,35 @@ class Phase4AcceptanceOrchestrator:
                 rejection_stage="propose",
             )
         checkout_id = str(proposal.envelope.checkout_id)
+
+        # G012 (deep-engine correction): capture the immutable transaction
+        # baseline for this checkout at proposal time, so Mission Control's
+        # current-transaction diff and revert can act on orchestrator-created
+        # checkouts exactly like mission-engine ones. Best-effort: an existing
+        # baseline is never replaced, and a capture failure must never change
+        # the acceptance pipeline's own verdicts.
+        try:
+            from ..merchant_sandbox import _capture_baseline
+            from ..persistence.models import Checkout as _RowCheckout
+            from ..persistence.models import Product
+            from ..persistence.repositories import session_scope
+
+            repos = self._checkout.repos
+            with session_scope(repos.factory) as session:
+                row = session.get(_RowCheckout, checkout_id)
+                product = session.get(Product, product_id)
+                if row is not None and product is not None:
+                    _capture_baseline(
+                        session,
+                        intent_id=intent_id,
+                        row=row,
+                        product=product,
+                        quantity=quantity,
+                        expected_checkout_hash=proposal.checkout_hash,
+                        expected_intent_hash=proposal.intent_hash,
+                    )
+        except Exception as exc:  # noqa: BLE001 - projection only; never block acceptance
+            logger.debug("baseline capture skipped for %s: %s", checkout_id, exc)
 
         # 2) Authorize via the production CheckoutService.
         try:

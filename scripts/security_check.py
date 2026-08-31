@@ -83,6 +83,15 @@ _ALLOWED_TEST_FIXTURES: dict[tuple[str, str], frozenset[str]] = {
         "services/api/tests/test_reducer.py",
         "credential-assignment",
     ): frozenset({"wh-route-wiring-secret"}),
+    # M095-M100 payment-FSM e2e: the stubbed Razorpay checkout launch payload
+    # needs a key-shaped string to be realistic. It is a SYNTHETIC value
+    # (never a credential; the e2e stubs the provider boundary only — the
+    # app pipeline is real). Allowed here so the scan keeps catching real
+    # key-shaped literals everywhere else.
+    (
+        "apps/web/e2e/phase5-payment-fsm.spec.ts",
+        "razorpay-key-shape",
+    ): frozenset({"rzp_test_phase5public"}),
     # rzp_live_ literal REQUIRED to prove live-key rejection (P2-S02).
     (
         "services/api/tests/test_settings_phase2.py",
@@ -114,7 +123,7 @@ _ALLOWED_TEST_FIXTURES: dict[tuple[str, str], frozenset[str]] = {
     (
         "scripts/security_check.py",
         "razorpay-key-shape",
-    ): frozenset({"rzp_live_CkYzExample"}),
+    ): frozenset({"rzp_live_CkYzExample", "rzp_test_phase5public"}),
 }
 _SCAN_SUFFIXES = {
     ".py",

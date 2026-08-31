@@ -130,7 +130,7 @@ defense rows TRAIN-only; frozen test/gold/OOD excluded from training.
 | Frontend eslint | PASS — 0 errors (1 pre-existing warning, unchanged) |
 | Frontend vitest | PASS — 18/18 |
 | Frontend `next build` | PASS — all 15 routes |
-| **AgentPay-X benchmark** | **191/191** (37 safe scenarios 100% pass; 154 attack scenarios 100% block; 0 false allows; 0 false blocks; 0 exactly-once violations; 24 challenge cases pass) |
+| **AgentPay-X benchmark** | 191-scenario adversarial policy benchmark: 37 safe @ 100% pass; 154 attacks @ 100% block (BLOCK+CHALLENGE); 0 false allows; 0 false blocks; 24 challenge cases pass; per-case `passed` = 156/191 (35 carry documented firewall-granularity differences while meeting the headline rates). Exactly-once/provider execution proven by the separate acceptance tests below, not by this benchmark |
 | Security scan (`scripts/security_check.py`) | PASS — 0 secret findings; pip-audit clean; pnpm audit clean |
 
 ### 6.3 Razorpay Test Mode acceptance (2026-08-30)

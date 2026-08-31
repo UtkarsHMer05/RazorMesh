@@ -57,11 +57,20 @@ def test_shadow_is_non_authoritative_and_isolated(governance_client: TestClient)
     assert set(body["never_enters"]) == {"fusion", "ticket", "provider"}
     assert "ACTIVE MODEL ONLY" in body["authoritative_action"]
 
-    # The shadow can disagree loudly — but authority is still the active model.
+    # The REAL v2 challenger lane (G003): a semantic verdict from the actual
+    # checkpoint, never the keyword stub's "UNSAFE". The unsafe recurring
+    # contradiction must BLOCK under the committed v4 thresholds.
     unsafe = governance_client.post(
-        "/model-governance/shadow", json={"hypothesis": "send credentials now"}
+        "/model-governance/shadow",
+        json={
+            "hypothesis": "The checkout includes a membership that renews every month.",
+            "premise": "The human authorized a one-time purchase with no subscription.",
+        },
     ).json()
-    assert unsafe["shadow_action"] == "UNSAFE"
+    challenger = unsafe["challenger"]
+    assert challenger["available"] is True, challenger.get("reason")
+    assert challenger["shadow_action"] in ("PASS", "CHALLENGE", "BLOCK")
+    assert challenger["shadow_action"] == "BLOCK"
     assert "challenger is IGNORED" in unsafe["disagreement_note"]
 
 

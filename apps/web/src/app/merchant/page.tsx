@@ -61,7 +61,7 @@ export default function MerchantPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { events: traceEvents, traceId } = useLiveTrace({ active: true });
+  const { events: traceEvents, traceId, summary, setTraceId } = useLiveTrace({ active: true });
 
   useEffect(() => {
     let ignore = false;
@@ -111,22 +111,34 @@ export default function MerchantPage() {
     setBusy(true);
     setError(null);
     try {
+      // G015: when a live mission exists, bind the new checkout to ITS
+      // intent so the mutation surface targets the current trace — never a
+      // silently disconnected one. Without a live mission this creates a new
+      // sandbox mission (fresh intent + trace).
       const res = await fetch(`${API}/merchant-sandbox/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_id: selected.id, quantity: 1 }),
+        body: JSON.stringify({
+          product_id: selected.id,
+          quantity: 1,
+          intent_id: summary?.intent_id ?? undefined,
+        }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.detail ?? "checkout failed");
       setCheckout(body);
       setLastMutation(null);
       setDiff([]);
+      // G015: the backend response carries the trace this checkout belongs
+      // to; adopt it as the global live trace so Buyer/Merchant/Protocols/
+      // Security/Audit all resolve the SAME trace.
+      if (body.trace_id && body.trace_id !== traceId) setTraceId(body.trace_id);
     } catch (e) {
       setError(String(e));
     } finally {
       setBusy(false);
     }
-  }, [selected]);
+  }, [selected, summary, traceId, setTraceId]);
 
   const mutate = useCallback(
     async (kind: string) => {

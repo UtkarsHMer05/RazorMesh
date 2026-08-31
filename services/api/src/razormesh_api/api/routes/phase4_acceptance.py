@@ -20,6 +20,7 @@ the payment provider, shell access, or arbitrary networking.
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime, timedelta
 from pathlib import Path as FilePath
 from typing import Annotated, Any
@@ -42,6 +43,8 @@ from razormesh_api.protocol.acceptance import (
 from razormesh_api.settings import Settings, get_settings
 from razormesh_api.spend import SpendError, SpendManager
 from razormesh_api.tickets import TicketRejected
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/phase4/acceptance", tags=["phase4-acceptance"])
 
@@ -329,6 +332,21 @@ def _create_demo_intent(repos: Any, *, max_quantity: int, max_total_minor: int) 
 
 def _demo_response(result: Any, scenario: str) -> dict[str, Any]:
     ev = result.run.evidence
+    # G015/G019: link the demo run's checkout to its display trace so every
+    # surface (Mission Control diff/revert/execute, Audit) resolves the SAME
+    # trace and its real checkout. Linkage only - never part of the money path.
+    try:
+        from razormesh_api.trace_registry import TraceRegistry
+
+        if result.run.intent_id:
+            repos = _repos(settings=get_settings())
+            TraceRegistry(repos).get_or_create_for_intent(
+                result.run.intent_id,
+                checkout_id=result.run.checkout_id or None,
+                run_id=result.run.run_id,
+            )
+    except Exception as exc:  # noqa: BLE001 - linkage must never break the demo path
+        logger.debug("trace linkage skipped for %s: %s", result.run.intent_id, exc)
     return {
         "scenario": scenario,
         "run_id": result.run.run_id,

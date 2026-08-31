@@ -33,19 +33,32 @@ OFF (animations are the story), Chrome.
 ## 35–60 s — Attack (Mission Control hidden-membership)
 
 - Open /mission-control → click **Hidden membership attack**.
-- Watch the nodes resolve from real events: protocol BLOCK → RazorGuard
-  BLOCK → Semantic contradiction 100% → Fusion BLOCK → Ticket WITHHELD.
+- Watch the nodes resolve from real events: protocol/firewall **PASS**
+  (the packet is protocol-valid!) → RazorGuard **BLOCK** (recurring not
+  authorized) → Semantic contradiction ~100% → Fusion **BLOCK** → Ticket
+  WITHHELD. NOTE: the protocol layer PASSES here — the stop is an
+  intent/authority stop, not a protocol stop.
 - The banner lands the thesis: "The packet stopped at razorguard — Razorpay
-  was never contacted." Provider calls: 0 (evidence sidebar).
+  was never contacted." Provider calls: 0 (evidence sidebar). The stopping
+  node is razorguard (the decision boundary), not the protocol gateway.
 - Optional beat: the same mutation applied by hand in /merchant (hidden
-  membership preset) with the authorized-vs-current diff (₹2,398 → ₹2,898).
+  membership preset) with the authorized-vs-current diff (read the numbers
+  from the live diff table; the authorized side is the immutable proposal
+  baseline, never the catalog).
 
 ## 60–80 s — Forensics (Audit)
 
 - Open /audit. Recent missions cards → click the attack's trace (or search it).
-- Show the visual timeline, then **Authorization vs current** (total_minor
-  CHANGED) — the diff that explains the block.
-- Click **Verify hash chain** → "CHAIN VALID over N events".
+- Show the visual timeline, then **Authorization vs current** — the
+  comprehensive diff (quantity, price, fees, recurring… whichever drifted)
+  that explains the block.
+- Click **▶ Play** on the read-only replay: the events walk one by one
+  (0.5x/1x/2x), the current-event indicator moves, and after the full replay
+  the provider-call count and event count are UNCHANGED (it never
+  re-executes).
+- Show the trace's own hash-chain nodes (each event links to the previous
+  hash) — where tamper would break THIS trace — then click **Verify hash
+  chain** for the global "CHAIN VALID over N events".
 
 ## 80–100 s — Protocol thesis (Mission Control)
 
@@ -72,9 +85,19 @@ OFF (animations are the story), Chrome.
 
 - /governance: ACTIVE safety model vs the REJECTED challenger table (human
   gold 2→7 WORSENED; test macro-F1 0.7367→0.9752 "improved — not enough").
-- /security-lab: Run red-team campaign — 191 scenarios, safe pass 100%,
-  attack block 100%, 0 false allows, 0 false blocks, 0 exactly-once
-  violations (canonical benchmark numbers).
+  Then the challenger shadow: type the delivery-address contradiction
+  ("The parcel will be routed through a local pickup point.") and run it —
+  the REAL fine-tuned v2 checkpoint says CHALLENGE (p C≈0.05) while the
+  ACTIVE model says BLOCK (p C≈0.999). Narrate: "The challenger disagrees
+  with the active model here — the exact tau-band gap that got it rejected
+  — and it is IGNORED for authority. Never fusion, never tickets, never
+  the provider."
+- /security-lab: Run red-team campaign — the 191-scenario adversarial
+  policy benchmark: 37 safe @ 100% pass, 154 attacks @ 100% block
+  (BLOCK or CHALLENGE), 0 false allows, 0 false blocks. Exactly-once and
+  provider-execution behavior is proven by SEPARATE acceptance tests
+  (order created exactly once; attack chains 0 provider calls) — the
+  benchmark itself is a policy engine, not live provider traffic.
 - Close: "Safety ships over headline accuracy. The AI proposes. RazorGuard
   authorizes. The trusted executor executes."
 

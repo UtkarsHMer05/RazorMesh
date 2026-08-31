@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useLiveTrace } from "@/lib/live-trace";
 import styles from "./mission-control.module.css";
 
@@ -44,6 +45,7 @@ const fmtINR = (m: number | null | undefined) =>
   m == null ? "—" : `₹${(m / 100).toLocaleString("en-IN")}`;
 
 export default function MissionControlPage() {
+  const router = useRouter();
   const { traceId, summary, events, setTraceId } = useLiveTrace({
     active: true,
     autoStop: false, // keep polling: the video page stays live
@@ -162,9 +164,79 @@ export default function MissionControlPage() {
     [setTraceId],
   );
 
-  const startSafeMission = useCallback(() => {
-    window.location.href = "/buyer";
+  // G019: REAL control-deck actions on the CURRENT trace's transaction.
+  const [txDiff, setTxDiff] = useState<
+    { trace_id: string; diff: { field: string; authorized: unknown; current: unknown }[]; clean: boolean } | null
+  >(null);
+
+  const refreshCurrentTransaction = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(`${API}/mission-control/current-transaction/${id}`);
+      if (res.status === 409) {
+        // The current trace's checkout has no immutable baseline yet (e.g.
+        // a run created before this contract). Honest absence, never a
+        // guessed diff.
+        setTxDiff(null);
+        return;
+      }
+      if (!res.ok) {
+        setTxDiff(null);
+        return;
+      }
+      setTxDiff(await res.json());
+    } catch {
+      setTxDiff(null); // diff is best-effort in the UI; backend is authority
+    }
   }, []);
+
+  useEffect(() => {
+    // Microtask boundary: no synchronous setState inside the effect body
+    // (react-compiler lint); the diff is re-derived after events settle.
+    const t = window.setTimeout(() => {
+      if (!traceId) {
+        setTxDiff(null);
+        return;
+      }
+      void refreshCurrentTransaction(traceId);
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [traceId, events.length, refreshCurrentTransaction]);
+
+  const actOnCurrent = useCallback(
+    async (action: "mutate" | "revert" | "execute", kind?: string) => {
+      if (!traceId) return;
+      setBusy(true);
+      setStatus(null);
+      try {
+        const res = await fetch(`${API}/mission-control/${action}-current`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trace_id: traceId, kind: kind ?? action }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.detail?.detail ?? body.detail ?? `${action} failed`);
+        if (action === "execute") {
+          setStatus(
+            `${body.outcome} — ${body.note}`,
+          );
+        } else {
+          setStatus(
+            `${body.label || action}: changed ${body.changed_fields?.join(", ") || "nothing"}. ${body.note ?? ""}`,
+          );
+        }
+        await refreshCurrentTransaction(traceId);
+      } catch (e) {
+        setStatus(String(e));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [traceId, refreshCurrentTransaction],
+  );
+
+  const startSafeMission = useCallback(() => {
+    router.push("/buyer");
+  }, [router]);
 
   const demoReset = useCallback(async () => {
     setBusy(true);
@@ -304,11 +376,57 @@ export default function MissionControlPage() {
                 <code>intent: {summary.intent_id}</code>
               </details>
             )}
+            {/* G020: current transaction diff (immutable baseline vs live) */}
+            {txDiff && (
+              <div className={styles.txDiff} data-testid="mc-tx-diff">
+                <h3>Current transaction — authorized vs current</h3>
+                {txDiff.clean ? (
+                  <p className="page-sub" data-testid="mc-tx-clean">
+                    No drift — the current transaction matches the immutable authorization
+                    baseline exactly.
+                  </p>
+                ) : (
+                  <table className={styles.diffTable} data-testid="mc-tx-diff-rows">
+                    <thead>
+                      <tr>
+                        <th>Field</th>
+                        <th>Authorized</th>
+                        <th>Current</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {txDiff.diff.map((d) => (
+                        <tr key={d.field}>
+                          <td>{d.field}</td>
+                          <td>{fmtINR(d.authorized as number) === "—" ? "—" : fmtINR(d.authorized as number)}</td>
+                          <td>
+                            <strong>
+                              {fmtINR(d.current as number) === "—"
+                                ? JSON.stringify(d.current)
+                                : fmtINR(d.current as number)}
+                            </strong>{" "}
+                            ← CHANGED
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                <p className="page-sub">
+                  Authorized side = the immutable TransactionBaseline captured at proposal time
+                  (a catalog change can never alter it). Current side = the live checkout row.
+                </p>
+              </div>
+            )}
           </section>
 
-          {/* Control deck (M104) */}
+          {/* Control deck (M104 + G019): real actions on the current trace */}
           <section className={styles.deck} data-testid="mc-controls">
             <h2>Control deck</h2>
+            <p className="page-sub">
+              Every action below acts on the CURRENT mission&apos;s transaction (trace{" "}
+              <strong>{traceId ?? "—"}</strong>). Navigation is labeled as navigation.
+            </p>
             <div className={styles.deckGrid}>
               <button type="button" className="btn btn-primary btn-sm" onClick={startSafeMission} data-testid="mc-safe">
                 Start safe mission
@@ -331,11 +449,56 @@ export default function MissionControlPage() {
               >
                 Protocol-valid / intent-invalid
               </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => void actOnCurrent("mutate", "price_drift")}
+                disabled={busy || !traceId}
+                data-testid="mc-mutate-price"
+              >
+                Price drift on current
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => void actOnCurrent("mutate", "quantity_increase")}
+                disabled={busy || !traceId}
+                data-testid="mc-mutate-quantity"
+              >
+                Quantity +1 on current
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => void actOnCurrent("mutate", "merchant_swap")}
+                disabled={busy || !traceId}
+                data-testid="mc-mutate-merchant"
+              >
+                Merchant swap on current
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => void actOnCurrent("execute")}
+                disabled={busy || !traceId}
+                data-testid="mc-execute-current"
+              >
+                Execute current transaction
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => void actOnCurrent("revert")}
+                disabled={busy || !traceId}
+                data-testid="mc-revert-current"
+              >
+                Revert current mutation
+              </button>
               <Link className="btn btn-secondary btn-sm" href={traceId ? `/audit?trace=${traceId}` : "/audit"} data-testid="mc-open-audit">
-                Open Audit →
+                Open Audit (navigate) →
               </Link>
               <Link className="btn btn-secondary btn-sm" href="/protocols" data-testid="mc-replay-scenario">
-                Replay scenario (Protocols) →
+                Protocol playground (navigate) →
               </Link>
               <button
                 type="button"

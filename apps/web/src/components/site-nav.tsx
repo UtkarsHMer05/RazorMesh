@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { TraceBadge } from '@/app/_components/trace-badge';
 
 export function SiteNav() {
@@ -26,7 +27,7 @@ export function SiteNav() {
         <div className="site-nav__actions">
           {/* Phase-5: the same live mission trace follows the judge everywhere (M014). */}
           <span className="site-nav__trace">
-            <TraceBadge />
+            <Suspense fallback={<span className="site-nav__trace" />}><TraceBadge /></Suspense>
           </span>
           <Link href="/buyer" className="site-nav__login">Log in</Link>
           <Link href="/buyer" className="site-nav__cta" data-testid="nav-cta">

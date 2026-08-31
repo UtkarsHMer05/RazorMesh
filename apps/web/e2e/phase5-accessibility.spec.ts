@@ -62,8 +62,9 @@ test("all surfaces render with reduced motion and remain operable", async ({ pag
 
 test("color is never the sole signal: decision states carry text labels", async ({ page }) => {
   // Blocked decision carries the word, not just a color.
+  // (G016: the dedicated hidden-recurring mission card runs that attack only.)
   await page.goto("/security-lab");
-  await page.getByTestId("mission-b").getByRole("button", { name: /run mission/i }).click();
+  await page.getByTestId("run-mission-hidden-recurring").click();
   await expect(page.getByTestId("attack-movie")).toContainText(/BLOCK/i, { timeout: 60_000 });
   await expect(page.getByTestId("attack-movie")).toContainText(/WITHHELD/i);
   await expect(page.getByTestId("provider-zero")).toContainText(/NOT CONTACTED/i);

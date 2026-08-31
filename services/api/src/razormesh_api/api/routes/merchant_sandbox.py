@@ -48,6 +48,7 @@ def _err(exc: MerchantDemoError) -> HTTPException:
     status = {
         "INTENT_NOT_FOUND": 404,
         "CHECKOUT_NOT_FOUND": 404,
+        "BASELINE_MISSING": 409,
         "MUTATION_OUT_OF_BOUNDS": 422,
         "NO_OTHER_MERCHANT": 409,
         "PRODUCT_GONE": 409,
@@ -58,12 +59,10 @@ def _err(exc: MerchantDemoError) -> HTTPException:
 class CheckoutRequest(BaseModel):
     product_id: str = Field(min_length=6, max_length=64)
     quantity: int = Field(default=1, ge=1, le=2)
-
-
-class MutateRequest(BaseModel):
-    intent_id: str = Field(pattern=INTENT_RE)
-    checkout_id: str = Field(pattern=CHECKOUT_RE)
-    kind: str = Field(min_length=4, max_length=32)
+    # G015: when the caller is working within an existing mission, pass its
+    # intent id so the sandbox mutation targets THAT transaction instead of
+    # silently creating a disconnected one. Explicit new mission = omit it.
+    intent_id: str | None = Field(default=None, pattern=INTENT_RE)
 
 
 @router.get("/presets")
@@ -76,7 +75,7 @@ def create_checkout(
     body: CheckoutRequest,
     repos: Annotated[Repositories, Depends(_repos)],
 ) -> dict[str, Any]:
-    from razormesh_api.persistence.models import Product
+    from razormesh_api.persistence.models import IntentContract, Product
 
     with session_scope_safe(repos) as session:
         product = session.get(Product, body.product_id)
@@ -86,15 +85,41 @@ def create_checkout(
         price_minor = product.price_minor
         shipping_minor = product.shipping_minor
         condition = product.condition
-    try:
-        intent_id, checkout_id, _expected = propose_checkout_for_demo(
-            repos, product_id=body.product_id, quantity=body.quantity
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=422, detail=str(exc)[:200]) from exc
+    # G015: reuse the CURRENT mission's intent when the caller passes it
+    # (the frontend forwards the global live trace's intent) — the mutation
+    # surface then targets the live mission's own checkout, keeping one
+    # trace across Buyer/Merchant/Protocols/Security/Audit.
+    if body.intent_id:
+        with session_scope_safe(repos) as session:
+            intent = session.get(IntentContract, body.intent_id)
+        if intent is None:
+            raise HTTPException(status_code=404, detail="Unknown intent")
+        # A fresh checkout for the CURRENT mission intent (new revision of
+        # the same transaction, not a disconnected trace).
+        try:
+            intent_id, checkout_id, _expected = propose_checkout_for_demo(
+                repos,
+                product_id=body.product_id,
+                quantity=body.quantity,
+                intent_id=body.intent_id,
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=str(exc)[:200]) from exc
+    else:
+        try:
+            intent_id, checkout_id, _expected = propose_checkout_for_demo(
+                repos, product_id=body.product_id, quantity=body.quantity
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=str(exc)[:200]) from exc
+    # Resolve the trace this checkout belongs to (G015: response carries it).
+    from razormesh_api.trace_registry import TraceRegistry
+
+    trace = TraceRegistry(repos).by_intent(intent_id)
     return {
         "intent_id": intent_id,
         "checkout_id": checkout_id,
+        "trace_id": trace.trace_id if trace else "",
         "product": {
             "product_id": body.product_id,
             "title": title,
@@ -102,7 +127,18 @@ def create_checkout(
             "shipping_minor": shipping_minor,
             "condition": condition,
         },
+        "note": (
+            "Checkout bound to the current mission trace."
+            if body.intent_id
+            else "New sandbox mission (fresh intent and trace)."
+        ),
     }
+
+
+class MutateRequest(BaseModel):
+    intent_id: str = Field(pattern=INTENT_RE)
+    checkout_id: str = Field(pattern=CHECKOUT_RE)
+    kind: str = Field(min_length=4, max_length=32)
 
 
 def session_scope_safe(repos: Repositories):  # type: ignore[no-untyped-def]

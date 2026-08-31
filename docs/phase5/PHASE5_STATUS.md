@@ -504,6 +504,25 @@ browser proof; no PASS from code inspection alone; never push (owner pushes manu
 
 ---
 
+# Evidence-granularity reconciliation (deep-engine correction G026)
+
+The original Phase-5 implementation recorded milestones M019-M120 in grouped
+(evidence-bundle) entries: waves of related milestones share one PASS record
+with shared browser/test evidence rather than one independently recorded
+proof per milestone. The recorded evidence is real, but the per-milestone
+independence implied by the one-milestone-at-a-time contract is not what the
+ledger structure shows.
+
+The deep-engine correction gates **G001-G030** are verified independently:
+one gate, one ledger entry, with its own commands, tests, browser actions
+and real-engine proof recorded per gate (see
+docs/phase5/DEEP_ENGINE_CORRECTION_STATUS.md).
+
+No historical screenshots were retroactively manufactured for the grouped
+milestones; this note is the honest record.
+
+---
+
 # Phase-5 completion summary
 
 All **120/120 milestones PASS** with recorded evidence. No milestone was

@@ -133,3 +133,15 @@
 @media (prefers-reduced-motion: reduce) {
   .movieRow { animation: none; }
 }
+
+/* G017: a movie stage with no backend event renders pending (visually muted,
+ * labeled PENDING) — never a fabricated DONE. */
+.moviePending {
+  opacity: 0.45;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movieRow {
+    animation: none !important;
+  }
+}

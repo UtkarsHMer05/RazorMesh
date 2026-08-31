@@ -355,3 +355,56 @@ class DemoTrace(Base):
     run_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class TransactionBaseline(Base):
+    """Deep-engine correction (G012): immutable transaction baseline snapshot.
+
+    Captured ONCE at checkout proposal time (the moment the human-confirmed
+    authorization is projected into a concrete offer). This is the
+    authorization-relevant ORIGINAL every mutation diff compares against and
+    every revert restores — never the current (mutable) checkout row and
+    never the current (mutable) catalog product row.
+
+    NOT a second authority store: the IntentContract remains the human
+    authority and the checkout row remains the live offer. This table exists
+    so that "authorized vs current" truth cannot drift when shared catalog
+    state changes underneath a demo transaction.
+
+    Immutability discipline: rows are INSERT-only (captured at proposal
+    time); no code path updates or deletes them. The unique checkout_id
+    constraint enforces one baseline per checkout.
+    """
+
+    __tablename__ = "transaction_baselines"
+    __table_args__ = (
+        UniqueConstraint("checkout_id", name="uq_baseline_checkout"),
+        Index("ix_baseline_intent_id", "intent_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    intent_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    checkout_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Authorization-relevant projection at proposal time (G012 field list).
+    merchant_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    product_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    variant_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    condition: Mapped[str] = mapped_column(String(32), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    unit_price_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    shipping_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    fees_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    tax_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    total_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False)
+    recurring: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    recurring_frequency: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    display_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    captured_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # G019: proposal-time authorization hashes (what the executor's
+    # revalidation contract compares the current checkout against). Stored at
+    # capture time so later mutations to the checkout row can never forge
+    # the original binding. Nullable only because pre-G019 rows lack them;
+    # execute-current refuses those rows rather than guessing.
+    expected_checkout_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    expected_intent_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
