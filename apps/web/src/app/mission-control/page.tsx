@@ -57,6 +57,29 @@ export default function MissionControlPage() {
   const [playIndex, setPlayIndex] = useState<number | null>(null);
   const [speed, setSpeed] = useState(1);
   const [presenter, setPresenter] = useState(false);
+  // F012: DEMO PREFLIGHT — real lightweight readiness probes.
+  const [preflight, setPreflight] = useState<{
+    label: string;
+    all_ready: boolean;
+    checks: { component: string; ready: boolean; detail: string; environment?: string }[];
+  } | null>(null);
+  const [preflightBusy, setPreflightBusy] = useState(false);
+
+  const runPreflight = useCallback(async (warmUp: boolean) => {
+    setPreflightBusy(true);
+    setPreflight(null);
+    try {
+      const res = await fetch(
+        `${API}/mission-control/preflight${warmUp ? "?warm_up=true" : ""}`,
+      );
+      if (!res.ok) throw new Error("preflight failed");
+      setPreflight(await res.json());
+    } catch (e) {
+      setStatus(String(e));
+    } finally {
+      setPreflightBusy(false);
+    }
+  }, []);
   const timerRef = useRef<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -302,7 +325,16 @@ export default function MissionControlPage() {
           {traceId && (
             <>
               {" "}
-              Live mission <strong>{traceId}</strong>.
+              Live mission <strong>{traceId}</strong>
+              {" "}
+              <span className={styles.envBadge} data-testid="env-badge">
+                {(() => {
+                  const payment = preflight?.checks.find(
+                    (c) => c.component === "Payment environment",
+                  );
+                  return payment?.environment ?? "…";
+                })()}
+              </span>
             </>
           )}
         </p>
@@ -317,7 +349,46 @@ export default function MissionControlPage() {
             {presenter ? "Exit presenter mode" : "Presenter mode"}
           </button>
           {presenter && <span className={styles.presenterBadge}>RECORDING VIEW</span>}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => void runPreflight(false)}
+            disabled={preflightBusy}
+            data-testid="run-preflight"
+          >
+            {preflightBusy ? "Probing…" : "Run demo preflight"}
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => void runPreflight(true)}
+            disabled={preflightBusy}
+            data-testid="run-preflight-warmup"
+            title="Same probes + a non-authoritative compiler warm-up request so the first real compile is fast"
+          >
+            Preflight + warm-up compiler
+          </button>
         </div>
+        {preflight && (
+          <div className="card" data-testid="preflight-panel">
+            <h3>
+              {preflight.label} —{" "}
+              {preflight.all_ready ? "ALL COMPONENTS READY" : "NOT READY — check failures"}
+            </h3>
+            <ul>
+              {preflight.checks.map((c) => (
+                <li key={c.component} data-testid={`preflight-${c.component.replace(/\s+/g, "-").toLowerCase()}`}>
+                  {c.ready ? "✓" : "✗"} <strong>{c.component}</strong> — {c.detail}
+                </li>
+              ))}
+            </ul>
+            <p className="page-sub">
+              Real lightweight probes only — no secrets exposed, no mandate compiled, nothing
+              fabricated. The payment environment line states which environment traces execute
+              in, so no local security mission is presented as a live provider transaction.
+            </p>
+          </div>
+        )}
       </header>
 
       <div className={styles.layout}>

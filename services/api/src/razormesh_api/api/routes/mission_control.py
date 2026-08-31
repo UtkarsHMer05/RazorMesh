@@ -54,6 +54,22 @@ def _ledger(repos: Annotated[Repositories, Depends(_repos)]) -> EvidenceLedger:
     return EvidenceLedger(repos)
 
 
+@router.get("/preflight")
+def preflight(warm_up: bool = False) -> dict[str, Any]:
+    """F012: DEMO PREFLIGHT — presenter-only readiness check.
+
+    Real lightweight probes over every component the video depends on
+    (PostgreSQL, Redis, AI Intent Compiler, active semantic model, v2
+    challenger shadow, protocol keys, audit chain, payment environment).
+    ``warm_up=true`` performs a NON-AUTHORITATIVE provider health request so
+    the 60-75s first compile does not ruin the recording. No secrets exposed;
+    no mandate compiled; nothing fabricated.
+    """
+    from razormesh_api.preflight import run_preflight
+
+    return run_preflight(warm_up_compiler=warm_up)
+
+
 @router.post("/reset")
 def reset_demo(
     repos: Annotated[Repositories, Depends(_repos)],

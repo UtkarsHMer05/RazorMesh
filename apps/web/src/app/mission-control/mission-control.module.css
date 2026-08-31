@@ -10,6 +10,11 @@
   background: var(--rm-red, #d02020); color: #fff; font-weight: 800;
   padding: 3px 10px; letter-spacing: 0.08em; border: 2px solid var(--rm-line, #121212);
 }
+/* F012: execution-environment badge per live trace (LOCAL/MOCK vs RAZORPAY TEST) */
+.envBadge {
+  background: #26303f; color: #e8eef7; font-weight: 700; font-size: 0.78em;
+  padding: 2px 8px; letter-spacing: 0.06em; border: 1px solid #4a5a72;
+}
 
 .layout {
   display: grid;
