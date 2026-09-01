@@ -432,13 +432,16 @@ export default function HomePage() {
             <nav className="site-footer__nav" aria-label="Footer">
               <Link href="/#story">Story</Link>
               <Link href="/#architecture">Architecture</Link>
+              <Link href="/mission-control">Mission Control</Link>
               <Link href="/security-lab">Security Lab</Link>
               <Link href="/buyer">Demo</Link>
+              <Link href="/protocols">Protocols</Link>
               <Link href="/audit">Audit</Link>
               <Link href="/merchant">Merchant</Link>
+              <Link href="/governance">Governance</Link>
             </nav>
             <p className="site-footer__legal">
-              Unofficial prototype · No real money · Phases&nbsp;1–4 complete ·
+              Unofficial prototype · No real money · Razorpay Test Mode only ·
               Semantic verifier: DeBERTa NLI (phase3-finetuned-v2,
               thresholds-v3) · AgentPay-IR v2 candidate evaluated, not
               activated by the frozen safety gate
