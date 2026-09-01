@@ -1,0 +1,14 @@
+.......                                                                  [100%]
+=============================== warnings summary ===============================
+tests/test_semantic_only_demo_f011.py::test_r002_authority_order_end_to_end
+tests/test_semantic_only_demo_f011.py::test_r002_authority_order_end_to_end
+tests/test_semantic_only_demo_f011.py::test_r002_authority_order_end_to_end
+tests/test_semantic_only_demo_f011.py::test_r002_authority_order_end_to_end
+tests/test_semantic_only_demo_f011.py::test_r002_authority_order_end_to_end
+tests/test_semantic_only_demo_f011.py::test_r002_authority_order_end_to_end
+tests/test_semantic_only_demo_f011.py::test_r002_authority_order_end_to_end
+  /Users/utkarshkhajuria/Desktop/RazorMesh/services/api/.venv/lib/python3.13/site-packages/torch/jit/_script.py:1488: DeprecationWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+EXIT=0

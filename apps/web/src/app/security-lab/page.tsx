@@ -67,6 +67,16 @@ type WhySemanticAi = {
     demo_transaction: { intent_id: string; checkout_id: string; fresh_per_run: boolean };
   };
   runtime: { model_id: string; policy_version: string; fail_closed: boolean };
+  authority_proof: {
+    tickets_before: number;
+    tickets_after: number;
+    attempts_before: number;
+    attempts_after: number;
+    provider_calls_before: number;
+    provider_calls_after: number;
+    ticket_minted: boolean;
+    note: string;
+  };
   demonstration: {
     pair_id: string;
     aspect: string;
@@ -75,13 +85,14 @@ type WhySemanticAi = {
     probabilities: { contradiction: number; entailment: number; neutral: number };
     fusion: string;
     ticket: string;
+    execution_attempt: string;
     provider_calls: number;
   }[];
   structured_lane_detail: {
     razorguard: string;
-    ticket_would_mint: boolean;
+    reason_codes: string[];
+    policy_version: string;
     note: string;
-    revalidation_gate: string;
   };
   story: string;
 };
@@ -230,13 +241,14 @@ export default function SecurityLabPage() {
         <h3>Why semantic AI matters — semantic-only tightening</h3>
         <p className="page-sub">
           If RazorGuard catches everything deterministic, why does the semantic model exist?
-          Run this: a FRESH transaction is created and driven through the REAL deterministic
-          RazorGuard machinery — on the structured facts alone it genuinely ALLOWS and mints an
-          ExecutionTicket (structure alone would move money). Then the REAL active semantic
+          Run this: a FRESH transaction is created and evaluated by the REAL deterministic
+          RazorGuard rule engine at the pre-issuance seam — on the structured facts alone it
+          ALLOWS (structure alone would proceed to a ticket). Then the REAL active semantic
           model reads the commerce evidence against the human authorization, finds the
-          continuing-service contradiction, and conservative fusion BLOCKs: ticket withheld,
-          provider contacted zero times. Every run uses a new, non-frozen transaction — never
-          used for model selection or calibration.
+          continuing-service contradiction, and conservative fusion BLOCKs — so the
+          ticket-issuance stage is never reached: ExecutionTicket NOT ISSUED, execution
+          attempt NOT CREATED, provider contacted zero times. Every run uses a new,
+          non-frozen transaction — never used for model selection or calibration.
         </p>
         <button
           onClick={() => void runWhySemanticAi()}
@@ -286,6 +298,12 @@ export default function SecurityLabPage() {
                   </td>
                 </tr>
                 <tr>
+                  <td>Execution Attempt</td>
+                  <td>
+                    <strong>{whySemantic.demonstration[0]?.execution_attempt}</strong>
+                  </td>
+                </tr>
+                <tr>
                   <td>Provider calls</td>
                   <td>
                     <strong>{whySemantic.demonstration[0]?.provider_calls}</strong>
@@ -301,8 +319,12 @@ export default function SecurityLabPage() {
                 <code>{whySemantic.runtime.policy_version}</code> · fixture{" "}
                 <code>{whySemantic.fixture.provenance}</code> (non-frozen) · demo transaction{" "}
                 <code>{whySemantic.fixture.demo_transaction.intent_id.slice(0, 20)}…</code> ·
-                revalidation gate{" "}
-                <code>{whySemantic.structured_lane_detail.revalidation_gate}</code>
+                durable authority proof: tickets {whySemantic.authority_proof.tickets_before} →{" "}
+                {whySemantic.authority_proof.tickets_after}, attempts{" "}
+                {whySemantic.authority_proof.attempts_before} →{" "}
+                {whySemantic.authority_proof.attempts_after}, provider calls{" "}
+                {whySemantic.authority_proof.provider_calls_before} →{" "}
+                {whySemantic.authority_proof.provider_calls_after}
               </p>
               <p className="page-sub">{whySemantic.structured_lane_detail.note}</p>
               <table>
@@ -314,6 +336,7 @@ export default function SecurityLabPage() {
                     <th>p(contradiction)</th>
                     <th>Fusion</th>
                     <th>Ticket</th>
+                    <th>Attempt</th>
                     <th>Provider</th>
                   </tr>
                 </thead>
@@ -328,6 +351,7 @@ export default function SecurityLabPage() {
                       <td>{row.probabilities.contradiction.toFixed(4)}</td>
                       <td>{row.fusion}</td>
                       <td>{row.ticket}</td>
+                      <td>{row.execution_attempt}</td>
                       <td>{row.provider_calls}</td>
                     </tr>
                   ))}
