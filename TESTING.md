@@ -387,6 +387,15 @@ entry describing that very allowlist decision; added 2026-09-01 during the Final
 Video Truth Fix when the scan flagged the documentation quote — same
 self-referencing justification as the allowlist's own repeated literal).
 
+Added 2026-09-01 (Submission Lock S003): the synthetic test-mode-shaped key id
+`rzp_test_validshape000` in `services/api/tests/test_preflight_f012.py` —
+REQUIRED to prove `validate_payment_provider_config` ACCEPTS a well-formed
+test-mode key (the validator is the preflight's authoritative payment lane);
+without a key-shaped literal the positive direction of the validator test
+cannot run. Never a credential. The same literals QUOTED in this TESTING.md
+allowlist documentation follow the self-referencing justification of the
+allowlist's own definition block above.
+
 ## 15. Phase-3 release-blocking gates (added P3-M08)
 
 On top of all Phase-1/2 gates:

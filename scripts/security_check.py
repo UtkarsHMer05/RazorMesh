@@ -123,7 +123,7 @@ _ALLOWED_TEST_FIXTURES: dict[tuple[str, str], frozenset[str]] = {
     (
         "scripts/security_check.py",
         "razorpay-key-shape",
-    ): frozenset({"rzp_live_CkYzExample", "rzp_test_phase5public"}),
+    ): frozenset({"rzp_live_CkYzExample", "rzp_test_phase5public", "rzp_test_validshape000"}),
     # The deep-engine-correction status doc QUOTES the pinned synthetic literal
     # while documenting the allowlist decision itself (evidence ledger entry,
     # e934bfe). Same justification as the self-referencing entry above: the
@@ -132,6 +132,21 @@ _ALLOWED_TEST_FIXTURES: dict[tuple[str, str], frozenset[str]] = {
         "docs/phase5/DEEP_ENGINE_CORRECTION_STATUS.md",
         "razorpay-key-shape",
     ): frozenset({"rzp_test_phase5public"}),
+    # S003 preflight tests: a SYNTHETIC test-mode-shaped key id REQUIRED to
+    # prove validate_payment_provider_config ACCEPTS a well-formed test key
+    # (the validator is the preflight's payment lane; without a key-shaped
+    # literal the positive direction cannot be tested). Never a credential.
+    (
+        "services/api/tests/test_preflight_f012.py",
+        "razorpay-key-shape",
+    ): frozenset({"rzp_test_validshape000"}),
+    # TESTING.md allowlist documentation QUOTES the pinned synthetic literals
+    # while describing the allowlist entries themselves (same self-referencing
+    # justification as the allowlist definition block above).
+    (
+        "TESTING.md",
+        "razorpay-key-shape",
+    ): frozenset({"rzp_test_phase5public", "rzp_test_validshape000"}),
 }
 _SCAN_SUFFIXES = {
     ".py",

@@ -181,7 +181,9 @@ def test_api_route_serves_real_verdicts(client: TestClient) -> None:
     assert all(r["provider_calls"] == 0 for r in body["demonstration"])
 
 
-def test_demo_fails_closed_without_model(repos: Repositories, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_demo_fails_closed_without_model(
+    repos: Repositories, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """If the active model cannot run, the demo surfaces the failure —
     never a painted BLOCK."""
 
