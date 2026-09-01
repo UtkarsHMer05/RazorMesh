@@ -1,0 +1,14 @@
+active: phase3-finetuned-v2 | semantic-thresholds-v3
+challenger activated: False | shadow available: True
+semantic demo honest: True | runtime: phase3-finetuned-v2
+semantic demo honest: True | runtime: phase3-finetuned-v2
+  f011-protection-plan ALLOW -> BLOCK -> BLOCK | ticket WITHHELD | provider 0
+  f011-hidden-membership ALLOW -> BLOCK -> BLOCK | ticket WITHHELD | provider 0
+PostgreSQL | True | durable authority reachable (SELECT 1)
+Redis | True | coordination store reachable (PING)
+AI Intent Compiler | True | configured (TokenRouter credentials present)
+Active Semantic Model | True | phase3-finetuned-v2 · policy semantic-thresholds-v3
+V2 Challenger Shadow | True | real v2 artifact loaded (candidate A_2ep, shadow-only)
+Protocol keys | True | dev Ed25519 signing pair present
+Audit chain | True | global hash chain valid over 2536 events
+Payment environment | True | RAZORPAY TEST MODE
