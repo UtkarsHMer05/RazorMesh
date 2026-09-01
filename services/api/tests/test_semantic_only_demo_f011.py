@@ -40,6 +40,7 @@ from razormesh_api.persistence.models import (
     ExecutionAttempt,
     ExecutionTicket,
     IntentContract,
+    TransactionBaseline,
 )
 from razormesh_api.persistence.repositories import Repositories
 from razormesh_api.semantic_only_demo import NEW_DEMO_FIXTURE, run_semantic_only_demo
@@ -125,6 +126,35 @@ def test_r002_authority_order_end_to_end(repos: Repositories) -> None:
     assert txn["intent_id"].startswith("intent_")
     assert txn["checkout_id"].startswith("chk_")
     assert txn["fresh_per_run"] is True
+    # M002 (2): the API-returned checkout id IS the id of the envelope the
+    # DecisionEngine evaluated (one proposal, never two).
+    assert txn["evaluated_checkout_id"] == txn["checkout_id"], txn
+    assert txn["single_checkout"] is True
+
+
+def test_m002_exactly_one_checkout_for_demo_intent(repos: Repositories) -> None:
+    """M002 (1): the demo creates EXACTLY ONE checkout row for its fresh
+    intent — the old flow created two (one from propose_checkout_for_demo,
+    one from a second svc.propose) while reporting the first and evaluating
+    the second."""
+    result = run_semantic_only_demo(repos)
+    intent_id = result["fixture"]["demo_transaction"]["intent_id"]
+    txn = result["fixture"]["demo_transaction"]
+    with repos.transaction() as session:
+        baseline_rows = int(
+            session.scalar(
+                select(func.count())
+                .select_from(TransactionBaseline)
+                .where(TransactionBaseline.intent_id == intent_id)
+            )
+            or 0
+        )
+    assert baseline_rows == 1, (
+        f"demo intent has {baseline_rows} checkouts — exactly one proposal "
+        "must exist (M002)"
+    )
+    # and the single one IS the evaluated one
+    assert txn["evaluated_checkout_id"] == txn["checkout_id"]
 
 
 def test_r002_no_ticket_or_authorize_events_for_demo_txn(repos: Repositories) -> None:
@@ -176,6 +206,21 @@ def test_r002_two_runs_fresh_transactions(repos: Repositories) -> None:
     )
     # Neither run minted anything.
     assert _counts(repos) == before
+    # M002: each run's transaction is a SINGLE-checkout lineage (returned ==
+    # evaluated, and each fresh intent owns exactly one checkout).
+    for r in (r1, r2):
+        txn = r["fixture"]["demo_transaction"]
+        assert txn["evaluated_checkout_id"] == txn["checkout_id"]
+        with repos.transaction() as session:
+            rows = int(
+                session.scalar(
+                    select(func.count())
+                    .select_from(TransactionBaseline)
+                    .where(TransactionBaseline.intent_id == txn["intent_id"])
+                )
+                or 0
+            )
+        assert rows == 1, rows
 
 
 def test_r002_fixture_not_frozen_data() -> None:

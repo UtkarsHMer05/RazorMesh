@@ -27,7 +27,7 @@ from __future__ import annotations
 import enum
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal, overload
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session as SessionType
@@ -328,6 +328,32 @@ def list_presets() -> list[dict[str, Any]]:
     return [{"kind": k.value, "label": v["label"]} for k, v in PRESETS.items()]
 
 
+@overload
+def propose_checkout_for_demo(
+    repos: Repositories,
+    *,
+    product_id: str,
+    quantity: int = ...,
+    intent_id: str | None = ...,
+    max_quantity: int = ...,
+    max_total_minor: int = ...,
+    with_proposal: Literal[False] = ...,
+) -> tuple[str, str, dict[str, Any]]: ...
+
+
+@overload
+def propose_checkout_for_demo(
+    repos: Repositories,
+    *,
+    product_id: str,
+    quantity: int = ...,
+    intent_id: str | None = ...,
+    max_quantity: int = ...,
+    max_total_minor: int = ...,
+    with_proposal: Literal[True],
+) -> tuple[str, str, dict[str, Any], Any]: ...
+
+
 def propose_checkout_for_demo(
     repos: Repositories,
     *,
@@ -336,7 +362,8 @@ def propose_checkout_for_demo(
     intent_id: str | None = None,
     max_quantity: int = 2,
     max_total_minor: int = 50_000_000,
-) -> tuple[str, str, dict[str, Any]]:
+    with_proposal: bool = False,
+) -> tuple[str, str, dict[str, Any]] | tuple[str, str, dict[str, Any], Any]:
     """Create a proposed checkout for a product.
 
     With ``intent_id`` (G015): the checkout is a new revision of the CURRENT
@@ -348,7 +375,12 @@ def propose_checkout_for_demo(
 
     Returns (intent_id, checkout_id, expected) where expected carries the
     authorization-relevant hashes for post-authorization drift defense checks
-    (the same revalidation contract the Security Lab uses).
+    (the same revalidation contract the Security Lab uses). With
+    ``with_proposal=True`` (M002) the REAL ``Proposal`` object the service
+    produced is appended as a fourth element, so a caller can evaluate the
+    exact envelope it just created — without proposing a SECOND checkout for
+    the same intent (backwards-compatible: existing 3-tuple callers are
+    unaffected).
 
     G012: the IMMUTABLE TransactionBaseline is captured here, inside the
     same transaction that persists the checkout - the baseline and the
@@ -436,6 +468,7 @@ def propose_checkout_for_demo(
             "revision": proposal.envelope.revision,
             "generation": 1,
         },
+        *((proposal,) if with_proposal else ()),  # M002: opt-in exact envelope
     )
 
 

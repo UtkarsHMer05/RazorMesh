@@ -18,9 +18,10 @@ Honesty contract:
 - The demo transaction and pairs are NEW, NON-FROZEN and created per run.
   They are NOT rows from frozen test/gold/OOD data and were NOT used for model
   selection or threshold calibration.
-- The deterministic lane is the REAL production rule machinery: a fresh
-  intent + checkout proposed through CheckoutService.propose (the buyer flow's
-  own path), then evaluated by the REAL DecisionEngine.decide over the same
+- The deterministic lane is the REAL production rule machinery: ONE fresh
+  intent + ONE CheckoutService.propose (M002: the checkout id reported to the
+  API/browser IS the envelope DecisionEngine evaluates — never a second
+  proposal), then evaluated by the REAL DecisionEngine.decide over the same
   EvaluationContext the authorize path builds — WITHOUT calling authorize(),
   so NO ticket is ever minted for this transaction. The evaluation seam is the
   production engine itself, never a duplicated/toy rule helper.
@@ -102,26 +103,22 @@ class SemanticOnlyOutcome:
 
 
 def _pipeline_evaluation(repos: Repositories) -> dict[str, Any]:
-    """R002: run a NEW NON-FROZEN transaction through the REAL deterministic
-    RazorGuard evaluation — WITHOUT ticket issuance.
+    """R002+M002: ONE fresh NON-FROZEN transaction through the REAL
+    deterministic RazorGuard evaluation — without ticket issuance.
 
-    The transaction is proposed through the real CheckoutService (the buyer
-    flow's own path), then evaluated by the REAL DecisionEngine.decide over
-    the SAME EvaluationContext the authorize stage builds (trusted product
-    facts, durable spend usage). ``authorize()`` is NEVER called: the
-    deterministic verdict is obtained at the evaluation seam the production
-    path itself uses, before any issuance consideration — exactly the real
-    authority order.
+    Actual order:
+      1. one fresh intent + ONE CheckoutService.propose (via
+         ``propose_checkout_for_demo(with_proposal=True)`` — the exact
+         Proposal object is reused; a second checkout is NEVER created, so
+         the checkout id reported to the API/browser is the SAME envelope the
+         DecisionEngine evaluates);
+      2. the REAL DecisionEngine.decide over the SAME EvaluationContext the
+         authorize stage builds (trusted product facts, durable spend
+         usage), stopping BEFORE any decision persistence or ticket mint;
+      3. deterministic ALLOW on the structured facts.
     """
 
-    from razormesh_api.checkout_service import (
-        CheckoutService,
-        ProposedItem,
-    )
     from razormesh_api.decider import DecisionEngine
-    from razormesh_api.domain.ids import IntentId
-    from razormesh_api.keys import DevSigningKeys
-    from razormesh_api.ledger import EvidenceLedger
     from razormesh_api.merchant_sandbox import propose_checkout_for_demo
     from razormesh_api.persistence.models import (
         AuthorizationSpend as RowSpend,
@@ -138,34 +135,19 @@ def _pipeline_evaluation(repos: Repositories) -> dict[str, Any]:
     from razormesh_api.rules.engine import EvaluationContext, ProductFacts
     from razormesh_api.rules.money_rules import MONEY_RULES
     from razormesh_api.rules.policy_rules import POLICY_RULES
-    from razormesh_api.settings import get_settings
 
-    # 1) Fresh NON-FROZEN demo transaction (intent + checkout + baseline).
+    # 1) ONE fresh demo transaction: intent + checkout + baseline + the exact
+    #    Proposal envelope (M002: no second proposal — the evaluated envelope
+    #    IS the created checkout).
     pid = _demo_product(repos)
-    i_id, c_id, expected = propose_checkout_for_demo(repos, product_id=pid, quantity=1)
-
-    # 2) Propose the checkout envelope through the REAL service (no authorize,
-    #    no decision row, no ticket — proposal only).
-    settings = get_settings()
-    keys = DevSigningKeys(
-        private_path=settings.dev_ticket_private_key_path,
-        public_path=settings.dev_ticket_public_key_path,
+    i_id, c_id, expected, proposal = propose_checkout_for_demo(
+        repos, product_id=pid, quantity=1, with_proposal=True
     )
+
+    # 2) The REAL deterministic evaluation over that exact envelope — the
+    #    same decide() + context construction the authorize stage performs,
+    #    stopping BEFORE any decision persistence or ticket mint.
     engine = DecisionEngine([*MONEY_RULES, *CATALOG_RULES, *POLICY_RULES])
-    svc = CheckoutService(repos, EvidenceLedger(repos), engine, keys.ensure())
-    from razormesh_api.checkout_service import CheckoutError
-
-    try:
-        proposal = svc.propose(
-            intent_id=IntentId(i_id), items=[ProposedItem(product_id=pid, quantity=1)]
-        )
-    except CheckoutError as exc:  # pragma: no cover - demo infra failure
-        raise RuntimeError(f"real proposal failed: {exc}") from exc
-
-    # 3) The REAL deterministic evaluation — the same decide() + context
-    #    construction the authorize stage performs, stopping BEFORE any
-    #    decision persistence or ticket mint. This is the production rule
-    #    engine, not a helper.
     with session_scope(repos.factory) as session:
         from sqlalchemy import select
 
@@ -200,9 +182,13 @@ def _pipeline_evaluation(repos: Repositories) -> dict[str, Any]:
         ),
     )
 
+    # M002 invariant: the reported checkout id IS the evaluated envelope's id.
+    assert str(env.checkout_id) == c_id, (env.checkout_id, c_id)
+
     return {
         "intent_id": i_id,
         "checkout_id": c_id,
+        "evaluated_checkout_id": str(env.checkout_id),
         "expected": expected,
         "razorguard_decision": outcome.decision.value,
         "reason_codes": list(outcome.reason_codes),
@@ -263,21 +249,20 @@ def _authority_counts(repos: Repositories) -> dict[str, int]:
 
 
 def run_semantic_only_demo(repos: Repositories | None = None) -> dict[str, Any]:
-    """S002: the fully real WHY SEMANTIC AI MATTERS demonstration.
+    """R002+M002: the fully real WHY SEMANTIC AI MATTERS demonstration.
 
-    Real machinery end to end:
-      1. a NEW NON-FROZEN intent + checkout created through the real mission
-         engine (immutable baseline captured);
-      2. the REAL deterministic RazorGuard path (CheckoutService.authorize)
-         over that transaction — it genuinely ALLOWS on the structured facts
-         and would genuinely mint an ExecutionTicket (proof the structured
-         lane alone would let money move);
+    Actual order (what really happens):
+      1. ONE fresh NON-FROZEN intent + ONE CheckoutService.propose (one trace,
+         one checkout; the reported checkout id IS the evaluated envelope);
+      2. the REAL deterministic RazorGuard evaluation — DecisionEngine.decide
+         at the PRE-ISSUANCE seam (the same EvaluationContext the authorize
+         stage builds) — ALLOW on the structured facts;
       3. the REAL active PRE_V2 model in canonical orientation over the
-         demo's sanitized commerce evidence vs the human authorization;
+         demo's sanitized commerce evidence vs the human authorization — BLOCK;
       4. the REAL conservative fusion seam (semantic only tightens) → BLOCK;
-      5. the REAL authority gate afterwards: the revalidation contract finds
-         the fused BLOCK path — no ticket may be redeemed for this transaction
-         once the semantic lane contradicts it — and provider calls stay 0.
+      5. the ticket-issuance stage is NEVER reached: ExecutionTicket NOT
+         ISSUED, execution attempt NOT CREATED, provider never contacted
+         (all three proven by unchanged durable row counts).
 
     Every verdict is computed at runtime by the real engines. If anything
     cannot run, the demo fails CLOSED with an honest reason — never a painted
@@ -381,6 +366,11 @@ def run_semantic_only_demo(repos: Repositories | None = None) -> dict[str, Any]:
             "demo_transaction": {
                 "intent_id": pipe["intent_id"],
                 "checkout_id": pipe["checkout_id"],
+                # M002: the checkout id the API/browser reports IS the id of
+                # the envelope DecisionEngine.decide evaluated (one proposal,
+                # never two).
+                "evaluated_checkout_id": pipe["evaluated_checkout_id"],
+                "single_checkout": pipe["evaluated_checkout_id"] == pipe["checkout_id"],
                 "fresh_per_run": True,
             },
         },

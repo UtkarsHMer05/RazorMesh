@@ -88,16 +88,40 @@ All screenshots are the current build with real engine state (click to enlarge).
 
 <table>
 <tr>
-<td width="50%"><img src="docs/assets/readme/02-buyer-ai-mission.webp" alt="Buyer AI Commerce Mission" width="480"><br><b>Buyer — mandate → AI compilation → constraints</b></td>
-<td width="50%"><img src="docs/assets/readme/03-merchant-mutation.webp" alt="Merchant mutation diff" width="480"><br><b>Merchant — hidden membership inserted after authorization</b></td>
+<td width="50%"><a href="docs/assets/readme/02-buyer-ai-mission.webp">
+      <img src="docs/assets/readme/02-buyer-ai-mission.webp"
+        alt="Buyer AI Commerce Mission"
+        width="480">
+    </a><br><b>Buyer — mandate → AI compilation → constraints</b></td>
+<td width="50%"><a href="docs/assets/readme/03-merchant-mutation.webp">
+      <img src="docs/assets/readme/03-merchant-mutation.webp"
+        alt="Merchant mutation diff"
+        width="480">
+    </a><br><b>Merchant — hidden membership inserted after authorization</b></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/assets/readme/04-protocol-playground.webp" alt="Protocol Playground" width="480"><br><b>Protocol Playground — UCP corrupt-signature → real verifier FAIL</b></td>
-<td width="50%"><img src="docs/assets/readme/05-security-semantic-ai.webp" alt="Security Lab semantic AI demo" width="480"><br><b>Security Lab — Why semantic AI matters</b></td>
+<td width="50%"><a href="docs/assets/readme/04-protocol-playground.webp">
+      <img src="docs/assets/readme/04-protocol-playground.webp"
+        alt="Protocol Playground"
+        width="480">
+    </a><br><b>Protocol Playground — UCP corrupt-signature → real verifier FAIL</b></td>
+<td width="50%"><a href="docs/assets/readme/05-security-semantic-ai.webp">
+      <img src="docs/assets/readme/05-security-semantic-ai.webp"
+        alt="Security Lab semantic AI demo"
+        width="480">
+    </a><br><b>Security Lab — Why semantic AI matters</b></td>
 </tr>
 <tr>
-<td width="50%"><img src="docs/assets/readme/06-audit-forensics.webp" alt="Audit Forensics" width="480"><br><b>Audit — anchors in the global chain, CHAIN VALID</b></td>
-<td width="50%"><img src="docs/assets/readme/07-model-governance.webp" alt="Model Governance" width="480"><br><b>Governance — real v2 challenger in shadow, ignored for authority</b></td>
+<td width="50%"><a href="docs/assets/readme/06-audit-forensics.webp">
+      <img src="docs/assets/readme/06-audit-forensics.webp"
+        alt="Audit Forensics"
+        width="480">
+    </a><br><b>Audit — anchors in the global chain, CHAIN VALID</b></td>
+<td width="50%"><a href="docs/assets/readme/07-model-governance.webp">
+      <img src="docs/assets/readme/07-model-governance.webp"
+        alt="Model Governance"
+        width="480">
+    </a><br><b>Governance — real v2 challenger in shadow, ignored for authority</b></td>
 </tr>
 </table>
 
@@ -283,6 +307,7 @@ All suites run as separate targeted invocations — never claimed as one green r
 - [`docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION.md`](docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION.md) — one-shot frozen evaluation
 - [`SECURITY.md`](SECURITY.md) · [`ARCHITECTURE.md`](ARCHITECTURE.md) · [`DECISIONS.md`](DECISIONS.md) (append-only)
 - [`docs/phase5/VIDEO_STORYBOARD.md`](docs/phase5/VIDEO_STORYBOARD.md) — the video story
+- [`docs/phase5/FINAL_README_VIDEO_LOCK_STATUS.md`](docs/phase5/FINAL_README_VIDEO_LOCK_STATUS.md) — final repository/video truth-lock evidence
 
 ## 19. Footer
 
