@@ -57,11 +57,20 @@ export default function MissionControlPage() {
   const [playIndex, setPlayIndex] = useState<number | null>(null);
   const [speed, setSpeed] = useState(1);
   const [presenter, setPresenter] = useState(false);
-  // F012: DEMO PREFLIGHT — real lightweight readiness probes.
+  // F012 + S003: DEMO PREFLIGHT — authoritative readiness probes.
   const [preflight, setPreflight] = useState<{
     label: string;
+    state: string;
     all_ready: boolean;
-    checks: { component: string; ready: boolean; detail: string; environment?: string }[];
+    required_systems_ready: boolean;
+    optional_unavailable: string[];
+    checks: {
+      component: string;
+      ready: boolean;
+      detail: string;
+      required?: boolean;
+      environment?: string;
+    }[];
   } | null>(null);
   const [preflightBusy, setPreflightBusy] = useState(false);
   const timerRef = useRef<number | null>(null);
@@ -373,19 +382,37 @@ export default function MissionControlPage() {
           <div className="card" data-testid="preflight-panel">
             <h3>
               {preflight.label} —{" "}
-              {preflight.all_ready ? "ALL COMPONENTS READY" : "NOT READY — check failures"}
+              <span data-testid="preflight-state">
+                {preflight.required_systems_ready
+                  ? "REQUIRED SYSTEMS READY"
+                  : "NOT READY — FIX BEFORE RECORDING"}
+              </span>
             </h3>
+            {preflight.optional_unavailable?.length > 0 && (
+              <p className="page-sub">
+                <em>
+                  OPTIONAL DEMO CAPABILITY UNAVAILABLE:{" "}
+                  {preflight.optional_unavailable.join(", ")} — does not affect
+                  payment safety.
+                </em>
+              </p>
+            )}
             <ul>
               {preflight.checks.map((c) => (
                 <li key={c.component} data-testid={`preflight-${c.component.replace(/\s+/g, "-").toLowerCase()}`}>
-                  {c.ready ? "✓" : "✗"} <strong>{c.component}</strong> — {c.detail}
+                  {c.ready ? "✓" : "✗"} <strong>{c.component}</strong>
+                  {c.required === false && <em> (optional)</em>} — {c.detail}
                 </li>
               ))}
             </ul>
             <p className="page-sub">
-              Real lightweight probes only — no secrets exposed, no mandate compiled, nothing
-              fabricated. The payment environment line states which environment traces execute
-              in, so no local security mission is presented as a live provider transaction.
+              Authoritative probes — the Razorpay lane runs the real config
+              validator; the compiler distinguishes CONFIGURED from LIVE
+              REACHABLE (warm-up); optional capabilities never gate the required
+              systems. No secrets exposed, no mandate compiled, nothing
+              fabricated. The payment environment line states which environment
+              traces execute in, so no local security mission is presented as a
+              live provider transaction.
             </p>
           </div>
         )}
