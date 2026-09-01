@@ -4,169 +4,264 @@
 
 > **Protocol validity is not transaction authority.**
 >
-> The AI proposes. RazorGuard authorizes. The trusted executor executes.
+> **The AI proposes. RazorGuard authorizes. The trusted executor executes.**
 
-RazorMesh is a zero-trust authorization layer between autonomous commerce agents
-and Razorpay. It verifies — immediately before any payment moves — that the
-**exact current transaction still matches the human's confirmed authorization**
-(Intent-to-Execution Integrity). A message being schema-valid, correctly
-signed, authenticated, and replay-safe says nothing about whether the human
-authorized *this* transaction.
+`Razorpay Test Mode / local mock only` · `No real money` · `Buildathon prototype`
 
-Unofficial buildathon prototype. All payments run in **Razorpay Test Mode only** —
-no real money, no production claims.
+[Live demo surfaces](#4-live-demo--what-the-judge-can-do) · [The three winning demos](#7-the-three-winning-demos) · [Model governance](#9-model-governance) · [Run it locally](#14-quick-demo)
 
 ---
 
-## The problem
+## 1. Hero — Mission Control, live
 
-AI agents can generate payment actions that are **technically valid but no longer
-match human intent**: a hidden recurring membership, a swapped merchant, a mutated
-quantity or amount, a currency change. No payment stack re-checks
-intent-to-transaction fit at execution time. The agent's message will happily
-pass every protocol check while draining a budget the human never approved.
+[<img src="docs/assets/readme/01-mission-control.webp" alt="RazorMesh Mission Control: the 13-stage trust pipeline with a live BLOCKED trace — protocol and firewall passed, RazorGuard stopped the packet, ticket withheld, provider never contacted" width="960">](docs/assets/readme/01-mission-control.webp)
 
-## The solution
+One authorization lineage, one trace. The checkout may be **revised** by merchant mutations — every revision is revalidated against the **same human authority**. The packet moves only as far as the real evidence says, and never past a BLOCK.
 
-RazorMesh re-verifies the **exact** intent immediately before execution, twice:
-deterministically (hard financial rules) and semantically (an NLI model that
-reads the transaction evidence against the human authorization). Semantics can
-only **tighten** — never loosen — a RazorGuard decision. The AI never holds
-payment authority: money moves only through a short-lived, single-use,
-context-bound ExecutionTicket redeemed by a trusted executor.
+## 2. The problem
 
-## Architecture
+An AI agent can submit a transaction that is **schema-valid, authenticated, correctly signed, and replay-safe — and still not what the human authorized.**
 
-```text
-Human authorization (confirmed)
-  → AI agent
-  → MCP / UCP / AP2 / ACP / A2A
-  → Protocol Firewall          (schema, signature, replay, idempotency)
-  → AgentCommerceIR            (normalized commerce intent)
-  → deterministic RazorGuard   (hard financial rules)
-  + SemanticVerifier           (active: PRE_V2 DeBERTa + semantic-thresholds-v3)
-  → conservative fusion        (BLOCK > CHALLENGE > ALLOW; semantics only tighten)
-  → ExecutionTicket            (context-bound, short-lived, single-use)
-  → trusted executor
-  → Razorpay Test Mode
-  → webhook / reconciliation / tamper-evident audit ledger
+```
+Human approved            →  ₹4,799 · one-time purchase
+Agent / merchant mutation →  ₹4,799 + recurring membership ₹499/month
+
+Protocol validity        →  PASS
+Transaction authority    →  BLOCK
 ```
 
-## Model governance — demonstrated, not hidden
+No payment stack re-checks **intent-to-transaction fit** at execution time. RazorMesh does — twice, deterministically and semantically, immediately before money moves. (**Intent-to-Execution Integrity**: a financial action may execute only when the *exact current* transaction remains within the human-confirmed authorization.)
 
-The **AgentPay-IR v2** fine-tuned model (13,605-row training corpus, frozen
-val/test/human-gold/OOD splits) was trained and evaluated **exactly once** on
-frozen, human-gold-anchored data as a *candidate*. The frozen safety gate
-**rejected its activation** (`M2_FROZEN_EVALUATION_FAIL / V2_NOT_ACTIVATED`):
-it improved in-distribution macro-F1 (0.737 → 0.975) but **worsened unsafe
-contradiction→entailment on the security-critical sets** (human gold 2 → 7,
-fresh OOD 5 → 6). The active runtime remains **PRE_V2**
-(`phase3-finetuned-v2`, policy `semantic-thresholds-v3`).
+## 3. The 30-second architecture
 
-This is the governance system working: a better-looking model was refused because
-it was less safe. Full one-shot evaluation evidence:
-`docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION.md`.
+```mermaid
+flowchart LR
+    H[Human authorization] --> A[AI shopping agent]
+    A --> M[Merchant offer]
+    M --> P[Agent protocol]
+    P --> F[Protocol firewall]
+    F --> IR[AgentCommerceIR]
+    IR --> R[RazorGuard]
+    IR --> S[Semantic trust]
+    R --> X[Conservative fusion]
+    S --> X
+    X -->|ALLOW| T[ExecutionTicket]
+    X -->|BLOCK| W[WITHHELD]
+    T --> RP[Razorpay Test / mock]
+    RP --> AU[Tamper-evident audit]
+    W --> AU
+```
 
-## Measured results
+**Protocol validity ≠ transaction authority.** Everything upstream of RazorGuard is evidence, never authority: the AI proposes, deterministic hard rules + a semantic NLI model check the *current* transaction against the confirmed authorization, and only an ALLOW can mint a short-lived, single-use, context-bound **ExecutionTicket** that the trusted executor redeems — exactly once.
 
-| Gate | Result |
+<details>
+<summary><b>Why two checks (deterministic + semantic)?</b></summary>
+
+Deterministic RazorGuard reads the structured projection — budgets, quantity, recurring flags, merchant/condition allowlists — and catches every rule it models. The semantic model reads the *commerce evidence text* against the *human authorization text* and catches contradictions no rule encodes (see [Demo C](#demo-c--why-semantic-ai-matters)). Semantic verdicts can only **tighten** a decision — never loosen one.
+
+</details>
+
+## 4. Live demo — what the judge can do
+
+| Surface | Route | What you can demonstrate |
+|---|---|---|
+| **Buyer — AI Commerce Mission** | [`/buyer`](http://localhost:3000/buyer) | Type a natural-language mandate → **real AI Intent Compiler** extracts hard constraints → human confirms authority → real shopping-agent search/rank over the catalog → checkout proposal. |
+| **Mission Control** | [`/mission-control`](http://localhost:3000/mission-control) | The 13-stage pipeline on the live trace; **DEMO PREFLIGHT** readiness probes; authorization-vs-current diff; mutations/revert/execute on the *current* trace; read-only replay. |
+| **Merchant Sandbox** | [`/merchant`](http://localhost:3000/merchant) | Mutate a real checkout after authorization (price drift, quantity, merchant swap, hidden membership) and watch the same trace detect drift. |
+| **Protocol Playground** | [`/protocols`](http://localhost:3000/protocols) | Real packet mutations through the real firewall + IR + consistency engine; **real UCP RFC 9421/9530 and AP2 ES256 signature verification** (safe → verified; tampered bytes → real verifier FAIL). |
+| **Security Lab** | [`/security-lab`](http://localhost:3000/security-lab) | Attack demos with per-stage verdicts; **Why semantic AI matters** (real engines end-to-end). |
+| **Audit Forensics** | [`/audit`](http://localhost:3000/audit) | Search by trace/intent/checkout/attempt/order id; this trace's **anchors in the global hash chain**; read-only replay; tamper test. |
+| **Model Governance** | [`/governance`](http://localhost:3000/governance) | Active vs challenger model truth; the **actual rejected v2 checkpoint** running live, shadow-only, in canonical NLI orientation. |
+
+## 5. Screenshot gallery
+
+All screenshots are the current build with real engine state (click to enlarge).
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/readme/02-buyer-ai-mission.webp" alt="Buyer AI Commerce Mission" width="480"><br><b>Buyer — mandate → AI compilation → constraints</b></td>
+<td width="50%"><img src="docs/assets/readme/03-merchant-mutation.webp" alt="Merchant mutation diff" width="480"><br><b>Merchant — hidden membership inserted after authorization</b></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/assets/readme/04-protocol-playground.webp" alt="Protocol Playground" width="480"><br><b>Protocol Playground — UCP corrupt-signature → real verifier FAIL</b></td>
+<td width="50%"><img src="docs/assets/readme/05-security-semantic-ai.webp" alt="Security Lab semantic AI demo" width="480"><br><b>Security Lab — Why semantic AI matters</b></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/assets/readme/06-audit-forensics.webp" alt="Audit Forensics" width="480"><br><b>Audit — anchors in the global chain, CHAIN VALID</b></td>
+<td width="50%"><img src="docs/assets/readme/07-model-governance.webp" alt="Model Governance" width="480"><br><b>Governance — real v2 challenger in shadow, ignored for authority</b></td>
+</tr>
+</table>
+
+## 6. How to read this repository
+
+<details>
+<summary><b>See why the semantic model is necessary (real engine output)</b></summary>
+
+| Stage | Verdict |
 |---|---|
-| **AgentPay-X** adversarial policy benchmark | **191-scenario benchmark: 100% safe-pass and 100% attack-block at the policy gate, 0 false allows, 0 false blocks, 0 exactly-once violations** — with separate provider/exactly-once acceptance tests. Strict per-case granularity is 156/191; the other 35 cases carry **documented firewall-granularity differences** (e.g. a malformed-JSONRPC attack blocks at the consistency layer rather than the firewall) while meeting the headline rates. Not 191 literal live provider attacks. |
-| Frozen evaluation (active PRE_V2 vs rejected v2) | see table below |
-| Backend test suite | 992 collected, exit 0 (live DeBERTa runtime in the loop; run as separate targeted suites — never claimed as one invocation) |
-| Live-ingress isolation suite | 13/13 in isolation (the full-suite run can flake 2–3 of these from cross-test DB interference — documented, rerun-in-isolation is the recorded gate) |
-| Static/type gates | ruff clean, mypy clean (97 files), tsc/eslint 0 errors |
-| Frontend | vitest 35/35, next build OK |
-| Security scan | PASS — 0 findings |
+| Structured RazorGuard (real rule engine) | **ALLOW** — structured facts carry no violation |
+| Semantic trust (active PRE_V2 model) | **BLOCK** — p(contradiction) 0.9998 |
+| Conservative fusion (real `fuse` seam) | **BLOCK** |
+| ExecutionTicket | **WITHHELD** |
+| Provider calls | **0** |
 
-Frozen evaluation, one-shot, hash-pinned sets (final test 2,227 · human gold 301
-· fresh OOD 665):
+The deterministic lane alone authorized this transaction — exactly the gap the semantic check closes.
 
-| Dataset | Active PRE_V2 macro-F1 | v2 candidate macro-F1 | Unsafe C→E (PRE_V2 → v2) |
+</details>
+
+<details>
+<summary><b>See the rejected v2 challenger safety gate</b></summary>
+
+The fine-tuned **AgentPay-IR v2** candidate improved in-distribution macro-F1 (0.737 → 0.975) but **worsened unsafe contradiction→entailment on the security-critical sets**:
+
+| Dataset (frozen, one-shot) | PRE_V2 macro-F1 | v2 macro-F1 | Unsafe C→E (PRE_V2 → v2) |
 |---|---|---|---|
 | Final test | 0.737 | 0.975 | 43 → 13 |
-| Human gold | **0.893** | 0.776 | **2 → 7 (worse — rejected)** |
-| Fresh OOD | 0.822 | 0.918 | **5 → 6 (worse — rejected)** |
+| Human gold | **0.893** | 0.776 | **2 → 7 (worse)** |
+| Fresh OOD | 0.822 | 0.918 | **5 → 6 (worse)** |
 
-### Razorpay Test Mode acceptance (measured live)
+A model that lets more gold contradictions reach a provider-call PASS must not ship — whatever its macro-F1. **RazorMesh refused to activate it.**
 
-| Chain | Result | Provider calls |
+</details>
+
+<details>
+<summary><b>Run the demo preflight before presenting</b></summary>
+
+Open `/mission-control` → **Run demo preflight (+ warm-up compiler)**. Expected: PostgreSQL READY · Redis READY · Payment environment (RAZORPAY TEST MODE / LOCAL MOCK) · AI Intent Compiler READY · Active Semantic Model READY · ExecutionTicket signing keys READY · Protocol crypto READY · Audit chain READY · V2 Challenger READY *or honestly* OPTIONAL UNAVAILABLE (it never gates payment safety).
+
+</details>
+
+## 7. The three winning demos
+
+### Demo A — Hidden recurring membership
+
+```
+Human:      one-time purchase only
+Mutation:   merchant inserts a ₹499/month membership
+Protocol:   PASS            (the packet is valid)
+RazorGuard: BLOCK           (recurring not authorized)
+Semantic:   contradiction   (p ≈ 0.999)
+Final:      BLOCK → Ticket WITHHELD → Provider calls: 0
+```
+
+### Demo B — Protocol valid, intent invalid
+
+```
+Signature:  VALID (ES256)   Schema: VALID   Replay: CLEAN
+Protocol:   PASS
+RazorGuard: BLOCK           (2 units = ₹4,998 vs a ≤ ₹3,000 authorization)
+Final:      BLOCK → Ticket WITHHELD → Provider calls: 0
+```
+
+**This proves: protocol validity is not transaction authority.** A cryptographically perfect packet still dies at the authority layer.
+
+### Demo C — Why semantic AI matters
+
+```
+Real deterministic RazorGuard:  ALLOW   (structured facts clean — it even minted a ticket)
+Real semantic model (PRE_V2):    BLOCK   (evidence contradicts the human authorization)
+Conservative fusion:            BLOCK
+ExecutionTicket:                WITHHELD
+Provider calls:                 0
+```
+
+Every verdict above is produced by the real engines at runtime on a **new, non-frozen demo fixture** — never painted. [See the Security Lab section](http://localhost:3000/security-lab) to run it live.
+
+## 8. Real protocol security
+
+| Protocol | Cryptographic verification |
+|---|---|
+| **UCP** | **RFC 9421 HTTP Message Signatures + RFC 9530 Content-Digest, ES256/P-256** — signed and verified by the repository's own signer/verifier. Tamper the signed body → real digest FAIL. |
+| **AP2** | **ES256 JWS/JWT with checkout-hash binding** — tamper a signed claim → real signature FAIL. |
+| **MCP / ACP / A2A** | Protocol normalization + commitment/binding evidence. **Not** equivalent cryptographic signature verification — honestly labeled as such. |
+
+The Protocol Firewall consumes adapter verification evidence; it is not the cryptographic verifier itself.
+
+## 9. Model governance
+
+The active semantic runtime is **PRE_V2** (`phase3-finetuned-v2`, policy `semantic-thresholds-v3`). The challenger — the **actual fine-tuned AgentPay-IR v2 checkpoint** (candidate A_2ep) — was evaluated exactly once on frozen, human-gold-anchored data and **rejected by the frozen safety gate** (numbers above). It runs live in an isolated **shadow** lane on new, non-frozen demo pairs (canonical NLI orientation: premise = commerce evidence, hypothesis = human authorization) so disagreement is visible — while remaining **NON-AUTHORITATIVE**: its output never enters fusion, tickets, or provider decisions. A fresh clone without the (size-excluded) artifact reports CHALLENGER_UNAVAILABLE truthfully.
+
+## 10. AgentPay-X adversarial benchmark
+
+A **191-scenario adversarial policy benchmark** (not live provider attacks):
+
+- **100% safe-pass** at the policy gate · **100% attack-block** (BLOCK + CHALLENGE) at the policy gate
+- **0 false allows · 0 false blocks · 0 exactly-once violations**
+- Strict per-case granularity: **156/191** — the other 35 carry **documented firewall-granularity differences** (e.g. a malformed-JSONRPC attack is blocked at the consistency layer rather than the firewall; the safety outcome is identical, the recorded stage differs)
+- Provider execution and exactly-once behavior are validated by **separate acceptance tests**, not this benchmark
+
+## 11. Razorpay Test Mode acceptance (measured live)
+
+| Flow | Decision | Provider calls |
 |---|---|---|
-| SAFE: authorization → checkout → ALLOW → ticket → executor | Razorpay Test **order created** (`order_TW16VWnXEVnDA6`) | **exactly 1** |
-| Hidden recurring term (attack) | final BLOCK, p(contradiction) 0.99995 | **0** |
-| Protocol-valid / human-intent-invalid (attack) | protocol PASS, final BLOCK | **0** |
-| Ticket replay (expired) | 403 `TICKET_EXPIRED` | 0 |
-| Ticket replay (immediate reuse) | idempotent same-attempt return | 0 additional |
+| Safe: authorize → checkout → ALLOW → ticket → executor | Razorpay Test **order created** | **exactly 1** |
+| Hidden recurring term (attack) | final BLOCK, p(C) 0.99995 | **0** |
+| Protocol-valid / intent-invalid (attack) | protocol PASS, final BLOCK | **0** |
+| Ticket replay (expired / immediate reuse) | 403 TICKET_EXPIRED / idempotent | **0 additional** |
 
-Webhook verification, provider-state reduction, and reconciliation are covered by
-48/48 permanent tests. **Honest limitation:** the in-browser checkout completion
-(typing test-card details in the Razorpay Test modal) is a human sandbox step —
-the Razorpay test sandbox declines every automated instrument on this account —
-so the live evidence proves everything up to and including provider order
-creation and all rejection paths, not a completed payment.
+Razorpay **Test Mode only** — no real money. Browser checkout completion remains a **human sandbox step** (the test sandbox declines automated instruments), so the proven boundary is order creation exactly-once plus every rejection path.
 
-## The demo (under one minute)
+## 12. Security invariants (selection)
 
-1. **Valid purchase** (Buyer page): the human authorizes "under ₹30,000, new
-   only, no subscription"; the checkout matches; ALLOW; ExecutionTicket issued;
-   the trusted executor creates a Razorpay Test order — contacted exactly once.
-2. **Recurring term the human never authorized** (Security Lab): protocol PASS,
-   RazorGuard BLOCK, SemanticVerifier contradiction, final BLOCK, no ticket,
-   **Razorpay never contacted**.
-3. **A cryptographically perfect attack** (Security Lab): schema-valid,
-   signature-valid, replay-safe message carrying 2 units against a ≤ ₹3,000
-   authorization — protocol PASS, intent mismatch, final BLOCK, **Razorpay never
-   contacted**. *Protocol validity is not transaction authority — proven live.*
-4. **Why semantic AI matters** (Security Lab): the deterministic rules ALLOW a
-   structured-clean transaction; the REAL active model reads the commerce
-   evidence against the human authorization, finds the contradiction
-   (p(contradiction) ≈ 0.9998) and BLOCKs through conservative fusion — ticket
-   withheld, provider called zero times.
-5. **Mission Control** (`/mission-control`): one transaction end-to-end — the
-   13-stage pipeline moves only as far as the real evidence says, live
-   authorization-vs-current diff, mutations/revert/execute on the CURRENT
-   trace, read-only replay, and DEMO PREFLIGHT proving every component ready.
-6. **Governance truth** (`/governance`): the actual rejected AgentPay-IR v2
-   checkpoint runs live in a non-authoritative shadow (canonical NLI
-   orientation: premise = commerce evidence, hypothesis = human authorization);
-   even when it disagrees, authority stays with the active model alone.
+- AI / agent code can never issue an ExecutionTicket; semantics only **tighten**
+- Tickets are context-bound, short-lived, single-use; replay-safe
+- No valid ticket → no provider execution; provider-unknown outcomes are never blindly retried
+- Merchant mutations never rewrite human authority; protocol PASS never authorizes
+- PostgreSQL is the durable authority; money is integer minor units
+- The challenger model cannot enter the money path; the audit chain is tamper-evident
 
-**Pages:** `/buyer` (purchase flow) · `/mission-control` (presenter console:
-13-stage live pipeline, current-transaction diff, real actions on the current
-trace, DEMO PREFLIGHT readiness probes, read-only replay) ·
-`/merchant` (offer sandbox — mutate a real checkout and watch the same trace
-drift) · `/protocols` (playground: real packet mutations, real UCP
-RFC 9421/9530 + AP2 ES256 signature verification, per-stage verdicts, cross-
-protocol consistency) · `/security-lab` (attack demos, per-stage decisions,
-**Why semantic AI matters** — the real model tightening an ALLOW into BLOCK) ·
-`/audit` (forensics: search by trace/intent/checkout/attempt/order id,
-tamper-evident anchors in the global chain, read-only replay, tamper test) ·
-`/governance` (active vs challenger model truth + the REAL rejected v2
-running non-authoritatively in shadow, canonical NLI orientation).
+Full list: [`SECURITY.md`](SECURITY.md)
 
-## Quick local run
+## 13. Tech stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.13 · FastAPI · SQLAlchemy 2 · Alembic |
+| Storage | PostgreSQL 18 (durable authority) · Redis 8 (coordination only) |
+| Frontend | Next.js 16 · TypeScript 5 · React 19 |
+| Semantic trust | PyTorch · Transformers · DeBERTa NLI (fine-tuned, artifact-hash-enforced) |
+| Crypto | Ed25519 (tickets) · ES256/P-256 + RFC 9421/9530 (UCP) · ES256 JWS (AP2) |
+| Payments | Razorpay **Test Mode** (or local mock) |
+| Testing | pytest · vitest · Playwright · Hypothesis · ruff · mypy |
+
+## 14. Quick demo
 
 ```bash
 docker compose up -d          # PostgreSQL 18 + Redis 8 (loopback-only)
 make setup                    # backend deps + dev keys + frontend deps
 make dev-api                  # FastAPI on 127.0.0.1:8000
 pnpm --dir apps/web dev       # Next.js on :3000
-make test                     # backend + frontend suites
 ```
 
-Razorpay **Test Mode** credentials go in `.env` (never committed; see
-`.env.example`); with no credentials a mock provider is used and the UI says so.
-No LLM API keys are required.
+Razorpay **Test Mode** credentials live in `.env` (never committed; see `.env.example`) — with no credentials the mock provider runs and the UI says so.
 
-## Documentation
+**About keys:** the deterministic/security stack runs without any LLM credential. Live **AI Intent Compilation** requires a backend-only TokenRouter API key; if it is unavailable, compilation **fails closed** rather than silently substituting another model. The AgentPay-IR v2 challenger artifact is intentionally not committed (size); a fresh clone truthfully reports CHALLENGER_UNAVAILABLE until the verified artifact is placed at the configured path.
 
-`docs/submission/BUILDATHON_FINAL_EVIDENCE.md` (submission evidence pack) ·
-`docs/submission/RAZORPAY_TEST_ACCEPTANCE.md` (acceptance chains) ·
-`docs/agentpay_ir_v2/` (corpus, frozen evaluation, model governance) ·
-`SECURITY.md` (invariants SEC-001..030) · `ARCHITECTURE.md` · `DECISIONS.md`
-(append-only decision log).
+## 15. Demo preflight
 
----
+Before recording: open [`/mission-control`](http://localhost:3000/mission-control) → **Run demo preflight (+ warm-up)**. The panel reports **REQUIRED SYSTEMS READY** or **NOT READY — FIX BEFORE RECORDING**, with each probe's real result and the payment environment line, so no local security mission is ever presented as a live provider transaction.
 
-*Unofficial prototype for the Razorpay Buildathon. Test Mode only; no real
-money; no production claims.*
+## 16. Test / verification
+
+Exact numbers from the final regression (run as separate targeted suites — never claimed as one invocation):
+
+| Suite | Result |
+|---|---|
+| Backend main suite | **789 passed, exit 0** (live DeBERTa in the loop) |
+| Phase-4 acceptance (incl. `tests/phase4/`) | **203/203, exit 0** |
+| Live-ingress e2e | **13/13 in isolation** (full-suite order-dependent flakes documented; rerun-in-isolation is the recorded gate) |
+| Frontend | vitest **35/35** · `tsc` clean · `eslint` 0 errors · `next build` OK |
+| Playwright | 46 passed + documented environment-only failures (reviewer-v2 specs need `RAZORMESH_REVIEWER_ENABLED=1` on the serving process) |
+| Security scan | **PASS — 0 blocking findings** (secret scan, pip-audit, pnpm audit) |
+
+## 17. Documentation
+
+- [`docs/submission/BUILDATHON_FINAL_EVIDENCE.md`](docs/submission/BUILDATHON_FINAL_EVIDENCE.md) — submission evidence pack
+- [`docs/submission/RAZORPAY_TEST_ACCEPTANCE.md`](docs/submission/RAZORPAY_TEST_ACCEPTANCE.md) — acceptance chains
+- [`docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION.md`](docs/agentpay_ir_v2/FINAL_FROZEN_EVALUATION.md) — one-shot frozen evaluation
+- [`SECURITY.md`](SECURITY.md) · [`ARCHITECTURE.md`](ARCHITECTURE.md) · [`DECISIONS.md`](DECISIONS.md) (append-only)
+- [`docs/phase5/VIDEO_STORYBOARD.md`](docs/phase5/VIDEO_STORYBOARD.md) — the video story
+
+## 18. Footer
+
+*Unofficial Razorpay Buildathon prototype. Razorpay Test Mode only. No real money. No production claims.*
