@@ -1,13 +1,18 @@
-"""F011: WHY SEMANTIC AI MATTERS — real-model semantic-only tightening.
+"""S002/F011: WHY SEMANTIC AI MATTERS — fully real-engine tightening.
 
-Proves the demo contract honestly:
-- the ACTIVE PRE_V2 model (not a stub) produces the semantic BLOCK on the new
-  non-frozen fixture pairs at runtime;
-- the deterministic lane ALLOWs the same structured facts;
+Proves the demo contract honestly (master prompt S002):
+- a NEW NON-FROZEN transaction is created per run through the real mission
+  engine and driven through the REAL deterministic RazorGuard machinery
+  (CheckoutService.propose/authorize) — its ALLOW is the real rule engine's
+  verdict, and the ticket it genuinely MINTS proves the structured lane alone
+  would move money;
+- the ACTIVE PRE_V2 model (not a stub) produces the semantic BLOCK on the
+  demo's new non-frozen pairs at runtime, in canonical orientation;
 - the real `fuse` seam yields BLOCK (semantic only tightens);
-- ticket WITHHELD and provider calls 0;
+- after the fused BLOCK the ticket is WITHHELD and provider calls are 0;
+- the real revalidation gate is exercised and reported;
 - fixture provenance is explicit: NEW_DEMO_FIXTURE, non-frozen, never used
-  for model selection or calibration;
+  for model selection or calibration, and its text appears in no frozen set;
 - if the model cannot run, the demo fails closed — never a painted result.
 """
 
@@ -15,13 +20,28 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
 
+from conftest import wipe_business_tables
 from razormesh_api.api.main import app
+from razormesh_api.catalog import seed_catalog
+from razormesh_api.persistence.db import create_session_factory
+from razormesh_api.persistence.repositories import Repositories
 from razormesh_api.semantic_only_demo import NEW_DEMO_FIXTURE, run_semantic_only_demo
 
 
 @pytest.fixture()
-def client(settings):  # type: ignore[no-untyped-def]
+def repos(settings):  # type: ignore[no-untyped-def]
+    engine = create_engine(settings.database_url, future=True)
+    r = Repositories(create_session_factory(engine))
+    wipe_business_tables(engine)
+    seed_catalog(r)
+    yield r
+    wipe_business_tables(engine)
+
+
+@pytest.fixture()
+def client(settings, repos):  # type: ignore[no-untyped-def]
     import razormesh_api.api.main as api_main
 
     api_main.get_settings.cache_clear()
@@ -44,29 +64,80 @@ def test_fixture_provenance_is_explicit() -> None:
         assert "must not" in pair["hypothesis"]
 
 
-def test_real_model_semantic_only_tightening() -> None:
-    """The REAL active model BLOCKs where the deterministic rules ALLOW."""
-    result = run_semantic_only_demo()
+def test_real_razorguard_allows_and_mints_ticket_then_semantic_blocks(repos: Repositories) -> None:
+    """S002 core: the REAL deterministic machinery ALLOWS the structured
+    transaction (and genuinely mints a ticket — proof structure alone would
+    move money); the REAL active model BLOCKs; real fusion BLOCKs; ticket
+    WITHHELD; provider calls 0."""
+    result = run_semantic_only_demo(repos)
     assert result["honest"] is True, result["story"]
 
+    # 1) The deterministic lane is the REAL rule engine over a fresh
+    #    transaction — and it genuinely minted an ExecutionTicket.
+    detail = result["structured_lane_detail"]
+    assert detail["razorguard"] == "ALLOW"
+    assert detail["ticket_would_mint"] is True, (
+        "the real CheckoutService.authorize must actually mint the ticket on "
+        "ALLOW — that is the whole point of the demo"
+    )
+    assert detail["revalidation_gate"] == "PASS"
+
+    # 2) The demo transaction is real, fresh, non-frozen.
+    txn = result["fixture"]["demo_transaction"]
+    assert txn["intent_id"].startswith("intent_")
+    assert txn["checkout_id"].startswith("chk_")
+    assert txn["fresh_per_run"] is True
+
+    # 3) Every demonstration row: real semantic BLOCK, real fusion BLOCK,
+    #    ticket WITHHELD, provider 0.
     demo = result["demonstration"]
     assert len(demo) >= 2
     for row in demo:
-        # Deterministic lane: the structured facts carry no violation.
-        assert row["razorguard"] == "ALLOW"
-        # REAL semantic verdict (computed at runtime by the active model).
+        assert row["razorguard"] == "ALLOW"  # the real rule engine's verdict
         assert row["semantic"] == "BLOCK", row
         assert row["probabilities"]["contradiction"] > 0.9, row["probabilities"]
-        # The real fusion seam: semantic can only tighten.
         assert row["fusion"] == "BLOCK"
-        # The money path: no authority, no provider contact.
         assert row["ticket"] == "WITHHELD"
         assert row["provider_calls"] == 0
 
-    # The runtime identity is the ACTIVE PRE_V2 production runtime.
+    # 4) The runtime identity is the ACTIVE PRE_V2 production runtime.
     assert result["runtime"]["model_id"] == "phase3-finetuned-v2"
     assert result["runtime"]["policy_version"] == "semantic-thresholds-v3"
     assert result["runtime"]["fail_closed"] is False
+
+
+def test_real_razorguard_invocation_is_provable(repos: Repositories) -> None:
+    """The RazorGuard ALLOW is recorded by the real pipeline: a DECISION
+    event + a TICKET_ISSUED event exist for the demo transaction's intent —
+    proving the real authorize path ran (not an approximation)."""
+    from sqlalchemy import select
+
+    from razormesh_api.persistence.models import AuditEvent
+
+    result = run_semantic_only_demo(repos)
+    intent_id = result["fixture"]["demo_transaction"]["intent_id"]
+    with repos.transaction() as session:
+        events = (
+            session.execute(
+                select(AuditEvent.event_type).where(AuditEvent.intent_id == intent_id)
+            )
+            .scalars()
+            .all()
+        )
+    assert "DECISION_RECORDED" in events, events
+    assert "TICKET_ISSUED" in events, (
+        "the real structured-lane authorization mints a ticket — audit proves it"
+    )
+
+
+def test_two_runs_use_fresh_transactions(repos: Repositories) -> None:
+    """Each run is a NEW NON-FROZEN transaction (never a cached/replayed one)."""
+    r1 = run_semantic_only_demo(repos)
+    r2 = run_semantic_only_demo(repos)
+    assert (
+        r1["fixture"]["demo_transaction"]["intent_id"]
+        != r2["fixture"]["demo_transaction"]["intent_id"]
+    )
 
 
 def test_demo_fixture_is_not_frozen_data() -> None:
@@ -104,10 +175,13 @@ def test_api_route_serves_real_verdicts(client: TestClient) -> None:
     assert body["honest"] is True
     assert body["fixture"]["non_frozen"] is True
     assert body["fixture"]["not_used_for_model_selection"] is True
+    assert body["structured_lane_detail"]["ticket_would_mint"] is True
     assert all(r["fusion"] == "BLOCK" for r in body["demonstration"])
+    assert all(r["ticket"] == "WITHHELD" for r in body["demonstration"])
+    assert all(r["provider_calls"] == 0 for r in body["demonstration"])
 
 
-def test_demo_fails_closed_without_model(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_demo_fails_closed_without_model(repos: Repositories, monkeypatch: pytest.MonkeyPatch) -> None:
     """If the active model cannot run, the demo surfaces the failure —
     never a painted BLOCK."""
 
@@ -118,4 +192,4 @@ def test_demo_fails_closed_without_model(monkeypatch: pytest.MonkeyPatch) -> Non
 
     monkeypatch.setattr(DebertaNLISemanticVerifier, "verify", broken_verify)
     with pytest.raises(RuntimeError):
-        run_semantic_only_demo()
+        run_semantic_only_demo(repos)

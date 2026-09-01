@@ -64,6 +64,7 @@ type WhySemanticAi = {
     not_used_for_model_selection: boolean;
     not_used_for_calibration: boolean;
     orientation: string;
+    demo_transaction: { intent_id: string; checkout_id: string; fresh_per_run: boolean };
   };
   runtime: { model_id: string; policy_version: string; fail_closed: boolean };
   demonstration: {
@@ -76,6 +77,12 @@ type WhySemanticAi = {
     ticket: string;
     provider_calls: number;
   }[];
+  structured_lane_detail: {
+    razorguard: string;
+    ticket_would_mint: boolean;
+    note: string;
+    revalidation_gate: string;
+  };
   story: string;
 };
 
@@ -223,61 +230,110 @@ export default function SecurityLabPage() {
         <h3>Why semantic AI matters — semantic-only tightening</h3>
         <p className="page-sub">
           If RazorGuard catches everything deterministic, why does the semantic model exist?
-          Run this: the deterministic rules read the structured projection (no recurring
-          semantics, price within cap) and ALLOW — the REAL active semantic model reads the
-          commerce evidence against the human authorization, finds the contradiction, and
-          BLOCKs through conservative fusion. Ticket withheld, provider contacted zero times.
-          Verdicts come from the live model at runtime (new, non-frozen demo fixture — never
-          used for model selection or calibration).
+          Run this: a FRESH transaction is created and driven through the REAL deterministic
+          RazorGuard machinery — on the structured facts alone it genuinely ALLOWS and mints an
+          ExecutionTicket (structure alone would move money). Then the REAL active semantic
+          model reads the commerce evidence against the human authorization, finds the
+          continuing-service contradiction, and conservative fusion BLOCKs: ticket withheld,
+          provider contacted zero times. Every run uses a new, non-frozen transaction — never
+          used for model selection or calibration.
         </p>
         <button
           onClick={() => void runWhySemanticAi()}
           disabled={whySemanticBusy}
           data-testid="run-why-semantic-ai"
         >
-          {whySemanticBusy ? "Running real model…" : "Run WHY SEMANTIC AI MATTERS demo"}
+          {whySemanticBusy ? "Running real engines…" : "Run WHY SEMANTIC AI MATTERS demo"}
         </button>
         {whySemantic && (
           <div data-testid="why-semantic-ai-result">
             <p>
-              <strong>{whySemantic.label}</strong> · active model{" "}
-              <code>{whySemantic.runtime.model_id}</code> · policy{" "}
-              <code>{whySemantic.runtime.policy_version}</code> · fixture{" "}
-              <code>{whySemantic.fixture.provenance}</code> (non-frozen)
+              <strong>{whySemantic.label}</strong> · live engines · fresh non-frozen
+              transaction per run
             </p>
             <table>
               <thead>
                 <tr>
-                  <th>Demo pair</th>
-                  <th>RazorGuard (structured)</th>
-                  <th>Semantic (real model)</th>
-                  <th>p(contradiction)</th>
-                  <th>Fusion</th>
-                  <th>Ticket</th>
-                  <th>Provider calls</th>
+                  <th>Stage</th>
+                  <th>Result</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody data-testid="why-semantic-ai-stages">
+                <tr>
+                  <td>Structured RazorGuard</td>
+                  <td>
+                    <strong>{whySemantic.structured_lane_detail.razorguard}</strong>
+                  </td>
+                </tr>
                 {whySemantic.demonstration.map((row) => (
                   <tr key={row.pair_id}>
-                    <td>
-                      <code>{row.pair_id}</code>
-                    </td>
-                    <td>{row.razorguard}</td>
+                    <td>Semantic Trust Check — {row.aspect}</td>
                     <td>
                       <strong>{row.semantic}</strong>
                     </td>
-                    <td>{row.probabilities.contradiction.toFixed(4)}</td>
-                    <td>
-                      <strong>{row.fusion}</strong>
-                    </td>
-                    <td>{row.ticket}</td>
-                    <td>{row.provider_calls}</td>
                   </tr>
                 ))}
+                <tr>
+                  <td>Conservative Fusion</td>
+                  <td>
+                    <strong>{whySemantic.demonstration[0]?.fusion}</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td>ExecutionTicket</td>
+                  <td>
+                    <strong>{whySemantic.demonstration[0]?.ticket}</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Provider calls</td>
+                  <td>
+                    <strong>{whySemantic.demonstration[0]?.provider_calls}</strong>
+                  </td>
+                </tr>
               </tbody>
             </table>
             <p className="page-sub">{whySemantic.story}</p>
+            <details>
+              <summary>Advanced · engine details</summary>
+              <p className="page-sub">
+                Active semantic model <code>{whySemantic.runtime.model_id}</code> · policy{" "}
+                <code>{whySemantic.runtime.policy_version}</code> · fixture{" "}
+                <code>{whySemantic.fixture.provenance}</code> (non-frozen) · demo transaction{" "}
+                <code>{whySemantic.fixture.demo_transaction.intent_id.slice(0, 20)}…</code> ·
+                revalidation gate{" "}
+                <code>{whySemantic.structured_lane_detail.revalidation_gate}</code>
+              </p>
+              <p className="page-sub">{whySemantic.structured_lane_detail.note}</p>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Demo pair</th>
+                    <th>RazorGuard</th>
+                    <th>Semantic</th>
+                    <th>p(contradiction)</th>
+                    <th>Fusion</th>
+                    <th>Ticket</th>
+                    <th>Provider</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {whySemantic.demonstration.map((row) => (
+                    <tr key={`adv-${row.pair_id}`}>
+                      <td>
+                        <code>{row.pair_id}</code>
+                      </td>
+                      <td>{row.razorguard}</td>
+                      <td>{row.semantic}</td>
+                      <td>{row.probabilities.contradiction.toFixed(4)}</td>
+                      <td>{row.fusion}</td>
+                      <td>{row.ticket}</td>
+                      <td>{row.provider_calls}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </details>
           </div>
         )}
       </div>
