@@ -329,8 +329,11 @@ export default function MissionControlPage() {
       <header className={styles.header}>
         <h1 className="page-title">Mission Control</h1>
         <p className="page-sub">
-          One transaction, end to end. The packet moves only as far as the real evidence says —
-          and never past a BLOCK.
+          One authorization lineage, one trace. The checkout under a trace may be
+          revised (merchant mutations create versioned checkout revisions) and
+          every revision is revalidated against the SAME human authority — the
+          packet moves only as far as the real evidence says, and never past a
+          BLOCK.
           {traceId && (
             <>
               {" "}
@@ -534,6 +537,8 @@ export default function MissionControlPage() {
                 <p className="page-sub">
                   Authorized side = the immutable TransactionBaseline captured at proposal time
                   (a catalog change can never alter it). Current side = the live checkout row.
+                  Mutations produce versioned checkout revisions under the same authorization
+                  lineage — each revision is revalidated against the same human authority.
                 </p>
               </div>
             )}
