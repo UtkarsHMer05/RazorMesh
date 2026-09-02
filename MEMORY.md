@@ -29,8 +29,29 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
 # Current snapshot
 
 **Project:** RazorMesh Trust
-**State (2026-08-31):** `PHASE-5 DEEP ENGINE CORRECTION COMPLETE` →
-`PHASE5_DEEP_ENGINE_CORRECTION_PASS / VIDEO_TRUTHFUL_AND_INTERACTIVE / PRE_V2_ACTIVE / V2_REAL_SHADOW_NON_AUTHORITATIVE`
+**State (2026-09-01):** `VIDEO DIRECTOR COMPLETE` →
+`RAZORMESH_VIDEO_DIRECTOR_PASS / CLICK_BY_CLICK_SCRIPT_READY / WORD_FOR_WORD_NARRATION_READY / REHEARSED_ON_CURRENT_BUILD`
+
+- **Video script shipped:** `docs/submission/VIDEO_RECORDING_MASTER_SCRIPT.md`
+  (19 sections; 3:30–4:00 primary + 2:00–2:30 emergency cut; exact tab order
+  MC/Buyer/SecurityLab/Governance/Audit; word-for-word narration; cursor
+  choreography; measured waits; honest fallbacks) and
+  `VIDEO_RECORDING_CHECKLIST.md`. Produced against the live running stack
+  (full browser rehearsal on 2026-09-01). Only buyer-mandate prompt verified
+  to compile cleanly first-try: the exact XM5 mandate in the script §6
+  (shorter variants → NEEDS_CLARIFICATION).
+- **Recording-day risk (operational, not a product bug):** TokenRouter chat
+  completions for `z-ai/glm-5.3-free` flap under load — observed 25 s, 112 s,
+  instant UNKNOWN_OUTCOME, and 120 s timeouts on the same prompt in one
+  session. App fails safe (502 COMPILER_UNAVAILABLE, no fake draft).
+  `list_models` health stays 200 (that is why preflight can say LIVE
+  REACHABLE while compiles fail). Script §19 gate 3 mandates a test compile
+  before recording; §17 has per-beat fallbacks.
+- **Browser operational facts for the video:** live trace is per-page client
+  state — cross-page continuity uses `?trace=RM-XXXXXX` deep links / the
+  header copy-trace chip; page reload drops unsaved client state (expected).
+  Fixed header can cover top-of-page buttons on small viewports — scroll
+  before clicking (rehearsal used 1600×900 fine).
 
 - **AgentPay-IR v2: EVALUATED / NOT ACTIVATED.** Trained on the final corpus
   (13,605/2,261/2,227 + 301 gold; 96 injection rows TRAIN-only; bundle
@@ -67,7 +88,7 @@ Never claim something passed unless `PHASE1_STATUS.md` contains the correspondin
   a1b2c3d4e5f6). Storyboard Scenario-B wording corrected to protocol-PASS →
   intent-BLOCK. Evidence: PROVENANCE_INVENTORY.md + docs/evidence/
   PROTOCOL_TRUTH_TABLE.md. D-057 records the decision.
-- **Next:** video recording + submission only.
+- **Next:** owner records the video using docs/submission/VIDEO_RECORDING_MASTER_SCRIPT.md (script shipped 2026-09-1); no further dev before the video.
 - Remote: the agent never pushes; the human owner pushes manually
   (see `docs/agentpay_ir_v2/REMOTE_STATE.md`).
 - Demo: Buyer (SAFE→Razorpay Test order), Security Lab (Scenario B recurring
@@ -265,8 +286,12 @@ by title as well as ID until the governance collision is separately reconciled.
 
 # Next action
 
-PRE-REVIEW FINAL CORRECTION PASS complete (2026-08-29). The ONE current handoff
-workflow (docs/agentpay_ir_v2/STATUS.md is authoritative):
+VIDEO DIRECTOR COMPLETE (2026-09-01). The ONE current action is: the owner
+records the submission video following
+`docs/submission/VIDEO_RECORDING_MASTER_SCRIPT.md` (start with checklist §19:
+preflight + test-compile gate; use the EMERGENCY SHORT cut if the compiler
+upstream is degraded). No further development work is planned before the video.
+The historical handoff workflow below is retained as evidence.
 
 1. Human opens http://localhost:3000/reviewer (dev server with
    RAZORMESH_REVIEWER_ENABLED=1, already in .env) and labels ALL 635 cards of

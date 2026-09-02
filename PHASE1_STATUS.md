@@ -1,6 +1,39 @@
 # PHASE1_STATUS.md — Execution Evidence
 
-## Phase-5 deep-engine correction checkpoint — 2026-08-31 (latest)
+## Video director pass — 2026-09-01 (latest)
+
+Owner master prompt: VIDEO RECORDING DIRECTOR (analysis + documentation only;
+no product behavior, no tests, no frozen-eval, no retraining, no push).
+Deliverables: `docs/submission/VIDEO_RECORDING_MASTER_SCRIPT.md` (19-section
+word-for-word recording script) + `docs/submission/VIDEO_RECORDING_CHECKLIST.md`
+(one-screen pre-flight). Produced by actually running the full stack
+(docker PG/Redis, uvicorn API with the live DeBERTa runtime, `pnpm dev`) and
+exercising every judge-facing route in a real browser: buyer compile→confirm→
+agent→propose→ALLOW (real TokenRouter compiles, two successes at 25–30 s),
+Mission Control hidden-recurring attack on the current trace (authorized-vs-
+current diff; Execute current transaction → STALE_CHECKOUT revalidation refusal;
+provider calls 0), Audit read-only replay + global chain verify (CHAIN VALID),
+Security Lab WHY-SEMANTIC-AI (RG ALLOW → semantic BLOCK pC≈0.9998 → fusion BLOCK
+→ ticket NOT ISSUED → attempt NOT CREATED → provider 0), Scenarios B/C
+(PROTOCOL_PASS + final BLOCK + provider 0), Governance shadow (real A_2ep
+challenger lane; disagreement case CHALLENGE-vs-BLOCK — challenger IGNORED),
+Protocol Playground (UCP safe = all-PASS + MATCH; corrupt signature = real
+RFC 9421/9530 FAIL content_digest_mismatch), Merchant sandbox preset + exact
+revert. Recorded operational reality: the live trace store is client-memory
+per page — navigate with `?trace=RM-XXXXXX` deep links (the script's tab
+order + copy-trace chip do this), and page reload drops unsaved client state
+(expected; not a defect). New risk characterized and documented in the script
+(§17/§19): the TokenRouter chat-completions upstream for `z-ai/glm-5.3-free`
+flapped during the session between 25 s, 112 s, instant UNKNOWN_OUTCOME, and
+120 s timeouts; the app fails safe (502 COMPILER_UNAVAILABLE, no fake draft);
+`list_models` health stays 200 — hence the script's mandatory pre-record
+test-compile gate and honest fallbacks. All beats besides the compile are
+sub-second warm (measured). Frozen truths unchanged: PRE_V2 active, v2
+shadow-only NON-AUTHORITATIVE, thresholds untouched, no push. Gate token:
+`RAZORMESH_VIDEO_DIRECTOR_PASS / CLICK_BY_CLICK_SCRIPT_READY /
+WORD_FOR_WORD_NARRATION_READY / REHEARSED_ON_CURRENT_BUILD`.
+
+## Phase-5 deep-engine correction checkpoint — 2026-08-31 (superseded as latest; retained as evidence)
 
 Owner master prompt `~/Downloads/RazorMesh_Phase5_Deep_Engine_Correction_Master_Prompt.md`
 (G001–G030). All 30 gates PASS with per-gate evidence in
