@@ -151,5 +151,5 @@ data/agentpay_ir_v2/corpus/review_*
 docs/agentpay_ir_v2/frozen_eval/*/predictions_human_gold.jsonl
 **/predictions_human_gold*.jsonl
 README_FIRST.md
-VIDEO_RECORDING_MASTER_SCRIPT.md
-VIDEO_RECORDING_CHECKLIST.md
+# VIDEO_RECORDING_MASTER_SCRIPT.md
+# VIDEO_RECORDING_CHECKLIST.md
